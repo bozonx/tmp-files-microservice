@@ -1,7 +1,7 @@
 {
   "name": "tmp-files-microservice",
   "version": "0.14.0",
-  "description": "Temporary files microservice",
+  "description": "NestJS + Fastify microservice boilerplate with health checks",
   "main": "dist/main.js",
   "scripts": {
     "build": "nest build",
@@ -60,8 +60,9 @@
   },
   "keywords": [
     "nestjs",
-    "stt",
-    "microservice"
+    "microservice",
+    "boilerplate",
+    "fastify"
   ],
   "author": "",
   "license": "MIT",

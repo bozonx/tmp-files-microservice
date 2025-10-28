@@ -85,7 +85,7 @@ async function bootstrap() {
   await app.listen(appConfig.port, appConfig.host);
 
   logger.log(
-    `🚀 Micro STT service is running on: http://${appConfig.host}:${appConfig.port}/${globalPrefix}`,
+    `🚀 NestJS service is running on: http://${appConfig.host}:${appConfig.port}/${globalPrefix}`,
     'Bootstrap',
   );
   logger.log(`📊 Environment: ${appConfig.nodeEnv}`, 'Bootstrap');

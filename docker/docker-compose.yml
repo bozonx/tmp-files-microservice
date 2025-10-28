@@ -1,7 +1,9 @@
 services:
-  micro-stt:
-    image: bozonx/stt-gateway-microservice:latest
-    container_name: stt-gateway-microservice
+  nestjs-boilerplate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: nestjs-boilerplate
     ports:
       - '8080:80'
     environment:
@@ -17,20 +19,6 @@ services:
 
       # Logging
       - LOG_LEVEL=warn
-
-      # Authorization
-      - AUTH_ENABLED=true
-      - AUTH_TOKENS=${AUTH_TOKENS}
-
-      # STT settings
-      - STT_DEFAULT_PROVIDER=assemblyai
-      - STT_ALLOWED_PROVIDERS=assemblyai
-      - STT_MAX_FILE_SIZE_MB=100
-      - STT_REQUEST_TIMEOUT_SEC=15
-      - STT_POLL_INTERVAL_MS=1500
-      - STT_MAX_SYNC_WAIT_MIN=3
-      - ALLOW_CUSTOM_API_KEY=false
-      - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
     restart: unless-stopped
     healthcheck:
       test:

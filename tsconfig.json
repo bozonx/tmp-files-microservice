@@ -23,7 +23,6 @@
       "@common/*": ["src/common/*"],
       "@modules/*": ["src/modules/*"],
       "@config/*": ["src/config/*"],
-      "@providers/*": ["src/providers/*"],
       "@test/*": ["test/*"]
     }
   },

@@ -1,67 +1,88 @@
-# Microservice Boilerplate (NestJS + Fastify)
+# Бойлерплейт микросервиса (NestJS + Fastify)
 
-Minimal NestJS microservice starter with Fastify, health checks, centralized error handling, and structured logging.
+Минимальный шаблон сервиса на NestJS с Fastify, готовый для быстрого старта проектов.
 
-## Features
+## Что включено
 
-- 🏥 Health checks (readiness, liveness) via Terminus
-- 📊 Pino logging (pretty in dev, JSON in prod)
-- 🛡️ Global exception filter
-- ⚡ Fastify adapter, CORS, Helmet
-- 🐳 Docker-friendly
+- 🏥 Health-check эндпоинты (readiness, liveness) на базе Terminus
+- 📊 Логирование через Pino (pretty в dev, JSON в prod)
+- 🛡️ Глобальный фильтр ошибок
+- ⚡ Fastify + CORS + Helmet
+- 🧪 Настроенные Jest-тесты (unit и e2e)
+- 🐳 Готовность к работе в Docker
 
-## Quick Start
+## Быстрый старт
 
-Requirements:
+Требования:
 
 - Node.js 22+
 - pnpm 10+
 
 ```bash
-# 1) Install
+# 1) Установка зависимостей
 pnpm install
 
-# 2) Configure env
+# 2) Окружение
 cp env.development.example .env.development
 cp env.production.example .env.production
 
-# 3) Dev run
+# 3) Запуск в разработке
 pnpm start:dev
 
-# 4) Prod build/run
+# 4) Сборка и запуск в прод-режиме
 pnpm build
 NODE_ENV=production pnpm start:prod
 ```
 
-Default URL: `http://localhost:3000/api/v1`
+URL по умолчанию: `http://localhost:3000/api/v1`
 
-## Configuration
+## Переменные окружения
 
-Environment files:
+Файлы окружения:
 
 - `.env.production`
 - `.env.development`
 
-Key variables:
+Ключевые переменные:
 
-- `NODE_ENV` (production|development|test)
-- `LISTEN_HOST` (e.g. `0.0.0.0` or `localhost`)
-- `LISTEN_PORT` (e.g. `80` or `3000`)
-- `API_BASE_PATH` (default `api`)
-- `API_VERSION` (default `v1`)
-- `LOG_LEVEL` (trace|debug|info|warn|error|fatal|silent)
+- `NODE_ENV` — `production|development|test`
+- `LISTEN_HOST` — например, `0.0.0.0` или `localhost`
+- `LISTEN_PORT` — например, `80` или `3000`
+- `API_BASE_PATH` — префикс API (по умолчанию `api`)
+- `API_VERSION` — версия API (по умолчанию `v1`)
+- `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
 
-## API Endpoints
+## Эндпоинты
 
 - `GET /{API_BASE_PATH}/{API_VERSION}/health`
 - `GET /{API_BASE_PATH}/{API_VERSION}/health/ready`
 - `GET /{API_BASE_PATH}/{API_VERSION}/health/live`
 
-## Logging
+## Тесты
 
-- Dev: pretty logs
-- Prod: JSON logs with `@timestamp` (ISO 8601 UTC)
+```bash
+# Все тесты
+pnpm test
 
-## License
+# Unit-тесты
+pnpm test:unit
+
+# E2E-тесты
+pnpm test:e2e
+```
+
+## Docker
+
+- Dockerfile ожидает уже собранный `dist/`
+- Пример запуска — `docker/docker-compose.yml`
+
+```bash
+# Сборка приложения и локальный запуск через compose
+pnpm build
+cd docker
+docker compose up -d --build
+```
+
+## Лицензия
 
 MIT

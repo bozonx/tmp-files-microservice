@@ -7,7 +7,6 @@
 
 import type { PinoLogger } from 'nestjs-pino';
 import type { ConfigService } from '@nestjs/config';
-import type { HttpService } from '@nestjs/axios';
 
 /**
  * Creates a mock PinoLogger instance with all required methods
@@ -27,20 +26,8 @@ export const createMockLogger = (): PinoLogger =>
   }) as unknown as PinoLogger;
 
 /**
- * Creates a mock HttpService instance with common HTTP methods
- *
- * @returns Mock HttpService with jest.fn() for all methods
+ * Placeholder for future HTTP-related mocks if needed.
  */
-export const createMockHttpService = () =>
-  ({
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    patch: jest.fn(),
-    delete: jest.fn(),
-    head: jest.fn(),
-    request: jest.fn(),
-  }) as unknown as HttpService;
 
 /**
  * Creates a mock ConfigService instance with customizable configuration
@@ -50,8 +37,8 @@ export const createMockHttpService = () =>
  *
  * @example
  * const mockConfig = createMockConfigService({
- *   'app.authEnabled': true,
- *   'app.authTokens': ['token1', 'token2']
+ *   'app.port': 3000,
+ *   'app.logLevel': 'debug'
  * });
  */
 export const createMockConfigService = (overrides: Record<string, any> = {}) =>

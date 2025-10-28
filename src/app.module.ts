@@ -26,7 +26,7 @@ import type { AppConfig } from '@config/app.config';
             level: appConfig.logLevel,
             timestamp: () => `,"@timestamp":"${new Date().toISOString()}"`,
             base: {
-              service: 'micro-stt',
+              service: 'nestjs-boilerplate',
               environment: appConfig.nodeEnv,
             },
             transport: isDev
