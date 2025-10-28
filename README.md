@@ -5,7 +5,7 @@
 ## Что включено
 
 - 🏥 Простой health-check эндпоинт `/health`
-- 📊 Логирование через Pino (pretty в dev, JSON в prod)
+- 📊 Логирование через Pino (JSON в prod)
 - 🛡️ Глобальный фильтр ошибок
 - ⚡ Fastify
 - 🧪 Настроенные Jest-тесты (unit и e2e)
@@ -22,26 +22,25 @@
 # 1) Установка зависимостей
 pnpm install
 
-# 2) Окружение
-cp env.development.example .env.development
+# 2) Окружение (prod)
 cp env.production.example .env.production
 
-# 3) Запуск в разработке
-pnpm start:dev
-
-# 4) Сборка и запуск в прод-режиме
+# 3) Сборка и запуск (prod)
 pnpm build
-NODE_ENV=production pnpm start:prod
+pnpm start:prod
 ```
 
-URL по умолчанию: `http://localhost:3000/api/v1`
+URL по умолчанию (prod): `http://localhost:80/api/v1`
+Для Docker Compose: `http://localhost:8080/api/v1`
 
 ## Переменные окружения
 
 Файлы окружения:
 
 - `.env.production`
-- `.env.development`
+- `.env` (опционально)
+
+Источник истины для переменных: `.env.production.example`.
 
 Ключевые переменные:
 
@@ -51,23 +50,14 @@ URL по умолчанию: `http://localhost:3000/api/v1`
 - `API_BASE_PATH` — префикс API (по умолчанию `api`)
 - `API_VERSION` — версия API (по умолчанию `v1`)
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
+- `TZ` — таймзона (по умолчанию `UTC`)
 
 ## Эндпоинты
 
 - `GET /{API_BASE_PATH}/{API_VERSION}/health`
 
 ## Тесты
-
-```bash
-# Все тесты
-pnpm test
-
-# Unit-тесты
-pnpm test:unit
-
-# E2E-тесты
-pnpm test:e2e
-```
+См. инструкции в `docs/dev.md`.
 
 ## Docker
 
@@ -75,11 +65,14 @@ pnpm test:e2e
 - Пример запуска — `docker/docker-compose.yml`
 
 ```bash
-# Сборка приложения и локальный запуск через compose
+# Сборка приложения
 pnpm build
-cd docker
-docker compose up -d --build
+
+# Локальный запуск через compose (без cd)
+docker compose -f docker/docker-compose.yml up -d --build
 ```
+
+После запуска (compose): `http://localhost:8080/api/v1/health`
 
 ## Лицензия
 

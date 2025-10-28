@@ -1,6 +1,6 @@
 {
-  "name": "tmp-files-microservice",
-  "version": "0.14.0",
+  "name": "microservice-boilerplate",
+  "version": "0.1.0",
   "description": "NestJS + Fastify microservice boilerplate with health checks",
   "main": "dist/main.js",
   "scripts": {
@@ -54,13 +54,7 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3"
   },
-  "keywords": [
-    "nestjs",
-    "microservice",
-    "boilerplate",
-    "fastify"
-  ],
-  "author": "",
+  "author": "Ivan K",
   "license": "MIT",
   "engines": {
     "node": ">=22.0.0"

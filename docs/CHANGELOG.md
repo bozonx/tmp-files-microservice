@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Unreleased
+
+- README ориентирован на production-использование (убраны dev-инструкции)
+- Добавлен `docs/dev.md` с инструкциями по разработке и dev-режиму
+- Уточнены prod URL и Docker Compose команды в README
+- В разделе env добавлено упоминание `TZ` и что источником истины является `.env.production.example`
+
 ## 0.15.0 — Boilerplate refactor
 
 - Полностью удалены функциональности STT, GraphQL и Auth
