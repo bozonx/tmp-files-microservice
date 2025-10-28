@@ -26,6 +26,6 @@
       "@test/*": ["test/*"]
     }
   },
-  "include": ["src/**/*", "test/**/*"],
-  "exclude": ["node_modules", "dist", "coverage", "test"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "coverage"]
 }
