@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -15,6 +15,8 @@
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
+    "noImplicitOverride": true,
+    "useUnknownInCatchVariables": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "types": ["node"],
