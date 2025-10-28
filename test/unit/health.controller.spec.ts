@@ -21,7 +21,7 @@ describe('HealthController (unit)', () => {
     expect(controller).toBeDefined();
   });
 
-  it('GET /health returns ok', async () => {
+  it('GET /api/v1/health returns ok', async () => {
     const res = await controller.check();
     expect(res).toEqual({ status: 'ok' });
   });

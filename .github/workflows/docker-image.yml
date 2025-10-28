@@ -38,9 +38,6 @@ jobs:
       - name: Build the project
         run: pnpm build
 
-      - name: Remove dev dependencies
-        run: pnpm prune --prod
-
       - name: Build the Docker image
         run: |
           docker build . --file docker/Dockerfile --tag bozonx/stt-gateway-microservice:${{ steps.versions.outputs.APP_VERSION }}

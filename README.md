@@ -4,7 +4,7 @@
 
 ## Что включено
 
-- 🏥 Простой health-check эндпоинт `/health`
+- 🏥 Простой health-check эндпоинт `/{API_BASE_PATH}/{API_VERSION}/health`
 - 📊 Логирование через Pino (JSON в prod)
 - 🛡️ Глобальный фильтр ошибок
 - ⚡ Fastify
