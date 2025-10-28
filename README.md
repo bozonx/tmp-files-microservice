@@ -4,7 +4,7 @@
 
 ## Что включено
 
-- 🏥 Health-check эндпоинты (readiness, liveness) на базе Terminus
+- 🏥 Простой health-check эндпоинт `/health`
 - 📊 Логирование через Pino (pretty в dev, JSON в prod)
 - 🛡️ Глобальный фильтр ошибок
 - ⚡ Fastify + CORS + Helmet
@@ -55,8 +55,6 @@ URL по умолчанию: `http://localhost:3000/api/v1`
 ## Эндпоинты
 
 - `GET /{API_BASE_PATH}/{API_VERSION}/health`
-- `GET /{API_BASE_PATH}/{API_VERSION}/health/ready`
-- `GET /{API_BASE_PATH}/{API_VERSION}/health/live`
 
 ## Тесты
 
