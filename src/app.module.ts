@@ -6,6 +6,7 @@ import { HealthModule } from '@modules/health/health.module';
 import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
 import appConfig from '@config/app.config';
 import type { AppConfig } from '@config/app.config';
+import pkg from '../package.json';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import type { AppConfig } from '@config/app.config';
             level: appConfig.logLevel,
             timestamp: () => `,"@timestamp":"${new Date().toISOString()}"`,
             base: {
-              service: 'nestjs-boilerplate',
+              service: (pkg as any).name ?? 'app',
               environment: appConfig.nodeEnv,
             },
             transport: isDev

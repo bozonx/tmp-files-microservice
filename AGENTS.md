@@ -1,7 +1,7 @@
 ## Agent Rules (alwaysApply)
 
 - Microservice with REST API
-- Stack: TypeScript, NestJS, Docker
+- Stack: TypeScript, NestJS, Fastify, Docker
 
 ### Structure and Practices
 
@@ -28,8 +28,5 @@
 
 ### Agent Expectations
 
-- Follow the above standards across all projects in the repository
 - Prefer targeted code edits over full rewrites if you not asked to refactor
-- When adding or changing functionality:
-  - Update tests and documentation in their respective directories also update README.md if necessary
-  - Record significant changes in the project's `CHANGELOG.md`
+- When adding or changing functionality update tests and documentation in their respective directories also update README.md if necessary
