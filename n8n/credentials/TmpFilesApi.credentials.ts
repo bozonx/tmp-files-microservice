@@ -15,20 +15,28 @@ export class TmpFilesApi implements ICredentialType {
 			description: 'Base URL of the temp-files microservice',
 		},
 		{
-			displayName: 'Bearer Token',
-			name: 'token',
+			displayName: 'Username',
+			name: 'username',
+			type: 'string',
+			default: '',
+			description: 'Username for Basic authentication',
+		},
+		{
+			displayName: 'Password',
+			name: 'password',
 			type: 'string',
 			typeOptions: { password: true },
 			default: '',
-			description: 'Optional Bearer token for authorization',
+			description: 'Password for Basic authentication',
 		},
 	];
 
 	authenticate: ICredentialType['authenticate'] = {
 		type: 'generic',
 		properties: {
-			headers: {
-				Authorization: "={{$credentials.token ? 'Bearer ' + $credentials.token : undefined}}",
+			auth: {
+				username: '={{$credentials.username}}',
+				password: '={{$credentials.password}}',
 			},
 		},
 	};
