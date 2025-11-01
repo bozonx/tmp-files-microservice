@@ -1,6 +1,6 @@
 {
     "name": "n8n-nodes-bozonx-tmp-files",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "n8n node to upload a binary file or file URL to a temporary files microservice and return a temporary link",
     "license": "MIT",
     "homepage": "",
@@ -28,12 +28,15 @@
         "dist"
     ],
     "n8n": {
-        "n8nNodesApiVersion": 1,
-        "strict": true,
-        "nodes": [
-            "dist/nodes/TmpFiles/TmpFiles.node.js"
-        ]
-    },
+      "n8nNodesApiVersion": 1,
+      "strict": true,
+      "nodes": [
+          "dist/nodes/TmpFiles/TmpFiles.node.js"
+      ],
+      "credentials": [
+          "dist/credentials/TmpFilesApi.credentials.js"
+      ]
+  },
     "devDependencies": {
         "@n8n/node-cli": "*",
         "eslint": "9.32.0",
