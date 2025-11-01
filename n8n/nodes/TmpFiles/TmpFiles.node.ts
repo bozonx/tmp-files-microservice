@@ -1,11 +1,11 @@
 import {
-	NodeConnectionTypes,
-	type IExecuteFunctions,
-	type IDataObject,
-	type INodeExecutionData,
-	type INodeType,
-	type INodeTypeDescription,
-	type IHttpRequestOptions,
+    NodeOperationError,
+    type IExecuteFunctions,
+    type IDataObject,
+    type INodeExecutionData,
+    type INodeType,
+    type INodeTypeDescription,
+    type IHttpRequestOptions,
 } from 'n8n-workflow';
 
 export class TmpFiles implements INodeType {
@@ -16,8 +16,10 @@ export class TmpFiles implements INodeType {
 		version: 1,
 		description: 'Upload a binary file or a file URL to the temp-files microservice',
 		defaults: { name: 'Temporary Files' },
-		inputs: [NodeConnectionTypes.Main],
-		outputs: [NodeConnectionTypes.Main],
+		icon: 'file:tmp-files.svg',
+		usableAsTool: true,
+		inputs: ['main'],
+		outputs: ['main'],
 		requestDefaults: {
 			baseURL: '={{$parameter.baseUrl}}',
 			headers: {
@@ -63,7 +65,7 @@ export class TmpFiles implements INodeType {
 				description: 'Base URL of the temp-files microservice',
 			},
 			{
-				displayName: 'TTL (minutes)',
+				displayName: 'TTL (Minutes)',
 				name: 'ttl',
 				type: 'number',
 				default: 60,
@@ -91,12 +93,12 @@ export class TmpFiles implements INodeType {
 			const token = (this.getNodeParameter('token', i) as string) || '';
 
 			if (!baseUrl) {
-				throw new Error('Base URL is required (set parameter or TMP_FILES_BASE_URL env var)');
+				throw new NodeOperationError(this.getNode(), 'Base URL is required (set parameter or TMP_FILES_BASE_URL env var)', { itemIndex: i });
 			}
 
 			const endpoint = `${baseUrl.replace(/\/$/, '')}/api/v1/tmp-files`;
 
-			let options: IHttpRequestOptions = {
+			const options: IHttpRequestOptions = {
 				method: 'POST',
 				url: endpoint,
 				json: true,
@@ -112,7 +114,7 @@ export class TmpFiles implements INodeType {
 			if (sourceType === 'url') {
 				const fileUrl = this.getNodeParameter('fileUrl', i) as string;
 				if (!fileUrl) {
-					throw new Error('File URL is required when source type is "URL"');
+					throw new NodeOperationError(this.getNode(), 'File URL is required when source type is "URL"', { itemIndex: i });
 				}
 				options.body = { url: fileUrl, ttl } as IDataObject;
 				(options.headers as IDataObject)['Content-Type'] = 'application/json';
@@ -120,12 +122,12 @@ export class TmpFiles implements INodeType {
 				const binaryProperty = this.getNodeParameter('binaryProperty', i) as string;
 				const item = items[i];
 				if (!item.binary || !item.binary[binaryProperty]) {
-					throw new Error(`Binary property "${binaryProperty}" is missing on item index ${i}`);
+					throw new NodeOperationError(this.getNode(), `Binary property "${binaryProperty}" is missing`, { itemIndex: i });
 				}
 				const dataBuffer = await this.helpers.getBinaryDataBuffer(i, binaryProperty);
 				const { fileName, mimeType } = item.binary[binaryProperty]!;
 
-				const optionsAny = options as unknown as { [key: string]: any };
+				const optionsAny = options as unknown as Record<string, unknown> & { formData?: unknown };
 				optionsAny.formData = {
 					file: {
 						value: dataBuffer,
@@ -137,7 +139,7 @@ export class TmpFiles implements INodeType {
 					ttl: String(ttl),
 				};
 			} else {
-				throw new Error(`Unsupported source type: ${sourceType}`);
+				throw new NodeOperationError(this.getNode(), `Unsupported source type: ${sourceType}`, { itemIndex: i });
 			}
 
 			const response = await this.helpers.httpRequest(options);
