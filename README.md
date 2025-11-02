@@ -10,6 +10,7 @@
 - ⚡ Fastify
 - 🧪 Настроенные Jest-тесты (unit и e2e)
 - 🐳 Готовность к работе в Docker
+- 🚫 Без встроенной авторизации; Swagger и GraphQL отсутствуют (аутентификация предполагается на уровне API Gateway)
 
 ## Быстрый старт
 
@@ -54,7 +55,22 @@ URL по умолчанию (prod): `http://localhost:80/api/v1`
 
 ## Эндпоинты
 
-- `GET /{API_BASE_PATH}/{API_VERSION}/health`
+- `GET /{API_BASE_PATH}/{API_VERSION}/health` — проверка состояния
+- `POST /{API_BASE_PATH}/{API_VERSION}/files` — загрузка файла (multipart/form-data)
+  - Поля: `file` (binary), `ttl` (integer, секунды), `metadata` (string, JSON, опционально), `allowDuplicate` (`true|false`, опционально), `customFilename` (string, опционально)
+- `GET /{API_BASE_PATH}/{API_VERSION}/files/:id` — информация о файле
+  - Query: `includeExpired=true|false`
+- `GET /{API_BASE_PATH}/{API_VERSION}/files/:id/download` — скачивание файла
+  - Query: `includeExpired=true|false`
+- `DELETE /{API_BASE_PATH}/{API_VERSION}/files/:id` — удаление файла
+  - Query: `force=true|false`
+- `GET /{API_BASE_PATH}/{API_VERSION}/files` — поиск/листинг файлов
+  - Query: `mimeType`, `minSize`, `maxSize`, `uploadedAfter`, `uploadedBefore`, `expiredOnly`, `limit`, `offset`
+- `GET /{API_BASE_PATH}/{API_VERSION}/files/stats` — агрегированная статистика
+- `GET /{API_BASE_PATH}/{API_VERSION}/files/:id/exists` — проверка существования файла
+  - Query: `includeExpired=true|false`
+
+Подробнее: `docs/api-specification.md`
 
 ## Тесты
 См. инструкции в `docs/dev.md`.

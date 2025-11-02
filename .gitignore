@@ -2,8 +2,6 @@ test-data/
 dist/
 test-nest/
 
-_old/
-
 # dotenv environment variable files
 .env
 .env.*
