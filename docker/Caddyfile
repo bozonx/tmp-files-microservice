@@ -1,11 +1,7 @@
 
 :80 {
     # Shared Bearer auth: single token из {env.AUTH_TOKEN}
-    @authed expression `
-        let auth = header.Authorization[0];
-        let token = auth.startsWith("Bearer ") ? auth.substring(7).trim() : "";
-        token.length() > 0 && token == "{env.AUTH_TOKEN}"
-    `
+    @authed `{http.request.header.Authorization}.startsWith("Bearer ") && {http.request.header.Authorization}.substring(7).trim() == {env.AUTH_TOKEN}`
 
     # Outer handle: только если authed
     handle @authed {
