@@ -19,13 +19,22 @@ describe('StorageService (basic)', () => {
           provide: ConfigService,
           useValue: {
             get: (key: string, def?: any) => {
-              const cfg: Record<string, any> = {
+              if (key === 'storage') {
+                return {
+                  basePath: testStoragePath,
+                  maxFileSize: 1 * 1024 * 1024,
+                  allowedMimeTypes: [],
+                  enableDeduplication: true,
+                  maxTtl: 3600,
+                };
+              }
+              const legacyEnvLike: Record<string, any> = {
                 STORAGE_DIR: testStoragePath,
                 MAX_FILE_SIZE_MB: 1,
                 ALLOWED_MIME_TYPES: [],
                 ENABLE_DEDUPLICATION: true,
               };
-              return key in cfg ? cfg[key] : def;
+              return key in legacyEnvLike ? legacyEnvLike[key] : def;
             },
           },
         },

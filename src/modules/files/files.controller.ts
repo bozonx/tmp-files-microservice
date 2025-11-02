@@ -18,7 +18,7 @@ export class FilesController {
       if (data.fields.metadata) {
         try { metadata = JSON.parse(data.fields.metadata.value as string); } catch { throw new BadRequestException('Invalid metadata JSON format'); }
       }
-      const allowDuplicate = data.fields.allowDuplicate ? data.fields.allowDuplicate.value === 'true' : true;
+      const allowDuplicate = data.fields.allowDuplicate ? data.fields.allowDuplicate.value === 'true' : false;
       const customFilename = data.fields.customFilename ? (data.fields.customFilename.value as string) : undefined;
 
       const fileBuffer = await data.toBuffer();

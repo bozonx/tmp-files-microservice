@@ -11,7 +11,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { StorageModule } from '@modules/storage/storage.module';
 import { FilesModule } from '@modules/files/files.module';
 import { CleanupModule } from '@modules/cleanup/cleanup.module';
-import pkg from '../package.json';
+import pkg from '../../package.json';
 
 @Module({
   imports: [

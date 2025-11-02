@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.2.1 - 2025-11-02
+
+- Unified storage configuration usage via `@config/storage.config` in `StorageService` (no direct env reads)
+- Fixed `FilesService.fileExists` to respect `includeExpired`
+- Switched docker-compose to build local image from Dockerfile (`tmp-files-service`) instead of pulling external image
+- Removed unused `sqlite3` dependency
+- Minor: dynamic import for `file-type` to avoid ESM/CJS interop issues under Jest
+
 ## 0.2.0 - 2025-11-02
 
 - Migrated business logic for temporary file storage from legacy service (`_old`) into boilerplate

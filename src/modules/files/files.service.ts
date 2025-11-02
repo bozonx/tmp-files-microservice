@@ -5,6 +5,7 @@ import { StorageService } from '@modules/storage/storage.service';
 import { ValidationUtil } from '@common/utils/validation.util';
 import { UploadedFile, FileInfo } from '@common/interfaces/file.interface';
 import type { AppConfig } from '@config/app.config';
+import { FilenameUtil } from '@common/utils/filename.util';
 
 interface UploadFileParams {
   file: UploadedFile;
@@ -79,7 +80,16 @@ export class FilesService {
         if (!mv.isValid) throw new BadRequestException(`Metadata validation failed: ${mv.errors.join(', ')}`);
       }
 
-      const saveResult = await this.storageService.saveFile({ file: params.file, ttl: params.ttl, metadata: params.metadata });
+      const fileForSave: UploadedFile = params.customFilename
+        ? { ...params.file, originalname: FilenameUtil.sanitizeFilename(params.customFilename) }
+        : params.file;
+
+      const saveResult = await this.storageService.saveFile({
+        file: fileForSave,
+        ttl: params.ttl,
+        metadata: params.metadata,
+        allowDuplicate: params.allowDuplicate,
+      });
       if (!saveResult.success) throw new InternalServerErrorException(`Failed to save file: ${saveResult.error}`);
 
       const fileInfo = saveResult.data as FileInfo;
@@ -106,7 +116,7 @@ export class FilesService {
       const idValidation = ValidationUtil.validateFileId(params.fileId);
       if (!idValidation.isValid) throw new BadRequestException(`File ID validation failed: ${idValidation.errors.join(', ')}`);
 
-      const fileResult = await this.storageService.getFileInfo(params.fileId);
+      const fileResult = await this.storageService.getFileInfo(params.fileId, params.includeExpired === true);
       if (!fileResult.success) {
         if (fileResult.error?.includes('not found')) throw new NotFoundException(`File with ID ${params.fileId} not found`);
         if (fileResult.error?.includes('expired')) throw new NotFoundException(`File with ID ${params.fileId} has expired`);
@@ -134,7 +144,7 @@ export class FilesService {
       const idValidation = ValidationUtil.validateFileId(params.fileId);
       if (!idValidation.isValid) throw new BadRequestException(`File ID validation failed: ${idValidation.errors.join(', ')}`);
 
-      const fileResult = await this.storageService.getFileInfo(params.fileId);
+      const fileResult = await this.storageService.getFileInfo(params.fileId, params.includeExpired === true);
       if (!fileResult.success) {
         if (fileResult.error?.includes('not found')) throw new NotFoundException(`File with ID ${params.fileId} not found`);
         if (fileResult.error?.includes('expired') && !params.includeExpired) throw new NotFoundException(`File with ID ${params.fileId} has expired`);
@@ -211,10 +221,8 @@ export class FilesService {
 
   async fileExists(fileId: string, includeExpired: boolean = false): Promise<boolean> {
     try {
-      const fileResult = await this.storageService.getFileInfo(fileId);
-      if (!fileResult.success) return false;
-      if ((fileResult as any).error?.includes('expired') && !includeExpired) return false;
-      return true;
+      const fileResult = await this.storageService.getFileInfo(fileId, includeExpired);
+      return !!fileResult.success;
     } catch (error: any) {
       this.logger.error(`File exists check failed: ${error.message}`, error.stack);
       return false;

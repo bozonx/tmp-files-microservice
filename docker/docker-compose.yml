@@ -1,7 +1,7 @@
 services:
-  nestjs-boilerplate:
-    image: bonzox/nestjs-boilerplate:latest
-    container_name: nestjs-boilerplate
+  tmp-files-microservice:
+    image: bonzox/tmp-files-microservice:latest
+    container_name: tmp-files-microservice
     ports:
       - '8080:80'
     environment:

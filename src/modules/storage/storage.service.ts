@@ -2,8 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { fileTypeFromBuffer } from 'file-type';
+// Use dynamic import for ESM-only module 'file-type' inside methods to avoid CJS interop issues
 import { v4 as uuidv4 } from 'uuid';
+import type { StorageAppConfig } from '@config/storage.config';
 
 import {
   FileInfo,
@@ -34,14 +35,15 @@ export class StorageService {
 
   private getConfig(): StorageConfig {
     if (!this.config) {
-      const basePath = this.configService.get<string>('STORAGE_DIR', './storage');
+      const storageCfg = this.configService.get<StorageAppConfig>('storage');
+      const basePath = storageCfg?.basePath || './storage';
       const absoluteBasePath = path.isAbsolute(basePath) ? basePath : path.resolve(basePath);
 
       this.config = {
         basePath: absoluteBasePath,
-        maxFileSize: (this.configService.get<number>('MAX_FILE_SIZE_MB', 100) as number) * 1024 * 1024,
-        allowedMimeTypes: (this.configService.get<string[]>('ALLOWED_MIME_TYPES', []) as string[]),
-        enableDeduplication: this.configService.get<boolean>('ENABLE_DEDUPLICATION', true) as boolean,
+        maxFileSize: storageCfg?.maxFileSize ?? 100 * 1024 * 1024,
+        allowedMimeTypes: storageCfg?.allowedMimeTypes ?? [],
+        enableDeduplication: storageCfg?.enableDeduplication ?? true,
       } as StorageConfig;
 
       this.metadataPath = path.join(this.config.basePath, 'data.json');
@@ -116,6 +118,7 @@ export class StorageService {
         };
       }
 
+      const { fileTypeFromBuffer } = await import('file-type');
       const detectedType = await fileTypeFromBuffer(fileBuffer);
       const mimeType = detectedType?.mime || file.mimetype;
 
@@ -128,7 +131,7 @@ export class StorageService {
 
       const hash = HashUtil.hashBuffer(fileBuffer);
 
-      if (config.enableDeduplication && allowDuplicate !== false) {
+      if (config.enableDeduplication && allowDuplicate !== true) {
         const existingFile = await this.findFileByHash(hash);
         if (existingFile) {
           return {
@@ -183,7 +186,7 @@ export class StorageService {
     }
   }
 
-  async getFileInfo(fileId: string): Promise<FileOperationResult> {
+  async getFileInfo(fileId: string, includeExpired: boolean = false): Promise<FileOperationResult> {
     try {
       const metadata = await this.loadMetadata();
       const fileInfo = metadata.files[fileId];
@@ -192,7 +195,7 @@ export class StorageService {
         return { success: false, error: `File with ID ${fileId} not found` };
       }
 
-      if (DateUtil.isExpired(fileInfo.expiresAt)) {
+      if (DateUtil.isExpired(fileInfo.expiresAt) && !includeExpired) {
         return { success: false, error: `File with ID ${fileId} has expired` };
       }
 
