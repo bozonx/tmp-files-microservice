@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Unreleased
+
+- Docs: README rewritten in English and focused on production usage (Docker/Compose/Bare-metal), env vars summary aligned with `.env.production.example`, cURL and endpoint sections clarified.
+- Docs: `docs/dev.md` translated to English and focused on development workflows (scripts, tests, lint/format, debugging, notes).
+
 ## 0.2.1 - 2025-11-02
 
 - Unified storage configuration usage via `@config/storage.config` in `StorageService` (no direct env reads)

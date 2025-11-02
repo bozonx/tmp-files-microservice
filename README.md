@@ -1,152 +1,147 @@
-# Микросервис временных файлов (NestJS + Fastify)
 
-REST-сервис для временного хранения файлов с TTL, дедупликацией и плановой очисткой. Построен на NestJS + Fastify.
+# Temporary Files Microservice (NestJS + Fastify)
 
-## Что включено
+Production-ready microservice for temporary file storage with TTL, content deduplication, search, and scheduled cleanup. Built with NestJS + Fastify.
 
-- 🏥 Простой health-check эндпоинт `/{API_BASE_PATH}/{API_VERSION}/health`
-- 📊 Логирование через Pino (JSON в prod)
-- 🛡️ Глобальный фильтр ошибок
-- ⚡ Fastify
-- 🧪 Настроенные Jest-тесты (unit и e2e)
-- 🐳 Готовность к работе в Docker
-- 🚫 Без встроенной авторизации; Swagger и GraphQL отсутствуют (аутентификация предполагается на уровне API Gateway)
+## What’s included
 
-## Описание
+- Health-check endpoint `/{API_BASE_PATH}/{API_VERSION}/health`
+- JSON logging via Pino (minimal in production)
+- Global error filter and validation
+- Fast and lightweight Fastify HTTP server
+- Unit and E2E tests (Jest)
+- Docker/Docker Compose support
+- No built-in auth; expose behind your API Gateway
 
-Сервис принимает файлы по REST (`multipart/form-data`), хранит их ограниченное время (TTL в секундах), предоставляет операции получения метаданных, скачивания, удаления, поиска и статистики. Дедупликация по SHA-256 предотвращает хранение идентичных файлов.
+## Overview
 
-## Возможности
+The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttl` (in seconds), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
 
-- Загрузка файла с указанием `ttl` (секунды) и произвольных `metadata` (JSON)
-- Дедупликация по хэшу содержимого
-- Поиск с фильтрами (MIME, размер, даты), пагинация
-- Получение агрегированной статистики
-- Проверка существования файла и статуса просрочки
-- Простая проверка здоровья сервиса: `GET /{API_BASE_PATH}/{API_VERSION}/health` возвращает `{ status: "ok" }`
+## Quick start (production)
 
-## Быстрый старт
+Choose one of the options below.
 
-Требования:
-
-- Node.js 22+
-- pnpm 10+
+### Option A — Docker Compose (prebuilt image)
 
 ```bash
-# 1) Установка зависимостей
+# Start service
+docker compose -f docker/docker-compose.yml up -d
+
+# Health check
+curl http://localhost:8080/api/v1/health
+```
+
+Default base URL with Compose: `http://localhost:8080/api/v1`
+
+Notes:
+- The provided Compose file uses a prebuilt image. Replace the image reference if you maintain a private registry.
+- To customize environment variables, edit `docker/docker-compose.yml` (environment section) or switch to using an `env_file` and point it to `.env.production`.
+
+### Option B — Build your own Docker image
+
+```bash
+# 1) Build application
 pnpm install
+pnpm build
 
-# 2) Окружение (prod)
+# 2) Build image (Dockerfile expects prebuilt dist/)
+docker build -f docker/Dockerfile -t tmp-files-microservice:local .
+
+# 3) Run container (reads env from .env.production)
 cp env.production.example .env.production
+docker run -d --name tmp-files-microservice \
+  --env-file ./.env.production -p 8080:80 \
+  tmp-files-microservice:local
 
-# 3) Сборка и запуск (prod)
+# 4) Health check
+curl http://localhost:8080/api/v1/health
+```
+
+### Option C — Bare-metal (Node.js)
+
+```bash
+pnpm install
+cp env.production.example .env.production
 pnpm build
 pnpm start:prod
 ```
 
-URL по умолчанию (prod): `http://localhost:80/api/v1`
-Для Docker Compose: `http://localhost:8080/api/v1`
+Default base URL: `http://localhost:80/api/v1`
 
-Подробно: `docs/quick-start.md`.
+## Environment variables
 
-## Переменные окружения
-
-Файлы окружения:
-
-- `.env.production`
-- `.env` (опционально)
-
-Источник истины для переменных: `.env.production.example`.
-
-Ключевые переменные:
+Source of truth: `.env.production.example`
 
 - `NODE_ENV` — `production|development|test`
-- `LISTEN_HOST` — например, `0.0.0.0` или `localhost`
-- `LISTEN_PORT` — например, `80` или `3000`
-- `API_BASE_PATH` — префикс API (по умолчанию `api`)
-- `API_VERSION` — версия API (по умолчанию `v1`)
+- `LISTEN_HOST` — e.g. `0.0.0.0` or `localhost`
+- `LISTEN_PORT` — e.g. `80` or `3000`
+- `API_BASE_PATH` — API prefix (default `api`)
+- `API_VERSION` — API version (default `v1`)
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
-- `TZ` — таймзона (по умолчанию `UTC`)
-- `SERVICE_NAME` — имя сервиса для логов (по умолчанию `tmp-files-microservice`)
+- `TZ` — timezone (default `UTC`)
+- `SERVICE_NAME` — service name in logs (default `tmp-files-microservice`)
+- Storage-related:
+  - `STORAGE_DIR` — base directory for files and metadata
+  - `MAX_FILE_SIZE_MB` — maximum upload size (MB)
+  - `ALLOWED_MIME_TYPES` — JSON array of allowed types, empty = allow all
+  - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
+  - `MAX_TTL_MIN` — maximum TTL in minutes (default 10080 = 7 days)
+  - `CLEANUP_CRON` — cleanup schedule (default every 10 minutes)
 
-## Эндпоинты
+## Endpoints (summary)
 
-- `GET /{API_BASE_PATH}/{API_VERSION}/health` — проверка состояния
-- `POST /{API_BASE_PATH}/{API_VERSION}/files` — загрузка файла (multipart/form-data)
-  - Поля: `file` (binary), `ttl` (integer, секунды), `metadata` (string, JSON, опционально), `allowDuplicate` (`true|false`, опционально), `customFilename` (string, опционально)
-- `GET /{API_BASE_PATH}/{API_VERSION}/files/:id` — информация о файле
-  - Query: `includeExpired=true|false`
-- `GET /{API_BASE_PATH}/{API_VERSION}/files/:id/download` — скачивание файла
-  - Query: `includeExpired=true|false`
-- `DELETE /{API_BASE_PATH}/{API_VERSION}/files/:id` — удаление файла
-  - Query: `force=true|false`
-- `GET /{API_BASE_PATH}/{API_VERSION}/files` — поиск/листинг файлов
-  - Query: `mimeType`, `minSize`, `maxSize`, `uploadedAfter`, `uploadedBefore`, `expiredOnly`, `limit`, `offset`
-- `GET /{API_BASE_PATH}/{API_VERSION}/files/stats` — агрегированная статистика
-- `GET /{API_BASE_PATH}/{API_VERSION}/files/:id/exists` — проверка существования файла
-  - Query: `includeExpired=true|false`
+- `GET /{base}/health` — service health
+- `POST /{base}/files` — upload (multipart/form-data)
+- `GET /{base}/files/:id` — file info
+- `GET /{base}/files/:id/download` — file download
+- `DELETE /{base}/files/:id` — delete file
+- `GET /{base}/files` — list/search with filters
+- `GET /{base}/files/stats` — aggregated stats
+- `GET /{base}/files/:id/exists` — existence check
 
-Подробнее: `docs/api-specification.md`
+Details: `docs/api-specification.md`
 
-## Примеры (cURL)
+## cURL examples
 
-Загрузка файла (без авторизации):
+Upload (no auth at service level):
 
 ```bash
 curl -X POST \
   -F "file=@./README.md" \
   -F "ttl=3600" \
-  http://localhost:3000/api/v1/files | jq
+  http://localhost:8080/api/v1/files | jq
 ```
 
-Получение информации:
+Info:
 
 ```bash
 FILE_ID="<uuid>"
-curl -s http://localhost:3000/api/v1/files/$FILE_ID | jq
+curl -s http://localhost:8080/api/v1/files/$FILE_ID | jq
 ```
 
-Скачивание файла:
+Download:
 
 ```bash
-curl -L -o downloaded.bin http://localhost:3000/api/v1/files/$FILE_ID/download
+curl -L -o downloaded.bin http://localhost:8080/api/v1/files/$FILE_ID/download
 ```
 
-Удаление файла:
+Delete:
 
 ```bash
-curl -s -X DELETE http://localhost:3000/api/v1/files/$FILE_ID | jq
+curl -s -X DELETE http://localhost:8080/api/v1/files/$FILE_ID | jq
 ```
 
-Больше примеров: `docs/usage-examples.md`.
+More examples: `docs/usage-examples.md`.
 
-## Тесты
-См. инструкции в `docs/dev.md`.
+## Documentation
 
-## Docker
+- `docs/quick-start.md` — quick start
+- `docs/api-specification.md` — REST API specification
+- `docs/usage-examples.md` — cURL examples
+- `dev_docs/STORAGE_MODULE.md` — storage module details
+- `docs/dev.md` — development guide
+- `docs/CHANGELOG.md` — changes
 
-- Dockerfile ожидает уже собранный `dist/`
-- Пример запуска — `docker/docker-compose.yml`
-
-```bash
-# Сборка приложения
-pnpm build
-
-# Локальный запуск через compose (без cd)
-docker compose -f docker/docker-compose.yml up -d --build
-```
-
-После запуска (compose): `http://localhost:8080/api/v1/health`
-
-## Документация
-
-- `docs/quick-start.md` — быстрый старт
-- `docs/api-specification.md` — спецификация REST API (без авторизации)
-- `docs/usage-examples.md` — практические примеры cURL
-- `dev_docs/STORAGE_MODULE.md` — детали модуля хранилища
-- `docs/dev.md` — руководство по разработке
-- `docs/CHANGELOG.md` — изменения
-
-## Лицензия
+## License
 
 MIT

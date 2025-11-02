@@ -1,64 +1,73 @@
-# Руководство по разработке (dev)
+# Development Guide (dev)
 
-## Требования
+## Requirements
 
 - Node.js 22+
 - pnpm 10+
 
-## Быстрый старт (dev)
+## Quick start (dev)
 
 ```bash
-# 1) Установка зависимостей
+# 1) Install dependencies
 pnpm install
 
-# 2) Окружение (dev)
+# 2) Configure environment (dev)
 cp env.development.example .env.development
 
-# 3) Запуск в режиме разработки (watch)
+# 3) Run in development (watch mode)
 pnpm start:dev
 ```
 
-- URL по умолчанию (dev): `http://localhost:3000/api/v1`
+- Default dev base URL: `http://localhost:3000/api/v1`
 
-## Тесты
+## Tests
 
-Проекты Jest разделены на `unit` и `e2e`.
+Jest projects are split into `unit` and `e2e`.
 
 ```bash
-# Все тесты
+# All tests
 pnpm test
 
-# Unit-тесты
+# Unit tests
 pnpm test:unit
 
-# E2E-тесты
+# E2E tests
 pnpm test:e2e
 
-# Непрерывный прогон
+# Watch mode
 pnpm test:watch
 
-# Покрытие
+# Coverage
 pnpm test:cov
 
-# Отладка
+# Debug tests
 pnpm test:unit:debug
 pnpm test:e2e:debug
 ```
 
-## Качество кода
+## Code quality
 
 ```bash
-# Линт
+# Lint
 pnpm lint
 
-# Форматирование
+# Format
 pnpm format
 ```
 
-## Полезно знать
+## Debugging the app
 
-- Включена глобальная `ValidationPipe` (whitelist, forbidNonWhitelisted, transform).
-- В dev используется `pino-pretty` c более подробными логами.
-- В prod игнорируется автологирование `/health`; в dev — логируется.
-- Чувствительные заголовки редактируются в логах (`authorization`, `x-api-key`).
-- Аликсы путей TypeScript/Jest: `@/*`, `@common/*`, `@modules/*`, `@config/*`, `@test/*`.
+```bash
+# Start Nest in debug with watch
+pnpm start:debug
+```
+
+Attach your debugger to the Node.js inspector port output by the command.
+
+## Useful notes
+
+- Global `ValidationPipe` is enabled (whitelist, forbidNonWhitelisted, transform).
+- Dev uses `pino-pretty` with more verbose logs; prod uses JSON logs.
+- Health route auto-logging is minimized in prod.
+- Sensitive headers are redacted in logs (`authorization`, `x-api-key`).
+- Path aliases for TypeScript/Jest: `@/*`, `@common/*`, `@modules/*`, `@config/*`, `@test/*`.
