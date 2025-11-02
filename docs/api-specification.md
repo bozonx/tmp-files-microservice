@@ -29,7 +29,7 @@
   - `file` — бинарное содержимое (обязательно)
   - `ttl` — integer (секунды, по умолчанию 3600 на уровне контроллера)
   - `metadata` — string (JSON), опционально
-  - `allowDuplicate` — `true|false`, опционально (по умолчанию `true`)
+  - `allowDuplicate` — `true|false`, опционально (по умолчанию false)
   - `customFilename` — string, опционально
 - Успешный ответ 201:
 ```json

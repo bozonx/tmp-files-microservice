@@ -67,6 +67,7 @@ URL по умолчанию (prod): `http://localhost:80/api/v1`
 - `API_VERSION` — версия API (по умолчанию `v1`)
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
 - `TZ` — таймзона (по умолчанию `UTC`)
+- `SERVICE_NAME` — имя сервиса для логов (по умолчанию `tmp-files-microservice`)
 
 ## Эндпоинты
 

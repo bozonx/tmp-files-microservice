@@ -1,7 +1,7 @@
 {
-  "name": "microservice-boilerplate",
+  "name": "tmp-files-microservice",
   "version": "0.1.0",
-  "description": "NestJS + Fastify microservice boilerplate with health checks",
+  "description": "Temporary files microservice",
   "main": "dist/main.js",
   "scripts": {
     "build": "nest build",
