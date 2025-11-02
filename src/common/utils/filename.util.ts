@@ -1,5 +1,5 @@
 import { extname, basename, dirname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { HashUtil } from './hash.util';
 
 export class FilenameUtil {
@@ -19,7 +19,7 @@ export class FilenameUtil {
     const cleanName = this.sanitizeFilename(originalName);
     const baseName = this.removeExtension(cleanName);
     const shortName = baseName.length > 20 ? baseName.substring(0, 20) : baseName;
-    const uuid = uuidv4().substring(0, 8);
+    const uuid = randomUUID().replace(/-/g, '').substring(0, 8);
     return `${shortName}_${uuid}${extension}`;
   }
 

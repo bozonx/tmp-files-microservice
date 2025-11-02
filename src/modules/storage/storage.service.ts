@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 // Use dynamic import for ESM-only module 'file-type' inside methods to avoid CJS interop issues
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import type { StorageAppConfig } from '@config/storage.config';
 
 import {
@@ -141,7 +141,7 @@ export class StorageService {
         }
       }
 
-      const fileId = uuidv4();
+      const fileId = randomUUID();
       const safeFilename = FilenameUtil.generateSafeFilename(file.originalname, hash);
       const storedFilename = `${fileId}_${safeFilename}`;
 
