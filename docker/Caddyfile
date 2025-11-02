@@ -1,0 +1,41 @@
+
+:80 {
+    # Shared Bearer auth: single token из {env.AUTH_TOKEN}
+    @authed expression `
+        let auth = header.Authorization[0];
+        let token = auth.startsWith("Bearer ") ? auth.substring(7).trim() : "";
+        token.length() > 0 && token == "{env.AUTH_TOKEN}"
+    `
+
+    # Outer handle: только если authed
+    handle @authed {
+    
+        handle /tmp-files* {
+            uri strip_prefix /tmp-files
+
+            reverse_proxy tmpfilesmicroservice:80 {
+                header_up X-Forwarded-Proto {http.request.scheme}
+                header_up X-Forwarded-For {http.request.remote.host}
+                header_up X-Real-IP {http.request.remote.host}
+
+                health_uri /api/v1/health
+                health_interval 30s
+            }
+        }
+
+        # Fallback: authed, но invalid path
+        handle {
+            respond "Forbidden: Invalid endpoint" 403 {
+                close
+            }
+        }
+    }
+
+    # Global fallback: не authed
+    handle {
+        respond "Unauthorized" 401 {
+            close
+        }
+    }
+}
+

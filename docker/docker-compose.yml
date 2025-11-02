@@ -1,6 +1,6 @@
 services:
   tmp-files-microservice:
-    image: bonzox/tmp-files-microservice:latest
+    image: ghcr.io/bozonx/tmp-files-microservice:latest
     container_name: tmp-files-microservice
     ports:
       - '8080:80'
