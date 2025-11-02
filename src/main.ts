@@ -27,6 +27,13 @@ async function bootstrap() {
 
   const appConfig = configService.get<AppConfig>('app')!;
 
+  // Register multipart for file uploads with size limits from storage config
+  await (app as any).register(require('@fastify/multipart'), {
+    limits: {
+      fileSize: (configService.get('storage') as any)?.maxFileSize ?? 100 * 1024 * 1024,
+    },
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );

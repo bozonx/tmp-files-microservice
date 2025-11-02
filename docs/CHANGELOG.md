@@ -1,19 +1,11 @@
 # CHANGELOG
 
-## Unreleased
+## 0.2.0 - 2025-11-02
 
-- README ориентирован на production-использование (убраны dev-инструкции)
-- Добавлен `docs/dev.md` с инструкциями по разработке и dev-режиму
-- Уточнены prod URL и Docker Compose команды в README
-- В разделе env добавлено упоминание `TZ` и что источником истины является `.env.production.example`
-
-## 0.15.0 — Boilerplate refactor
-
-- Полностью удалены функциональности STT, GraphQL и Auth
-- Оставлен только модуль Health (простой health-check)
-- Упрощены конфиги окружения (`.env.*`)
-- Обновлён `AppModule` и логирование (service: `nestjs-boilerplate`)
-- Очищены и пересобраны тесты (unit + e2e только для health)
-- Переработан `docker-compose.yml` до минимального примера (локальная сборка)
-- Обновлён `README.md` (рус.)
-- Удалены устаревшие документы в `docs/` (STT/Auth/GraphQL)
+- Migrated business logic for temporary file storage from legacy service (`_old`) into boilerplate
+- Implemented REST-only API: upload, info, download, delete, list, stats, exists
+- Added Storage, Files, and Cleanup modules (Nest Schedule-based cleanup)
+- Wired Fastify multipart and global API prefix using boilerplate config
+- Added storage configuration (`src/config/storage.config.ts`) and env examples
+- Brought essential developer docs to `dev_docs/STORAGE_MODULE.md`
+- Expanded Jest config and added a basic StorageService unit test

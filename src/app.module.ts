@@ -6,16 +6,22 @@ import { HealthModule } from '@modules/health/health.module';
 import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
 import appConfig from '@config/app.config';
 import type { AppConfig } from '@config/app.config';
+import storageConfig from '@config/storage.config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { StorageModule } from '@modules/storage/storage.module';
+import { FilesModule } from '@modules/files/files.module';
+import { CleanupModule } from '@modules/cleanup/cleanup.module';
 import pkg from '../package.json';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig],
+      load: [appConfig, storageConfig],
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
       cache: true,
     }),
+    ScheduleModule.forRoot(),
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
@@ -89,6 +95,9 @@ import pkg from '../package.json';
       },
     }),
     HealthModule,
+    StorageModule,
+    FilesModule,
+    CleanupModule,
   ],
   controllers: [],
   providers: [
