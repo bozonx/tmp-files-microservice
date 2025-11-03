@@ -1,7 +1,10 @@
 
 :80 {
-    # Shared Bearer auth: single token из {env.AUTH_TOKEN}
-    @authed `{http.request.header.Authorization}.startsWith("Bearer ") && {http.request.header.Authorization}.substring(7).trim() == {env.AUTH_TOKEN}`
+    # Shared Bearer auth: single token из {env.AUTH_TOKENS}
+    @authed <<CEL
+        header_regexp('auth', 'Authorization', '^\\s*Bearer\\s+(.+?)\\s*$') &&
+        ((',' + {env.AUTH_TOKENS} + ',').contains(',' + {re.auth.1} + ','))
+    CEL
 
     # Outer handle: только если authed
     handle @authed {
@@ -34,4 +37,8 @@
         }
     }
 }
+
+
+
+
 
