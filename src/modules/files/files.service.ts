@@ -5,6 +5,7 @@ import { StorageService } from '@modules/storage/storage.service';
 import { ValidationUtil } from '@common/utils/validation.util';
 import { UploadedFile, FileInfo } from '@common/interfaces/file.interface';
 import type { AppConfig } from '@config/app.config';
+import type { StorageAppConfig } from '@config/storage.config';
 import { FilenameUtil } from '@common/utils/filename.util';
 
 interface UploadFileParams {
@@ -52,7 +53,8 @@ export class FilesService {
 
   constructor(private readonly storageService: StorageService, private readonly configService: ConfigService) {
     this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE_MB', 100) * 1024 * 1024;
-    this.allowedMimeTypes = this.configService.get<string[]>('ALLOWED_MIME_TYPES', []);
+    const storageCfg = this.configService.get<StorageAppConfig>('storage');
+    this.allowedMimeTypes = storageCfg?.allowedMimeTypes ?? [];
   }
 
   private generateApiUrl(endpoint: string, params: Record<string, string> = {}): string {

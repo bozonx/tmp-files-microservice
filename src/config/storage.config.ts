@@ -10,13 +10,23 @@ export interface StorageAppConfig {
 
 function parseAllowedMimeTypes(input?: string): string[] {
   if (!input || input.trim() === '') return [];
+  // Try JSON array first for backward compatibility
   try {
     const parsed = JSON.parse(input);
     if (Array.isArray(parsed)) {
-      return parsed.filter((v) => typeof v === 'string' && v.trim() !== '');
+      return parsed
+        .filter((v) => typeof v === 'string')
+        .map((v) => v.trim())
+        .filter((v) => v !== '');
     }
-  } catch {}
-  return [];
+  } catch {
+    // ignore and fallback to CSV parsing
+  }
+  // Fallback: comma-separated list
+  return input
+    .split(',')
+    .map((v) => v.trim())
+    .filter((v) => v !== '');
 }
 
 export default registerAs('storage', (): StorageAppConfig => {
