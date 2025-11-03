@@ -79,7 +79,6 @@ Source of truth: `.env.production.example`
 - `API_VERSION` — API version (default `v1`)
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
 - `TZ` — timezone (default `UTC`)
-- `SERVICE_NAME` — service name in logs (default `tmp-files-microservice`)
 - Storage-related:
   - `STORAGE_DIR` — base directory for files and metadata
   - `MAX_FILE_SIZE_MB` — maximum upload size (MB)
