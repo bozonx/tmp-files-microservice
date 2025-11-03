@@ -8,6 +8,7 @@ ENV LISTEN_HOST=0.0.0.0
 ENV LISTEN_PORT=80
 ENV TZ=UTC
 ENV LOG_LEVEL=warn
+ENV STORAGE_DIR=/data
 
 # Install pnpm
 RUN corepack enable
