@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Breaking: STORAGE_DIR environment variable is now required; service fails to start if missing. Docs and env examples updated.
 - Docs: README rewritten in English and focused on production usage (Docker/Compose/Bare-metal), env vars summary aligned with `.env.production.example`, cURL and endpoint sections clarified.
 - Docs: `docs/dev.md` translated to English and focused on development workflows (scripts, tests, lint/format, debugging, notes).
 

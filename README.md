@@ -80,7 +80,7 @@ Source of truth: `.env.production.example`
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
-  - `STORAGE_DIR` — base directory for files and metadata
+  - `STORAGE_DIR` — base directory for files and metadata. REQUIRED. If missing, the service fails to start.
   - `MAX_FILE_SIZE_MB` — maximum upload size (MB)
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)

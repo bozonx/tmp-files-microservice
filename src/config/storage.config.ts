@@ -30,8 +30,12 @@ function parseAllowedMimeTypes(input?: string): string[] {
 }
 
 export default registerAs('storage', (): StorageAppConfig => {
+  const dir = process.env.STORAGE_DIR?.trim();
+  if (!dir) {
+    throw new Error('Storage config validation error: STORAGE_DIR environment variable is required');
+  }
   return {
-    basePath: process.env.STORAGE_DIR || './storage',
+    basePath: dir,
     maxFileSize: (parseInt(process.env.MAX_FILE_SIZE_MB || '100', 10) || 100) * 1024 * 1024,
     allowedMimeTypes: parseAllowedMimeTypes(process.env.ALLOWED_MIME_TYPES),
     enableDeduplication: process.env.ENABLE_DEDUPLICATION !== 'false',

@@ -36,7 +36,10 @@ export class StorageService {
   private getConfig(): StorageConfig {
     if (!this.config) {
       const storageCfg = this.configService.get<StorageAppConfig>('storage');
-      const basePath = storageCfg?.basePath || './storage';
+      if (!storageCfg?.basePath) {
+        throw new Error('Storage base path is not configured. Set STORAGE_DIR environment variable.');
+      }
+      const basePath = storageCfg.basePath;
       const absoluteBasePath = path.isAbsolute(basePath) ? basePath : path.resolve(basePath);
 
       this.config = {

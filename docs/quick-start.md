@@ -7,8 +7,11 @@
 ```bash
 pnpm install
 cp env.development.example .env.development
+# Укажите STORAGE_DIR в .env.development перед запуском
 pnpm start:dev
 ```
+
+Внимание: переменная окружения STORAGE_DIR обязательна. Приложение завершит запуск с ошибкой, если она не указана.
 
 По умолчанию dev URL: `http://localhost:3000/api/v1`
 
