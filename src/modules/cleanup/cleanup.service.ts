@@ -1,15 +1,49 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import { StorageService } from '@modules/storage/storage.service';
-import { DateUtil } from '@common/utils/date.util';
 
 @Injectable()
-export class CleanupService {
+export class CleanupService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CleanupService.name);
+  private readonly intervalName = 'cleanup';
 
-  constructor(private readonly storageService: StorageService) {}
+  constructor(
+    private readonly storageService: StorageService,
+    private readonly configService: ConfigService,
+    private readonly schedulerRegistry: SchedulerRegistry,
+  ) {}
 
-  @Cron('0 */10 * * * *')
+  onModuleInit(): void {
+    const minutesRaw = this.configService.get<string>('CLEANUP_INTERVAL_MINUTES');
+    const minutes = Number(minutesRaw ?? 10);
+    const validMinutes = Number.isFinite(minutes) ? Math.floor(minutes) : 10;
+
+    if (validMinutes <= 0) {
+      this.logger.log('Cleanup interval disabled (CLEANUP_INTERVAL_MINUTES <= 0)');
+      return;
+    }
+
+    const intervalMs = validMinutes * 60_000;
+    const intervalRef = setInterval(() => {
+      void this.handleScheduledCleanup();
+    }, intervalMs);
+
+    this.schedulerRegistry.addInterval(this.intervalName, intervalRef);
+    this.logger.log(`Scheduled cleanup with interval: every ${validMinutes} minute(s)`);
+  }
+
+  onModuleDestroy(): void {
+    try {
+      const interval = this.schedulerRegistry.getInterval(this.intervalName);
+      clearInterval(interval);
+      this.schedulerRegistry.deleteInterval(this.intervalName);
+    } catch {
+      // ignore if not registered
+    }
+  }
+
   async handleScheduledCleanup(): Promise<void> {
     this.logger.log('Starting scheduled cleanup');
     const start = Date.now();
