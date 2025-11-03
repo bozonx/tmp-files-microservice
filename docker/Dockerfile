@@ -9,6 +9,7 @@ ENV LISTEN_PORT=80
 ENV TZ=UTC
 ENV LOG_LEVEL=warn
 ENV STORAGE_DIR=/storage
+ENV CLEANUP_INTERVAL_MINUTES=10
 
 # Install pnpm
 RUN corepack enable

@@ -46,6 +46,8 @@ const config: Config = {
       coveragePathIgnorePatterns: ['/node_modules/', '/dist/', '/test/', '.module.ts$', 'main.ts$'],
       transform,
       moduleNameMapper,
+      modulePathIgnorePatterns: ['<rootDir>/dist'],
+      watchPathIgnorePatterns: ['<rootDir>/dist'],
       // Global timeout for unit tests (default: 5 seconds)
       testTimeout: 5000,
     },
@@ -63,6 +65,8 @@ const config: Config = {
       coveragePathIgnorePatterns: ['/node_modules/', '/dist/', '/test/', '.module.ts$', 'main.ts$'],
       transform,
       moduleNameMapper,
+      modulePathIgnorePatterns: ['<rootDir>/dist'],
+      watchPathIgnorePatterns: ['<rootDir>/dist'],
       // Global timeout for e2e tests (default: 30 seconds)
       testTimeout: 30000,
     },

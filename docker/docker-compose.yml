@@ -3,22 +3,22 @@ services:
     image: ghcr.io/bozonx/tmp-files-microservice:latest
     container_name: tmp-files-microservice
     hostname: tmp-files-microservice
+    restart: unless-stopped
+    user: '1000:1000'
     ports:
       - '8080:80'
     environment:
-      # Basic app settings
-      - NODE_ENV=production
-      - LISTEN_HOST=0.0.0.0
       - LISTEN_PORT=80
       - TZ=UTC
-
-      # API prefix
       - API_BASE_PATH=api
-      - API_VERSION=v1
-
-      # Logging
       - LOG_LEVEL=warn
-    restart: unless-stopped
+      - MAX_FILE_SIZE_MB=100
+      #- ALLOWED_MIME_TYPES=
+      - ENABLE_DEDUPLICATION=true
+      - MAX_TTL_MIN=10080
+      - CLEANUP_INTERVAL_MINUTES=10
+    volumes:
+      - ./storage:/storage
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:80/api/v1/health || exit 1']
       interval: 30s
