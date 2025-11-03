@@ -11,6 +11,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { StorageModule } from '@modules/storage/storage.module';
 import { FilesModule } from '@modules/files/files.module';
 import { CleanupModule } from '@modules/cleanup/cleanup.module';
+import pkg from '../package.json';
 
 @Module({
   imports: [
@@ -26,14 +27,13 @@ import { CleanupModule } from '@modules/cleanup/cleanup.module';
       useFactory: (configService: ConfigService) => {
         const appConfig = configService.get<AppConfig>('app')!;
         const isDev = appConfig.nodeEnv === 'development';
-        const serviceName = process.env.SERVICE_NAME || 'tmp-files-microservice';
 
         return {
           pinoHttp: {
             level: appConfig.logLevel,
             timestamp: () => `,"@timestamp":"${new Date().toISOString()}"`,
             base: {
-              service: serviceName,
+              service: (pkg as any).name ?? 'app',
               environment: appConfig.nodeEnv,
             },
             transport: isDev
