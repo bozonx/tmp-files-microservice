@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CleanupService } from '@/modules/cleanup/cleanup.service';
 import { StorageService } from '@/modules/storage/storage.service';
+import { ConfigService } from '@nestjs/config';
+import { SchedulerRegistry } from '@nestjs/schedule';
 
 describe('CleanupService', () => {
   let service: CleanupService;
@@ -16,6 +18,9 @@ describe('CleanupService', () => {
       providers: [
         CleanupService,
         { provide: StorageService, useValue: storage },
+        // Disable interval during unit tests
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('0') } },
+        { provide: SchedulerRegistry, useValue: { addInterval: jest.fn(), getInterval: jest.fn(), deleteInterval: jest.fn() } },
       ],
     }).compile();
 

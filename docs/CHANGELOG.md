@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Breaking: STORAGE_DIR environment variable is now required; service fails to start if missing. Docs and env examples updated.
+- Change: Switched cleanup scheduling from cron to interval via `CLEANUP_INTERVAL_MINUTES` (set `0` to disable). Replaces `CLEANUP_CRON`.
+- Feature: Added REST endpoint `POST /{API_BASE_PATH}/{API_VERSION}/cleanup/run` to trigger cleanup on demand.
 - Docs: README rewritten in English and focused on production usage (Docker/Compose/Bare-metal), env vars summary aligned with `.env.production.example`, cURL and endpoint sections clarified.
 - Docs: `docs/dev.md` translated to English and focused on development workflows (scripts, tests, lint/format, debugging, notes).
 

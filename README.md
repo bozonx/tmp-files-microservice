@@ -80,12 +80,12 @@ Source of truth: `.env.production.example`
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
-  - `STORAGE_DIR` — base directory for files and metadata. REQUIRED. If missing, the service fails to start.
+  - `STORAGE_DIR` — базовый каталог для файлов и метаданных. ОБЯЗАТЕЛЬНО. При отсутствии переменной сервис не запускается.
   - `MAX_FILE_SIZE_MB` — maximum upload size (MB)
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 10080 = 7 days)
-  - `CLEANUP_CRON` — cleanup schedule (default every 10 minutes)
+  - `CLEANUP_INTERVAL_MINUTES` — cleanup interval in minutes (default 10, set 0 to disable)
 
 ## Endpoints (summary)
 
@@ -97,6 +97,7 @@ Source of truth: `.env.production.example`
 - `GET /{base}/files` — list/search with filters
 - `GET /{base}/files/stats` — aggregated stats
 - `GET /{base}/files/:id/exists` — existence check
+- `POST /{base}/cleanup/run` — run cleanup immediately
 
 Details: `docs/api-specification.md`
 
