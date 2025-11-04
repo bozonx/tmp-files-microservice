@@ -34,7 +34,7 @@
           "dist/nodes/TmpFiles/TmpFiles.node.js"
       ],
       "credentials": [
-          "dist/credentials/TmpFilesApi.credentials.js"
+          "dist/credentials/BozonxMicroservicesApi.credentials.js"
       ]
   },
     "devDependencies": {
