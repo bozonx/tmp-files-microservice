@@ -4,6 +4,7 @@
 
 - Node.js 22+
 - pnpm 10+
+- STORAGE_DIR
 
 ## Quick start (dev)
 
@@ -13,12 +14,14 @@ pnpm install
 
 # 2) Configure environment (dev)
 cp env.development.example .env.development
+# ВАЖНО: укажите STORAGE_DIR в .env.development перед запуском
 
 # 3) Run in development (watch mode)
 pnpm start:dev
 ```
 
-- Default dev base URL: `http://localhost:3000/api/v1`
+- Базовый URL (dev) по умолчанию: `http://localhost:3000/api/v1`
+- ВАЖНО: `STORAGE_DIR` обязательна; приложение не запустится, если переменная не задана.
 
 ## Tests
 

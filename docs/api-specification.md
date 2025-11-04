@@ -1,37 +1,37 @@
-# API Спецификация (REST-only)
+# API Specification (REST-only)
 
-Сервис предоставляет REST API без встроенной авторизации. Если требуется защита, используйте API Gateway. Swagger/OpenAPI и GraphQL отсутствуют.
+The service exposes a REST API with no built-in authentication. If protection is required, use an API Gateway. Swagger/OpenAPI and GraphQL are not provided.
 
-## Базовый путь
+## Base path
 
-- Базовый URL формируется как: `/{API_BASE_PATH}/v1`
-- По умолчанию: `/api/v1`
-- Переменная `API_BASE_PATH` задаётся через окружение (`.env`), без ведущих/замыкающих слешей.
+- The base URL is formed as: `/{API_BASE_PATH}/v1`
+- Default: `/api/v1`
+- The `API_BASE_PATH` variable is set via environment (`.env`), without leading or trailing slashes.
 
-## Форматы данных
+## Data formats
 
-- Загрузка файлов: `multipart/form-data`
-- Остальные запросы: `application/json`
+- File upload: `multipart/form-data`
+- Other requests: `application/json`
 
-## Типы и единицы
+## Types and units
 
-- `ttlMinutes` — целое число в минутах. По умолчанию — `1440` (1 сутки).
-- Даты в ISO-8601 (UTC).
-- Ограничение размера загрузки задаётся переменной `MAX_FILE_SIZE_MB` (источник истины). Это значение применяется и в Fastify multipart, и в сервисной валидации.
+- `ttlMinutes` — integer in minutes. Default is `1440` (1 day).
+- Dates use ISO-8601 (UTC).
+- Upload size limit is defined by `MAX_FILE_SIZE_MB` (single source of truth). This value is enforced by both Fastify multipart and service-level validation.
 
 ## Endpoints
 
 ### Health
 - GET `/{base}/health`
-- Ответ: `{ "status": "ok" }`
+- Response: `{ "status": "ok" }`
 
-### Загрузка файла
+### Upload file
 - POST `/{base}/files`
-- Тело (multipart/form-data):
-  - `file` — бинарное содержимое (обязательно)
-  - `ttlMinutes` — integer (минуты, по умолчанию 1440 на уровне контроллера)
-  - `metadata` — string (JSON), опционально. Любые свои метаданные
-- Успешный ответ 201:
+- Body (multipart/form-data):
+  - `file` — binary content (required)
+  - `ttlMinutes` — integer (minutes, controller default is 1440)
+  - `metadata` — string (JSON), optional. Arbitrary custom metadata
+- Success 201 response:
 ```json
 {
   "file": {
@@ -54,12 +54,12 @@
 }
 ```
 
-- Ошибки:
-  - 400 — ошибки валидации (например, недопустимый MIME, отрицательный размер, некорректный JSON в `metadata`)
-  - 413 — файл превышает максимальный допустимый размер (`MAX_FILE_SIZE_MB`)
-  - 500 — внутренняя ошибка
-  
-Пример ответа 413:
+- Errors:
+  - 400 — validation errors (e.g., invalid MIME, negative size, malformed JSON in `metadata`)
+  - 413 — file exceeds the maximum allowed size (`MAX_FILE_SIZE_MB`)
+  - 500 — internal error
+
+Example 413 response:
 ```json
 {
   "statusCode": 413,
@@ -71,36 +71,36 @@
 }
 ```
 
-### Информация о файле
+### File info
 - GET `/{base}/files/:id`
-- Ответ 200: как `file` объект из примера выше + `downloadUrl`, `deleteUrl`.
+- 200 response: same `file` object as above plus `downloadUrl`, `deleteUrl`.
 
-Ошибки: 400 (невалидный `id`), 404 (не найден или истёк), 500.
+Errors: 400 (invalid `id`), 404 (not found or expired), 500.
 
-### Скачивание файла
+### Download file
 - GET `/{base}/files/:id/download`
-- Ответ: бинарные данные файла + заголовки `Content-Type`, `Content-Length`, `Content-Disposition`.
+- Response: file binary data with `Content-Type`, `Content-Length`, `Content-Disposition` headers.
 
-Ошибки: 400, 404, 500. В ответах также выставляются no-cache заголовки.
+Errors: 400, 404, 500. Responses also include no-cache headers.
 
-### Удаление файла
+### Delete file
 - DELETE `/{base}/files/:id`
-- Ответ 200:
+- 200 response:
 ```json
 { "fileId": "uuid", "message": "File deleted successfully", "deletedAt": "2025-11-02T10:00:00.000Z" }
 ```
 
-Ошибки: 400, 404 (не найден), 500.
+Errors: 400, 404 (not found), 500.
 
-### Листинг/поиск файлов
+### List/search files
 - GET `/{base}/files`
-- Query (все опциональны):
+- Query (all optional):
   - `mimeType`
-  - `minSize`, `maxSize` (байты)
-  - `uploadedAfter`, `uploadedBefore` (ISO дата)
+  - `minSize`, `maxSize` (bytes)
+  - `uploadedAfter`, `uploadedBefore` (ISO date)
   - `expiredOnly` (true|false)
   - `limit`, `offset`
-- Ответ 200:
+- 200 response:
 ```json
 {
   "files": [ { "id": "uuid", "originalName": "file.txt", "mimeType": "text/plain", "size": 12, "uploadedAt": "...", "ttlMinutes": 60, "expiresAt": "...", "hash": "...", "isExpired": false, "timeRemainingMinutes": 60 } ],
@@ -109,41 +109,41 @@
 }
 ```
 
-### Статистика
+### Stats
 - GET `/{base}/files/stats`
-- Ответ 200:
+- 200 response:
 ```json
-{ "stats": { /* агрегаты */ }, "generatedAt": "2025-11-02T10:00:00.000Z" }
+{ "stats": { /* aggregates */ }, "generatedAt": "2025-11-02T10:00:00.000Z" }
 ```
 
-### Проверка существования
+### Existence check
 - GET `/{base}/files/:id/exists`
-- Ответ 200:
+- 200 response:
 ```json
 { "exists": true, "fileId": "uuid", "isExpired": false }
 ```
 
-- Поведение:
-  - Поле `isExpired` всегда присутствует и имеет тип boolean
-  - При невалидном `id` возвращается 400
+- Behavior:
+  - The `isExpired` field is always present and is a boolean
+  - 400 is returned for an invalid `id`
 
-### Ручная очистка
+### Manual cleanup
 - POST `/{base}/cleanup/run`
-- Описание: запускает процесс очистки просроченных файлов немедленно.
-- Ответ 200:
+- Description: triggers cleanup of expired files immediately.
+- 200 response:
 ```json
 { "success": true, "message": "Cleanup completed" }
 ```
 
-Ошибки: 500 (если очистка завершилась ошибкой)
+Errors: 500 (if cleanup failed)
 
-## Ошибки
-- 400: ошибки валидации (ID, TTL, размер и MIME, некорректный JSON)
-- 404: файл не найден или истёк
-- 413: файл слишком большой (источник лимита — `MAX_FILE_SIZE_MB`)
-- 500: внутренняя ошибка
+## Errors
+- 400: validation errors (ID, TTL, size and MIME, malformed JSON)
+- 404: file not found or expired
+- 413: file too large (limit source — `MAX_FILE_SIZE_MB`)
+- 500: internal error
 
-Структура ошибки (унифицированный формат):
+Error structure (unified format):
 ```json
 {
   "statusCode": 400,
@@ -151,6 +151,6 @@
   "path": "/api/v1/files/invalid",
   "method": "GET",
   "message": "File ID validation failed: File ID must contain only alphanumeric characters, hyphens, and underscores",
-  "error": { /* оригинальный ответ исключения или имя */ }
+  "error": { /* original exception response or name */ }
 }
 ```

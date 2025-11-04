@@ -68,23 +68,6 @@ pnpm start:prod
 
 Default base URL: `http://localhost:80/api/v1`
 
-### Option D — Local development (dev)
-
-```bash
-# Install dependencies
-pnpm install
-
-# Configure dev environment
-cp env.development.example .env.development
-# IMPORTANT: set STORAGE_DIR in .env.development before running
-
-# Run in watch mode
-pnpm start:dev
-```
-
-- Default dev base URL: `http://localhost:3000/api/v1`
-- Note: `STORAGE_DIR` is mandatory. The app will fail to start if not set.
-
 ## Environment variables
 
 Source of truth: `.env.production.example`
