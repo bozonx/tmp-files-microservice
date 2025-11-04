@@ -61,8 +61,7 @@ pnpm format
 ## Debugging the app
 
 ```bash
-# Start Nest in debug with watch
-pnpm start:debug
+# Start Nest in debug with watchpnpm start:debug
 ```
 
 Attach your debugger to the Node.js inspector port output by the command.
