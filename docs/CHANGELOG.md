@@ -9,6 +9,11 @@
 - Feature: Added REST endpoint `POST /{API_BASE_PATH}/v1/cleanup/run` to trigger cleanup on demand.
 - Docs: README rewritten in English and focused on production usage (Docker/Compose/Bare-metal), env vars summary aligned with `.env.production.example`, cURL and endpoint sections clarified.
 - Docs: `docs/dev.md` translated to English and focused on development workflows (scripts, tests, lint/format, debugging, notes).
+- Change: Standardized 413 (Payload Too Large) for oversized uploads; `MAX_FILE_SIZE_MB` is the single source of truth for upload size across multipart and service validation.
+- Change: `GET /files/:id/exists` now validates `id` and returns 400 on invalid values; response always includes boolean `isExpired`.
+- Docs: Expanded `docs/api-specification.md` with detailed success and error examples, explicit error format, and cleanup endpoint documentation.
+- Docs: README updated with error section and `MAX_FILE_SIZE_MB` notes.
+- Tests: Added unit test for 413 behavior and E2E tests for `exists` validation and `isExpired` presence.
 
 ## 0.2.1 - 2025-11-02
 

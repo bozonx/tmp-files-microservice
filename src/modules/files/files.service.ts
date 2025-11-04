@@ -113,7 +113,12 @@ export class FilesService {
     } catch (error: any) {
       const executionTime = Date.now() - startTime;
       this.logger.error(`File upload failed: ${error.message} (${executionTime}ms)`, error.stack);
-      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) throw error;
+      if (
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException ||
+        error instanceof PayloadTooLargeException
+      )
+        throw error;
       throw new InternalServerErrorException(`File upload failed: ${error.message}`);
     }
   }

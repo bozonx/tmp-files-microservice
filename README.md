@@ -97,7 +97,7 @@ Source of truth: `.env.production.example`
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
   - `STORAGE_DIR` — base directory for files and metadata. MANDATORY.
-  - `MAX_FILE_SIZE_MB` — maximum upload size (MB)
+  - `MAX_FILE_SIZE_MB` — maximum upload size (MB). Source of truth for upload limits; affects both Fastify multipart and service-side validation.
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
@@ -116,6 +116,13 @@ Source of truth: `.env.production.example`
 - `POST /{base}/cleanup/run` — run cleanup immediately
 
 Details: [docs/api-specification.md](docs/api-specification.md)
+
+## Errors
+
+- 400 — validation errors (invalid ID/TTL/MIME, malformed JSON)
+- 404 — file not found or expired (when `includeExpired`/`force` is not set)
+- 413 — file too large (controlled by `MAX_FILE_SIZE_MB`)
+- 500 — internal error
 
 ## cURL examples
 
