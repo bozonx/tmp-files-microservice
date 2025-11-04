@@ -13,7 +13,8 @@ export class FilesController {
       const data: any = await (request as any).file();
       if (!data) throw new BadRequestException('No file provided');
 
-      const ttl = data.fields.ttl ? parseInt(data.fields.ttl.value as string) : 3600;
+      const ttlMinutes = data.fields.ttl ? parseInt(data.fields.ttl.value as string) : 1440;
+      const ttl = Math.max(60, Math.floor(ttlMinutes * 60));
       let metadata: Record<string, any> = {};
       if (data.fields.metadata) {
         try { metadata = JSON.parse(data.fields.metadata.value as string); } catch { throw new BadRequestException('Invalid metadata JSON format'); }

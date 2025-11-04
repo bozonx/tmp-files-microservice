@@ -3,7 +3,7 @@ import { FileInfo, UploadedFile } from '@common/interfaces/file.interface';
 export class ValidationUtil {
   private static readonly DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024;
   private static readonly MIN_TTL_MIN = 1 * 60;
-  private static readonly DEFAULT_MAX_TTL = 30 * 24 * 60 * 60;
+  private static readonly DEFAULT_MAX_TTL = 31 * 24 * 60 * 60;
 
   static validateUploadedFile(
     file: UploadedFile,

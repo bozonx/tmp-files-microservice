@@ -85,7 +85,7 @@ export class TmpFiles implements INodeType {
 			try {
 				const sourceType = this.getNodeParameter('sourceType', i) as string;
 				const ttl = this.getNodeParameter('ttl', i) as number;
-				const ttlSeconds = Math.max(1, Math.floor(ttl * 60));
+				const ttlMinutes = Math.max(1, Math.floor(ttl));
 
 				const options: IHttpRequestOptions = {
 					method: 'POST',
@@ -98,7 +98,7 @@ export class TmpFiles implements INodeType {
 						throw new NodeOperationError(this.getNode(), 'File URL is required when source type is "URL"', { itemIndex: i });
 					}
 					options.json = true;
-					options.body = { url: fileUrl, ttl: ttlSeconds } as IDataObject;
+					options.body = { url: fileUrl, ttl: ttlMinutes } as IDataObject;
 				} else if (sourceType === 'binary') {
 					const binaryProperty = this.getNodeParameter('binaryProperty', i) as string;
 					const item = items[i];
@@ -118,7 +118,7 @@ export class TmpFiles implements INodeType {
 								contentType: mimeType || 'application/octet-stream',
 							},
 						},
-						ttl: String(ttlSeconds),
+						ttl: String(ttlMinutes),
 					};
 				} else {
 					throw new NodeOperationError(this.getNode(), `Unsupported source type: ${sourceType}`, { itemIndex: i });

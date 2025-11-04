@@ -74,7 +74,7 @@ export class FilesService {
       if (!v.isValid) throw new BadRequestException(`File validation failed: ${v.errors.join(', ')}`);
 
       const storageCfg = this.configService.get('storage') as any;
-      const ttlValidation = ValidationUtil.validateTTL(params.ttl, 60, storageCfg?.maxTtl ?? 30 * 24 * 3600);
+      const ttlValidation = ValidationUtil.validateTTL(params.ttl, 60, storageCfg?.maxTtl ?? 31 * 24 * 3600);
       if (!ttlValidation.isValid) throw new BadRequestException(`TTL validation failed: ${ttlValidation.errors.join(', ')}`);
 
       if (params.metadata) {
