@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Breaking: API now accepts input `ttl` in minutes (default 1440 = 1 day). Responses still return `ttl` in seconds.
+- Breaking: API parameter renamed to `ttlMinutes`. Both requests and responses use minutes (default 1440 = 1 day).
 - Change: Increased default `MAX_TTL_MIN` from 10080 (7 days) to 44640 (31 days). Updated code defaults, env examples, and docker-compose.
 - Breaking: STORAGE_DIR environment variable is now required; service fails to start if missing. Docs and env examples updated.
 - Change: Switched cleanup scheduling from cron to interval via `CLEANUP_INTERVAL_MINUTES` (set `0` to disable). Replaces `CLEANUP_CRON`.
@@ -15,7 +15,7 @@
 - Docs: README updated with error section and `MAX_FILE_SIZE_MB` notes.
 - Tests: Added unit test for 413 behavior and E2E tests for `exists` validation and `isExpired` presence.
 - Breaking: удалён параметр загрузки `customFilename`; он больше не поддерживается в API, коде и документации.
- - Breaking: удалён параметр `includeExpired` во всех эндпоинтах. Просроченные файлы всегда считаются недоступными: их нельзя получить, скачать или проверить существование (они считаются как "не найдены"). Исключения: листинг поддерживает `expiredOnly`, а удаление просроченных доступно с `force=true`.
+ - Breaking: удалён параметр `includeExpired` во всех эндпоинтах. Просроченные файлы всегда считаются недоступными: их нельзя получить, скачать или проверить существование (они считаются как "не найдены"). Исключения: листинг поддерживает `expiredOnly`, а удаление просроченных доступно без дополнительных параметров.
 
 ## 0.2.1 - 2025-11-02
 

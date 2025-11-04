@@ -15,7 +15,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 
 ## Overview
 
-The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttl` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
+The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttlMinutes` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
 
 ## Quick start
 
@@ -120,7 +120,7 @@ Details: [docs/api-specification.md](docs/api-specification.md)
 ## Errors
 
 - 400 — validation errors (invalid ID/TTL/MIME, malformed JSON)
-- 404 — file not found or expired (use `force=true` only for deleting expired files)
+- 404 — file not found
 - 413 — file too large (controlled by `MAX_FILE_SIZE_MB`)
 - 500 — internal error
 
@@ -135,7 +135,7 @@ BASE_URL="http://localhost:8080/api/v1"
 # BASE_URL="http://localhost:3000/api/v1"
 ```
 
-- `ttl` is provided in minutes (default 1440 = 1 day). In responses, `ttl` is returned in seconds.
+- `ttlMinutes` is provided in minutes (default 1440 = 1 day). In responses, `ttlMinutes` is also returned in minutes.
 
 - **Health**
 
@@ -148,7 +148,7 @@ curl -s "$BASE_URL/health"
 ```bash
 curl -s -X POST \
   -F "file=@./README.md" \
-  -F "ttl=60" \
+  -F "ttlMinutes=60" \
   "$BASE_URL/files" | jq
 ```
 
@@ -171,11 +171,6 @@ curl -L -o downloaded.bin "$BASE_URL/files/$FILE_ID/download"
 curl -s -X DELETE "$BASE_URL/files/$FILE_ID" | jq
 ```
 
-Force delete expired:
-
-```bash
-curl -s -X DELETE "$BASE_URL/files/$FILE_ID?force=true" | jq
-```
 
 - **List/Search**
 

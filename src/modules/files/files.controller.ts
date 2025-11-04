@@ -14,7 +14,7 @@ export class FilesController {
       const data: any = await (request as any).file();
       if (!data) throw new BadRequestException('No file provided');
 
-      const ttlMinutes = data.fields.ttl ? parseInt(data.fields.ttl.value as string) : 1440;
+      const ttlMinutes = data.fields.ttlMinutes ? parseInt(data.fields.ttlMinutes.value as string) : 1440;
       const ttl = Math.max(60, Math.floor(ttlMinutes * 60));
       let metadata: Record<string, any> = {};
       if (data.fields.metadata) {
@@ -79,9 +79,9 @@ export class FilesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  async deleteFile(@Param('id') fileId: string, @Query('force') force?: string): Promise<DeleteFileResponse> {
+  async deleteFile(@Param('id') fileId: string): Promise<DeleteFileResponse> {
     try {
-      return await this.filesService.deleteFile({ fileId, force: force === 'true' });
+      return await this.filesService.deleteFile({ fileId });
     } catch (error: any) {
       if (error instanceof BadRequestException || error instanceof NotFoundException || error instanceof InternalServerErrorException) throw error;
       throw new InternalServerErrorException(`File deletion failed: ${error.message}`);

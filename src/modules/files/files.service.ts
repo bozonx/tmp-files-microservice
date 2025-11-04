@@ -15,7 +15,7 @@ interface UploadFileParams {
 
 interface GetFileInfoParams { fileId: string }
 interface DownloadFileParams { fileId: string }
-interface DeleteFileParams { fileId: string; force?: boolean }
+interface DeleteFileParams { fileId: string }
 
 export interface FileResponse {
   id: string;
@@ -23,12 +23,12 @@ export interface FileResponse {
   mimeType: string;
   size: number;
   uploadedAt: string;
-  ttl: number;
+  ttlMinutes: number;
   expiresAt: string;
   metadata?: Record<string, any>;
   hash: string;
   isExpired: boolean;
-  timeRemaining: number;
+  timeRemainingMinutes: number;
 }
 
 export interface UploadFileResponse {
@@ -175,15 +175,13 @@ export class FilesService {
       const idValidation = ValidationUtil.validateFileId(params.fileId);
       if (!idValidation.isValid) throw new BadRequestException(`File ID validation failed: ${idValidation.errors.join(', ')}`);
 
-      const fileResult = await this.storageService.getFileInfo(params.fileId);
-      if (!fileResult.success) {
-        if (fileResult.error?.includes('not found')) throw new NotFoundException(`File with ID ${params.fileId} not found`);
-        if (fileResult.error?.includes('expired') && !params.force) throw new NotFoundException(`File with ID ${params.fileId} has expired`);
-        if (!fileResult.error?.includes('expired')) throw new InternalServerErrorException(`Failed to get file info: ${fileResult.error}`);
-      }
-
       const deleteResult = await this.storageService.deleteFile(params.fileId);
-      if (!deleteResult.success) throw new InternalServerErrorException(`Failed to delete file: ${deleteResult.error}`);
+      if (!deleteResult.success) {
+        if (deleteResult.error?.includes('not found')) {
+          throw new NotFoundException(`File with ID ${params.fileId} not found`);
+        }
+        throw new InternalServerErrorException(`Failed to delete file: ${deleteResult.error}`);
+      }
 
       const fileInfo = deleteResult.data as FileInfo;
       return { fileId: fileInfo.id, message: 'File deleted successfully', deletedAt: new Date().toISOString() };
@@ -243,12 +241,12 @@ export class FilesService {
       mimeType: fileInfo.mimeType,
       size: fileInfo.size,
       uploadedAt: uploadedAt.toISOString(),
-      ttl: fileInfo.ttl,
+      ttlMinutes: Math.floor(fileInfo.ttl / 60),
       expiresAt: expiresAt.toISOString(),
       metadata: fileInfo.metadata,
       hash: fileInfo.hash,
       isExpired: DateUtil.isExpired(expiresAt),
-      timeRemaining: Math.max(0, DateUtil.diffInSeconds(expiresAt, DateUtil.now().toDate())),
+      timeRemainingMinutes: Math.floor(Math.max(0, DateUtil.diffInSeconds(expiresAt, DateUtil.now().toDate())) / 60),
     };
   }
 }

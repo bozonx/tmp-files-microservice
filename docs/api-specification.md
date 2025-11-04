@@ -15,7 +15,7 @@
 
 ## Типы и единицы
 
-- `ttl` — целое число в минутах (во входящих запросах). По умолчанию — `1440` (1 сутки).
+- `ttlMinutes` — целое число в минутах. По умолчанию — `1440` (1 сутки).
 - Даты в ISO-8601 (UTC).
 - Ограничение размера загрузки задаётся переменной `MAX_FILE_SIZE_MB` (источник истины). Это значение применяется и в Fastify multipart, и в сервисной валидации.
 
@@ -29,7 +29,7 @@
 - POST `/{base}/files`
 - Тело (multipart/form-data):
   - `file` — бинарное содержимое (обязательно)
-  - `ttl` — integer (минуты, по умолчанию 1440 на уровне контроллера)
+  - `ttlMinutes` — integer (минуты, по умолчанию 1440 на уровне контроллера)
   - `metadata` — string (JSON), опционально. Любые свои метаданные
 - Успешный ответ 201:
 ```json
@@ -40,12 +40,12 @@
     "mimeType": "text/plain",
     "size": 12,
     "uploadedAt": "2025-11-02T10:00:00.000Z",
-    "ttl": 3600,
+    "ttlMinutes": 60,
     "expiresAt": "2025-11-02T11:00:00.000Z",
     "metadata": {},
     "hash": "sha256...",
     "isExpired": false,
-    "timeRemainingMinutes": 3599
+    "timeRemainingMinutes": 60
   },
   "downloadUrl": "/api/v1/files/uuid/download",
   "infoUrl": "/api/v1/files/uuid",
@@ -85,13 +85,12 @@
 
 ### Удаление файла
 - DELETE `/{base}/files/:id`
-- Query: `force=true|false` (при истечении TTL)
 - Ответ 200:
 ```json
 { "fileId": "uuid", "message": "File deleted successfully", "deletedAt": "2025-11-02T10:00:00.000Z" }
 ```
 
-Ошибки: 400, 404 (не найден или истёк без `force`), 500.
+Ошибки: 400, 404 (не найден), 500.
 
 ### Листинг/поиск файлов
 - GET `/{base}/files`
@@ -104,7 +103,7 @@
 - Ответ 200:
 ```json
 {
-  "files": [ { "id": "uuid", "originalName": "file.txt", "mimeType": "text/plain", "size": 12, "uploadedAt": "...", "ttl": 3600, "expiresAt": "...", "hash": "...", "isExpired": false, "timeRemaining": 3599 } ],
+  "files": [ { "id": "uuid", "originalName": "file.txt", "mimeType": "text/plain", "size": 12, "uploadedAt": "...", "ttlMinutes": 60, "expiresAt": "...", "hash": "...", "isExpired": false, "timeRemainingMinutes": 60 } ],
   "total": 1,
   "pagination": { "page": 1, "limit": 10, "totalPages": 1, "hasNext": false, "hasPrev": false }
 }
@@ -140,7 +139,7 @@
 
 ## Ошибки
 - 400: ошибки валидации (ID, TTL, размер и MIME, некорректный JSON)
-- 404: файл не найден или истёк (при удалении можно указать `force` для просроченных)
+- 404: файл не найден или истёк
 - 413: файл слишком большой (источник лимита — `MAX_FILE_SIZE_MB`)
 - 500: внутренняя ошибка
 
@@ -155,7 +154,3 @@
   "error": { /* оригинальный ответ исключения или имя */ }
 }
 ```
-
-## Примечания
-- Авторизация отсутствует на уровне сервиса. Применяйте её на API Gateway.
-- Входной параметр `ttl` указывается в минутах. В ответах поле `ttl` возвращается в секундах (отражает фактическое время жизни на стороне сервера).

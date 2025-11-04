@@ -67,7 +67,7 @@ export class TmpFiles implements INodeType {
 			},
 			{
 				displayName: 'TTL (Minutes)',
-				name: 'ttl',
+				name: 'ttlMinutes',
 				type: 'number',
 				default: 60,
 				required: true,
@@ -84,8 +84,8 @@ export class TmpFiles implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				const sourceType = this.getNodeParameter('sourceType', i) as string;
-				const ttl = this.getNodeParameter('ttl', i) as number;
-				const ttlMinutes = Math.max(1, Math.floor(ttl));
+				const ttlMinutesParam = this.getNodeParameter('ttlMinutes', i) as number;
+				const ttlMinutes = Math.max(1, Math.floor(ttlMinutesParam));
 
 				const options: IHttpRequestOptions = {
 					method: 'POST',
@@ -98,7 +98,7 @@ export class TmpFiles implements INodeType {
 						throw new NodeOperationError(this.getNode(), 'File URL is required when source type is "URL"', { itemIndex: i });
 					}
 					options.json = true;
-					options.body = { url: fileUrl, ttl: ttlMinutes } as IDataObject;
+					options.body = { url: fileUrl, ttlMinutes: ttlMinutes } as IDataObject;
 				} else if (sourceType === 'binary') {
 					const binaryProperty = this.getNodeParameter('binaryProperty', i) as string;
 					const item = items[i];
@@ -118,7 +118,7 @@ export class TmpFiles implements INodeType {
 								contentType: mimeType || 'application/octet-stream',
 							},
 						},
-						ttl: String(ttlMinutes),
+						ttlMinutes: String(ttlMinutes),
 					};
 				} else {
 					throw new NodeOperationError(this.getNode(), `Unsupported source type: ${sourceType}`, { itemIndex: i });
