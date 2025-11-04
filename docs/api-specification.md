@@ -30,9 +30,8 @@
 - Тело (multipart/form-data):
   - `file` — бинарное содержимое (обязательно)
   - `ttl` — integer (минуты, по умолчанию 1440 на уровне контроллера)
-  - `metadata` — string (JSON), опционально
+  - `metadata` — string (JSON), опционально. Любые свои метаданные
   - `allowDuplicate` — `true|false`, опционально (по умолчанию false)
-  - `customFilename` — string, опционально
 - Успешный ответ 201:
 ```json
 {

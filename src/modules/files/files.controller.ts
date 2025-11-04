@@ -21,7 +21,7 @@ export class FilesController {
         try { metadata = JSON.parse(data.fields.metadata.value as string); } catch { throw new BadRequestException('Invalid metadata JSON format'); }
       }
       const allowDuplicate = data.fields.allowDuplicate ? data.fields.allowDuplicate.value === 'true' : false;
-      const customFilename = data.fields.customFilename ? (data.fields.customFilename.value as string) : undefined;
+      
 
       const fileBuffer = await data.toBuffer();
       const file = {
@@ -32,7 +32,7 @@ export class FilesController {
         path: '',
       };
 
-      return await this.filesService.uploadFile({ file, ttl, metadata, allowDuplicate, customFilename });
+      return await this.filesService.uploadFile({ file, ttl, metadata, allowDuplicate });
     } catch (error: any) {
       if (error instanceof BadRequestException || error instanceof InternalServerErrorException) throw error;
       throw new InternalServerErrorException(`File upload failed: ${error.message}`);

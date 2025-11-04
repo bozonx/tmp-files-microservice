@@ -14,6 +14,7 @@
 - Docs: Expanded `docs/api-specification.md` with detailed success and error examples, explicit error format, and cleanup endpoint documentation.
 - Docs: README updated with error section and `MAX_FILE_SIZE_MB` notes.
 - Tests: Added unit test for 413 behavior and E2E tests for `exists` validation and `isExpired` presence.
+ - Breaking: удалён параметр загрузки `customFilename`; он больше не поддерживается в API, коде и документации.
 
 ## 0.2.1 - 2025-11-02
 

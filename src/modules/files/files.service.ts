@@ -6,14 +6,12 @@ import { ValidationUtil } from '@common/utils/validation.util';
 import { UploadedFile, FileInfo } from '@common/interfaces/file.interface';
 import type { AppConfig } from '@config/app.config';
 import type { StorageAppConfig } from '@config/storage.config';
-import { FilenameUtil } from '@common/utils/filename.util';
 
 interface UploadFileParams {
   file: UploadedFile;
   ttl: number;
   metadata?: Record<string, any>;
   allowDuplicate?: boolean;
-  customFilename?: string;
 }
 
 interface GetFileInfoParams { fileId: string; includeExpired?: boolean }
@@ -88,12 +86,8 @@ export class FilesService {
         if (!mv.isValid) throw new BadRequestException(`Metadata validation failed: ${mv.errors.join(', ')}`);
       }
 
-      const fileForSave: UploadedFile = params.customFilename
-        ? { ...params.file, originalname: FilenameUtil.sanitizeFilename(params.customFilename) }
-        : params.file;
-
       const saveResult = await this.storageService.saveFile({
-        file: fileForSave,
+        file: params.file,
         ttl: params.ttl,
         metadata: params.metadata,
         allowDuplicate: params.allowDuplicate,
