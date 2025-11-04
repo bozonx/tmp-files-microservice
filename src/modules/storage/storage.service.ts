@@ -121,9 +121,15 @@ export class StorageService {
         };
       }
 
-      const { fileTypeFromBuffer } = await import('file-type');
-      const detectedType = await fileTypeFromBuffer(fileBuffer);
-      const mimeType = detectedType?.mime || file.mimetype;
+      let mimeType = file.mimetype;
+      try {
+        const { fileTypeFromBuffer } = await import('file-type');
+        const detectedType = await fileTypeFromBuffer(fileBuffer);
+        mimeType = detectedType?.mime || mimeType;
+      } catch (err: any) {
+        // Fallback for test/runtime environments where ESM dynamic import via VM is not available
+        this.logger.warn(`MIME detection skipped, fallback to provided mimetype. Reason: ${err?.message || err}`);
+      }
 
       if (config.allowedMimeTypes.length > 0 && !config.allowedMimeTypes.includes(mimeType)) {
         return {

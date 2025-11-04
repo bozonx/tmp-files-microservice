@@ -71,17 +71,17 @@ Example 413 response:
 }
 ```
 
-### Загрузка файла по URL
+### Upload file by URL
 - POST `/{base}/files/url`
-- Тело запроса (application/json):
-  - `url` — строка (обязательно). Прямая ссылка на файл, который нужно скачать и сохранить
-  - `ttlMinutes` — целое число (в минутах, по умолчанию 1440)
-  - `metadata` — строка (JSON) или объект, опционально. Произвольные метаданные
-- Успешный ответ 201: такой же, как для обычной загрузки
-- Ошибки:
-  - 400 — некорректный URL или неверный формат `metadata`
-  - 413 — файл превышает максимальный допустимый размер (`MAX_FILE_SIZE_MB`)
-  - 500 — внутренняя ошибка
+- Body (application/json):
+  - `url` — string (required). Direct link to the file to be downloaded and stored
+  - `ttlMinutes` — integer (minutes, default 1440)
+  - `metadata` — string (JSON) or object, optional. Arbitrary custom metadata
+- Success 201 response: same as for regular upload
+- Errors:
+  - 400 — invalid URL or malformed `metadata`
+  - 413 — file exceeds the maximum allowed size (`MAX_FILE_SIZE_MB`)
+  - 500 — internal error
 
 ### File info
 - GET `/{base}/files/:id`

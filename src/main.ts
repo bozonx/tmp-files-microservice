@@ -11,7 +11,7 @@ async function bootstrap() {
   // Create app with bufferLogs enabled to capture early logs
   const bodyLimitMb = Math.max(
     1,
-    parseInt(process.env.HTTP_REQUEST_BODY_LIMIT_MB ?? '10', 10) || 10,
+    parseInt(process.env.HTTP_REQUEST_BODY_LIMIT_MB ?? '100', 10) || 100,
   );
   const bodyLimit = bodyLimitMb * 1024 * 1024;
   const app = await NestFactory.create<NestFastifyApplication>(

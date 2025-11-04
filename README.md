@@ -1,13 +1,3 @@
-- **Upload by URL**
-
-```bash
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com/file.bin","ttlMinutes":1440, "metadata":"{\\"source\\":\\"example\\"}"}' \
-  "$BASE_URL/files/url" | jq
-```
-
-
 # Temporary Files Microservice (NestJS + Fastify)
 
 Production-ready microservice for temporary file storage with TTL, content deduplication, search, and scheduled cleanup. Built with NestJS + Fastify.
@@ -86,7 +76,7 @@ Source of truth: `.env.production.example`
 - `LISTEN_PORT` — e.g. `80` or `3000`
 - `API_BASE_PATH` — API prefix (default `api`)
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
-- `HTTP_REQUEST_BODY_LIMIT_MB` — maximum size of the HTTP request body for Fastify body parser (default 10 MB)
+- `HTTP_REQUEST_BODY_LIMIT_MB` — maximum size of the HTTP request body for Fastify body parser (default 100 MB)
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
   - `STORAGE_DIR` — base directory for files and metadata. MANDATORY.
@@ -144,6 +134,15 @@ curl -s -X POST \
   -F "file=@./README.md" \
   -F "ttlMinutes=60" \
   "$BASE_URL/files" | jq
+```
+
+- **Upload by URL**
+
+```bash
+curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com/file.bin","ttlMinutes":1440, "metadata":"{\\"source\\":\\"example\\"}"}' \
+  "$BASE_URL/files/url" | jq
 ```
 
 - **Info**
