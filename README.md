@@ -15,7 +15,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 
 ## Overview
 
-The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttl` (in seconds), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
+The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttl` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
 
 ## Quick start (production)
 
@@ -107,7 +107,7 @@ Upload (no auth at service level):
 ```bash
 curl -X POST \
   -F "file=@./README.md" \
-  -F "ttl=3600" \
+  -F "ttl=60" \
   http://localhost:8080/api/v1/files | jq
 ```
 

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Breaking: API now accepts input `ttl` in minutes (default 1440 = 1 day). Responses still return `ttl` in seconds.
 - Change: Increased default `MAX_TTL_MIN` from 10080 (7 days) to 44640 (31 days). Updated code defaults, env examples, and docker-compose.
 - Breaking: STORAGE_DIR environment variable is now required; service fails to start if missing. Docs and env examples updated.
 - Change: Switched cleanup scheduling from cron to interval via `CLEANUP_INTERVAL_MINUTES` (set `0` to disable). Replaces `CLEANUP_CRON`.

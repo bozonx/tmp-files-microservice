@@ -28,11 +28,11 @@ curl http://localhost:3000/api/v1/health
 ```bash
 curl -X POST \
   -F "file=@./README.md" \
-  -F "ttl=3600" \
+  -F "ttl=60" \
   http://localhost:3000/api/v1/files
 ```
 
-- `ttl` в секундах (например, 3600 = 1 час)
+- `ttl` в минутах (например, 60 = 1 час; значение по умолчанию — 1440 = 1 сутки)
 
 ## Другие операции
 

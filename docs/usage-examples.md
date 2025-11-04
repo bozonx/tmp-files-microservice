@@ -17,7 +17,7 @@ curl -s "$BASE_URL/health"
 ```bash
 curl -s -X POST \
   -F "file=@./README.md" \
-  -F "ttl=3600" \
+  -F "ttl=60" \
   "$BASE_URL/files" | jq
 ```
 
@@ -62,4 +62,4 @@ curl -s "$BASE_URL/files/stats" | jq
 curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 ```
 
-Примечание: `ttl` указывается в секундах.
+Примечание: `ttl` указывается в минутах (по умолчанию 1440 = 1 сутки). В ответах `ttl` возвращается в секундах.
