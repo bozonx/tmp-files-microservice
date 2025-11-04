@@ -5,7 +5,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 
 ## What’s included
 
-- Health-check endpoint `/{API_BASE_PATH}/{API_VERSION}/health`
+- Health-check endpoint `/{API_BASE_PATH}/v1/health`
 - JSON logging via Pino (minimal in production)
 - Global error filter and validation
 - Fast and lightweight Fastify HTTP server
@@ -76,7 +76,6 @@ Source of truth: `.env.production.example`
 - `LISTEN_HOST` — e.g. `0.0.0.0` or `localhost`
 - `LISTEN_PORT` — e.g. `80` or `3000`
 - `API_BASE_PATH` — API prefix (default `api`)
-- `API_VERSION` — API version (default `v1`)
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
 - `TZ` — timezone (default `UTC`)
 - Storage-related:

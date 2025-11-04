@@ -28,7 +28,7 @@ describe('FilesService', () => {
           useValue: {
             get: (key: string, def?: any) => {
               const cfg: Record<string, any> = {
-                app: { apiBasePath: 'api', apiVersion: 'v1' },
+                app: { apiBasePath: 'api' },
                 MAX_FILE_SIZE_MB: 100,
                 ALLOWED_MIME_TYPES: [],
                 storage: { maxTtl: 3600 },

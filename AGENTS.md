@@ -28,5 +28,4 @@
 
 ### Agent Expectations
 
-- Prefer targeted code edits over full rewrites if you not asked to refactor
 - When adding or changing functionality update tests and documentation in their respective directories also update README.md if necessary

@@ -15,14 +15,12 @@ describe('app.config', () => {
     process.env.LISTEN_PORT = '8080';
     process.env.LISTEN_HOST = '127.0.0.1';
     process.env.API_BASE_PATH = '/api/';
-    process.env.API_VERSION = '/v1/';
     process.env.NODE_ENV = 'test';
     process.env.LOG_LEVEL = 'info';
     const cfg = appConfig();
     expect(cfg.port).toBe(8080);
     expect(cfg.host).toBe('127.0.0.1');
     expect(cfg.apiBasePath).toBe('api');
-    expect(cfg.apiVersion).toBe('v1');
     expect(cfg.nodeEnv).toBe('test');
     expect(cfg.logLevel).toBe('info');
   });
