@@ -11,9 +11,15 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
     imports: [AppModule],
   }).compile();
 
+  const bodyLimitMb = Math.max(
+    1,
+    parseInt(process.env.HTTP_REQUEST_BODY_LIMIT_MB ?? '10', 10) || 10,
+  );
+  const bodyLimit = bodyLimitMb * 1024 * 1024;
   const app = moduleRef.createNestApplication<NestFastifyApplication>(
     new FastifyAdapter({
       logger: false, // We'll use Pino logger instead
+      bodyLimit,
     })
   );
 
