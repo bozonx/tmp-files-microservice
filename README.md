@@ -1,3 +1,12 @@
+- **Upload by URL**
+
+```bash
+curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com/file.bin","ttlMinutes":1440, "metadata":"{\\"source\\":\\"example\\"}"}' \
+  "$BASE_URL/files/url" | jq
+```
+
 
 # Temporary Files Microservice (NestJS + Fastify)
 
@@ -91,6 +100,7 @@ Source of truth: `.env.production.example`
 
 - `GET /{base}/health` — service health
 - `POST /{base}/files` — upload (multipart/form-data)
+- `POST /{base}/files/url` — upload by providing a direct file URL (JSON)
 - `GET /{base}/files/:id` — file info
 - `GET /{base}/files/:id/download` — file download
 - `DELETE /{base}/files/:id` — delete file

@@ -6,6 +6,8 @@ import { ValidationUtil } from '@common/utils/validation.util';
 import { UploadedFile, FileInfo } from '@common/interfaces/file.interface';
 import type { AppConfig } from '@config/app.config';
 import type { StorageAppConfig } from '@config/storage.config';
+import * as http from 'http';
+import * as https from 'https';
 
 interface UploadFileParams {
   file: UploadedFile;
@@ -52,6 +54,29 @@ export class FilesService {
     const storageCfg = this.configService.get<StorageAppConfig>('storage');
     this.maxFileSize = storageCfg?.maxFileSize ?? 100 * 1024 * 1024;
     this.allowedMimeTypes = storageCfg?.allowedMimeTypes ?? [];
+  }
+
+  async uploadFileFromUrl(params: { url: string; ttl: number; metadata?: Record<string, any> }): Promise<UploadFileResponse> {
+    const startTime = Date.now();
+    try {
+      if (!params.url || typeof params.url !== 'string') {
+        throw new BadRequestException('Invalid URL');
+      }
+
+      const file = await this.fetchRemoteFile(params.url);
+      // Reuse existing validation and save pipeline
+      return await this.uploadFile({ file, ttl: params.ttl, metadata: params.metadata });
+    } catch (error: any) {
+      const executionTime = Date.now() - startTime;
+      this.logger.error(`File upload by URL failed: ${error.message} (${executionTime}ms)`, error.stack);
+      if (
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException ||
+        error instanceof PayloadTooLargeException
+      )
+        throw error;
+      throw new InternalServerErrorException(`File upload by URL failed: ${error.message}`);
+    }
   }
 
   private generateApiUrl(endpoint: string, params: Record<string, string> = {}): string {
@@ -248,5 +273,77 @@ export class FilesService {
       isExpired: DateUtil.isExpired(expiresAt),
       timeRemainingMinutes: Math.floor(Math.max(0, DateUtil.diffInSeconds(expiresAt, DateUtil.now().toDate())) / 60),
     };
+  }
+
+  private async fetchRemoteFile(urlStr: string, redirectCount = 0): Promise<UploadedFile> {
+    return new Promise<UploadedFile>((resolve, reject) => {
+      try {
+        const urlObj = new URL(urlStr);
+        const lib = urlObj.protocol === 'https:' ? https : http;
+
+        const req = lib.get(urlObj, (res) => {
+          // Handle redirects (up to 5)
+          if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            if (redirectCount >= 5) return reject(new BadRequestException('Too many redirects'));
+            const nextUrl = new URL(res.headers.location, urlObj).toString();
+            res.resume();
+            return resolve(this.fetchRemoteFile(nextUrl, redirectCount + 1));
+          }
+
+          if (res.statusCode !== 200) {
+            res.resume();
+            return reject(new BadRequestException(`Failed to fetch URL. Status: ${res.statusCode}`));
+          }
+
+          const contentType = (res.headers['content-type'] as string) || 'application/octet-stream';
+          const contentLengthHeader = res.headers['content-length'];
+          const declaredLength = contentLengthHeader ? parseInt(String(contentLengthHeader), 10) : 0;
+          if (declaredLength && declaredLength > this.maxFileSize) {
+            res.destroy();
+            return reject(new PayloadTooLargeException('File size exceeds the maximum allowed limit'));
+          }
+
+          const chunks: Buffer[] = [];
+          let total = 0;
+          res.on('data', (chunk: Buffer) => {
+            total += chunk.length;
+            if (total > this.maxFileSize) {
+              res.destroy(new PayloadTooLargeException('File size exceeds the maximum allowed limit'));
+              return;
+            }
+            chunks.push(chunk);
+          });
+          res.on('end', () => {
+            const buffer = Buffer.concat(chunks);
+            const size = buffer.length;
+
+            // Derive filename
+            let filename = 'file';
+            const cd = res.headers['content-disposition'];
+            if (typeof cd === 'string') {
+              const match = cd.match(/filename\*=UTF-8''([^;\n]+)/) || cd.match(/filename="?([^";\n]+)"?/);
+              if (match && match[1]) filename = decodeURIComponent(match[1]);
+            } else {
+              const pathname = urlObj.pathname;
+              const last = pathname.split('/').filter(Boolean).pop();
+              if (last) filename = last;
+            }
+
+            const uploaded: UploadedFile = {
+              originalname: filename,
+              mimetype: contentType,
+              size,
+              buffer,
+              path: '',
+            };
+            resolve(uploaded);
+          });
+          res.on('error', (err) => reject(err));
+        });
+        req.on('error', (err) => reject(err));
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 }

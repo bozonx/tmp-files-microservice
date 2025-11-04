@@ -23,14 +23,14 @@ export class TmpFiles implements INodeType {
 		inputs: ['main'],
 		outputs: ['main'],
 		requestDefaults: {
-			baseURL: '={{$credentials.baseUrl}}',
+			baseURL: '={{$credentials.gatewayUrl}}',
 			headers: {
 				Accept: 'application/json',
 			},
 		},
 		credentials: [
 			{
-				name: 'tmpFilesApi',
+				name: 'bozonxMicroservicesApi',
 				required: true,
 			},
 		],
@@ -69,10 +69,17 @@ export class TmpFiles implements INodeType {
 				displayName: 'TTL (Minutes)',
 				name: 'ttlMinutes',
 				type: 'number',
-				default: 60,
+				default: 1440,
 				required: true,
 				typeOptions: { minValue: 1 },
 				description: 'Time to live before the file is removed',
+			},
+			{
+				displayName: 'Metadata (JSON)',
+				name: 'metadata',
+				type: 'string',
+				default: '',
+				description: 'Optional JSON string with custom metadata to associate with the file',
 			},
 		],
 	};
@@ -86,6 +93,7 @@ export class TmpFiles implements INodeType {
 				const sourceType = this.getNodeParameter('sourceType', i) as string;
 				const ttlMinutesParam = this.getNodeParameter('ttlMinutes', i) as number;
 				const ttlMinutes = Math.max(1, Math.floor(ttlMinutesParam));
+				const metadata = (this.getNodeParameter('metadata', i) as string) || '';
 
 				const options: IHttpRequestOptions = {
 					method: 'POST',
@@ -98,7 +106,10 @@ export class TmpFiles implements INodeType {
 						throw new NodeOperationError(this.getNode(), 'File URL is required when source type is "URL"', { itemIndex: i });
 					}
 					options.json = true;
-					options.body = { url: fileUrl, ttlMinutes: ttlMinutes } as IDataObject;
+					const body: IDataObject = { url: fileUrl, ttlMinutes };
+					if (metadata && metadata.trim() !== '') body.metadata = metadata;
+					options.url = '/api/v1/files/url';
+					options.body = body;
 				} else if (sourceType === 'binary') {
 					const binaryProperty = this.getNodeParameter('binaryProperty', i) as string;
 					const item = items[i];
@@ -119,12 +130,13 @@ export class TmpFiles implements INodeType {
 							},
 						},
 						ttlMinutes: String(ttlMinutes),
+						...(metadata && metadata.trim() !== '' ? { metadata } : {}),
 					};
 				} else {
 					throw new NodeOperationError(this.getNode(), `Unsupported source type: ${sourceType}`, { itemIndex: i });
 				}
 
-				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'tmpFilesApi', options);
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'bozonxMicroservicesApi', options);
 				returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
 			} catch (error) {
 				if (this.continueOnFail()) {

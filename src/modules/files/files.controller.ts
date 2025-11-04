@@ -37,6 +37,35 @@ export class FilesController {
     }
   }
 
+  @Post('url')
+  @HttpCode(HttpStatus.CREATED)
+  async uploadFileFromUrl(@Req() request: FastifyRequest): Promise<UploadFileResponse> {
+    try {
+      const body: any = (request as any).body || {};
+      const url = body.url;
+      if (!url || typeof url !== 'string') {
+        throw new BadRequestException('Field "url" is required and must be a string');
+      }
+
+      const ttlMinutes = body.ttlMinutes ? parseInt(String(body.ttlMinutes)) : 1440;
+      const ttl = Math.max(60, Math.floor(ttlMinutes * 60));
+
+      let metadata: Record<string, any> | undefined;
+      if (body.metadata !== undefined) {
+        if (typeof body.metadata === 'string' && body.metadata.trim() !== '') {
+          try { metadata = JSON.parse(body.metadata); } catch { throw new BadRequestException('Invalid metadata JSON format'); }
+        } else if (typeof body.metadata === 'object' && body.metadata !== null) {
+          metadata = body.metadata;
+        }
+      }
+
+      return await this.filesService.uploadFileFromUrl({ url, ttl, metadata });
+    } catch (error: any) {
+      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) throw error;
+      throw new InternalServerErrorException(`File upload by URL failed: ${error.message}`);
+    }
+  }
+
   @Get('stats')
   async getFileStats(): Promise<{ stats: any; generatedAt: string }> {
     try {

@@ -1,9 +1,9 @@
 import type { ICredentialType, INodeProperties } from 'n8n-workflow';
 
-export class SttGatewayApi implements ICredentialType {
+export class BozonxMicroservicesApi implements ICredentialType {
 	name = 'bozonxMicroservicesApi';
 	displayName = 'Bozonx Microservices API';
-	documentationUrl = 'https://github.com/bozonx/stt-gateway-microservice/tree/main/n8n-nodes-bozonx-stt-gateway-microservice#readme';
+	documentationUrl = 'https://github.com/bozonx/tmp-files-microservice/tree/main/n8n#readme';
 	properties: INodeProperties[] = [
 		{
 			displayName: 'Gateway URL',
