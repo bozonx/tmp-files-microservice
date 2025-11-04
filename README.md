@@ -77,7 +77,7 @@ Source of truth: `.env.production.example`
 - `LISTEN_PORT` — e.g. `80` or `3000`
 - `API_BASE_PATH` — API prefix (default `api`)
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
-- `HTTP_REQUEST_BODY_LIMIT_MB` — максимальный размер тела HTTP-запроса для Fastify body parser (по умолчанию 10 МБ)
+- `HTTP_REQUEST_BODY_LIMIT_MB` — maximum size of the HTTP request body for Fastify body parser (default 10 MB)
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
   - `STORAGE_DIR` — base directory for files and metadata. MANDATORY.
