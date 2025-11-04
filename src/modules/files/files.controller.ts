@@ -20,8 +20,6 @@ export class FilesController {
       if (data.fields.metadata) {
         try { metadata = JSON.parse(data.fields.metadata.value as string); } catch { throw new BadRequestException('Invalid metadata JSON format'); }
       }
-      const allowDuplicate = data.fields.allowDuplicate ? data.fields.allowDuplicate.value === 'true' : false;
-      
 
       const fileBuffer = await data.toBuffer();
       const file = {
@@ -32,7 +30,7 @@ export class FilesController {
         path: '',
       };
 
-      return await this.filesService.uploadFile({ file, ttl, metadata, allowDuplicate });
+      return await this.filesService.uploadFile({ file, ttl, metadata });
     } catch (error: any) {
       if (error instanceof BadRequestException || error instanceof InternalServerErrorException) throw error;
       throw new InternalServerErrorException(`File upload failed: ${error.message}`);
@@ -49,9 +47,9 @@ export class FilesController {
   }
 
   @Get(':id')
-  async getFileInfo(@Param('id') fileId: string, @Query('includeExpired') includeExpired?: string): Promise<GetFileInfoResponse> {
+  async getFileInfo(@Param('id') fileId: string): Promise<GetFileInfoResponse> {
     try {
-      return await this.filesService.getFileInfo({ fileId, includeExpired: includeExpired === 'true' });
+      return await this.filesService.getFileInfo({ fileId });
     } catch (error: any) {
       if (error instanceof BadRequestException || error instanceof NotFoundException || error instanceof InternalServerErrorException) throw error;
       throw new InternalServerErrorException(`Get file info failed: ${error.message}`);
@@ -61,11 +59,10 @@ export class FilesController {
   @Get(':id/download')
   async downloadFile(
     @Param('id') fileId: string,
-    @Query('includeExpired') includeExpired: string | undefined,
     @Res() res: FastifyReply,
   ): Promise<void> {
     try {
-      const result = await this.filesService.downloadFile({ fileId, includeExpired: includeExpired === 'true' });
+      const result = await this.filesService.downloadFile({ fileId });
       const { buffer, fileInfo } = result;
       res.header('Content-Type', fileInfo.mimeType);
       res.header('Content-Length', fileInfo.size.toString());
@@ -120,24 +117,19 @@ export class FilesController {
 
   @Get(':id/exists')
   @HttpCode(HttpStatus.OK)
-  async checkFileExists(@Param('id') fileId: string, @Query('includeExpired') includeExpired?: string): Promise<{ exists: boolean; fileId: string; isExpired: boolean }> {
+  async checkFileExists(@Param('id') fileId: string): Promise<{ exists: boolean; fileId: string; isExpired: boolean }> {
     try {
       const idValidation = ValidationUtil.validateFileId(fileId);
       if (!idValidation.isValid) {
         throw new BadRequestException(`File ID validation failed: ${idValidation.errors.join(', ')}`);
       }
 
-      const exists = await this.filesService.fileExists(fileId, includeExpired === 'true');
-      let isExpired: boolean = false;
-      if (exists) {
-        try {
-          const fileInfo = await this.filesService.getFileInfo({ fileId, includeExpired: includeExpired === 'true' });
-          isExpired = fileInfo.file.isExpired;
-        } catch {
-          isExpired = includeExpired === 'true' ? true : false;
-        }
+      const exists = await this.filesService.fileExists(fileId);
+      if (!exists) {
+        return { exists, fileId, isExpired: false };
       }
-      return { exists, fileId, isExpired };
+      const fileInfo = await this.filesService.getFileInfo({ fileId });
+      return { exists, fileId, isExpired: fileInfo.file.isExpired };
     } catch (error: any) {
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(`File exists check failed: ${error.message}`);

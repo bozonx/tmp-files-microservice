@@ -105,7 +105,7 @@ export class StorageService {
 
   async saveFile(params: CreateFileParams): Promise<FileOperationResult> {
     try {
-      const { file, ttl, metadata = {}, allowDuplicate = true } = params;
+      const { file, ttl, metadata = {} } = params;
       const config = this.getConfig();
 
       await this.initializeStorage();
@@ -134,7 +134,7 @@ export class StorageService {
 
       const hash = HashUtil.hashBuffer(fileBuffer);
 
-      if (config.enableDeduplication && allowDuplicate !== true) {
+      if (config.enableDeduplication) {
         const existingFile = await this.findFileByHash(hash);
         if (existingFile) {
           return {
@@ -189,7 +189,7 @@ export class StorageService {
     }
   }
 
-  async getFileInfo(fileId: string, includeExpired: boolean = false): Promise<FileOperationResult> {
+  async getFileInfo(fileId: string): Promise<FileOperationResult> {
     try {
       const metadata = await this.loadMetadata();
       const fileInfo = metadata.files[fileId];
@@ -198,7 +198,7 @@ export class StorageService {
         return { success: false, error: `File with ID ${fileId} not found` };
       }
 
-      if (DateUtil.isExpired(fileInfo.expiresAt) && !includeExpired) {
+      if (DateUtil.isExpired(fileInfo.expiresAt)) {
         return { success: false, error: `File with ID ${fileId} has expired` };
       }
 
@@ -256,6 +256,10 @@ export class StorageService {
     try {
       const metadata = await this.loadMetadata();
       let files = Object.values(metadata.files);
+
+      if (!params.expiredOnly) {
+        files = files.filter((file) => !DateUtil.isExpired(file.expiresAt));
+      }
 
       if (params.mimeType) {
         files = files.filter((file) => file.mimeType === params.mimeType);

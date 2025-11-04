@@ -120,7 +120,7 @@ Details: [docs/api-specification.md](docs/api-specification.md)
 ## Errors
 
 - 400 — validation errors (invalid ID/TTL/MIME, malformed JSON)
-- 404 — file not found or expired (when `includeExpired`/`force` is not set)
+- 404 — file not found or expired (use `force=true` only for deleting expired files)
 - 413 — file too large (controlled by `MAX_FILE_SIZE_MB`)
 - 500 — internal error
 
@@ -157,12 +157,6 @@ curl -s -X POST \
 ```bash
 FILE_ID="<uuid>"
 curl -s "$BASE_URL/files/$FILE_ID" | jq
-```
-
-Include expired:
-
-```bash
-curl -s "$BASE_URL/files/$FILE_ID?includeExpired=true" | jq
 ```
 
 - **Download**

@@ -11,11 +11,10 @@ interface UploadFileParams {
   file: UploadedFile;
   ttl: number;
   metadata?: Record<string, any>;
-  allowDuplicate?: boolean;
 }
 
-interface GetFileInfoParams { fileId: string; includeExpired?: boolean }
-interface DownloadFileParams { fileId: string; includeExpired?: boolean }
+interface GetFileInfoParams { fileId: string }
+interface DownloadFileParams { fileId: string }
 interface DeleteFileParams { fileId: string; force?: boolean }
 
 export interface FileResponse {
@@ -90,7 +89,6 @@ export class FilesService {
         file: params.file,
         ttl: params.ttl,
         metadata: params.metadata,
-        allowDuplicate: params.allowDuplicate,
       });
       if (!saveResult.success) throw new InternalServerErrorException(`Failed to save file: ${saveResult.error}`);
 
@@ -123,7 +121,7 @@ export class FilesService {
       const idValidation = ValidationUtil.validateFileId(params.fileId);
       if (!idValidation.isValid) throw new BadRequestException(`File ID validation failed: ${idValidation.errors.join(', ')}`);
 
-      const fileResult = await this.storageService.getFileInfo(params.fileId, params.includeExpired === true);
+      const fileResult = await this.storageService.getFileInfo(params.fileId);
       if (!fileResult.success) {
         if (fileResult.error?.includes('not found')) throw new NotFoundException(`File with ID ${params.fileId} not found`);
         if (fileResult.error?.includes('expired')) throw new NotFoundException(`File with ID ${params.fileId} has expired`);
@@ -151,10 +149,10 @@ export class FilesService {
       const idValidation = ValidationUtil.validateFileId(params.fileId);
       if (!idValidation.isValid) throw new BadRequestException(`File ID validation failed: ${idValidation.errors.join(', ')}`);
 
-      const fileResult = await this.storageService.getFileInfo(params.fileId, params.includeExpired === true);
+      const fileResult = await this.storageService.getFileInfo(params.fileId);
       if (!fileResult.success) {
         if (fileResult.error?.includes('not found')) throw new NotFoundException(`File with ID ${params.fileId} not found`);
-        if (fileResult.error?.includes('expired') && !params.includeExpired) throw new NotFoundException(`File with ID ${params.fileId} has expired`);
+        if (fileResult.error?.includes('expired')) throw new NotFoundException(`File with ID ${params.fileId} has expired`);
         throw new InternalServerErrorException(`Failed to get file info: ${fileResult.error}`);
       }
       const fileInfo = fileResult.data as FileInfo;
@@ -226,9 +224,9 @@ export class FilesService {
     }
   }
 
-  async fileExists(fileId: string, includeExpired: boolean = false): Promise<boolean> {
+  async fileExists(fileId: string): Promise<boolean> {
     try {
-      const fileResult = await this.storageService.getFileInfo(fileId, includeExpired);
+      const fileResult = await this.storageService.getFileInfo(fileId);
       return !!fileResult.success;
     } catch (error: any) {
       this.logger.error(`File exists check failed: ${error.message}`, error.stack);

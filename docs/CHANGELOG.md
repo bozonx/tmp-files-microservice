@@ -14,7 +14,8 @@
 - Docs: Expanded `docs/api-specification.md` with detailed success and error examples, explicit error format, and cleanup endpoint documentation.
 - Docs: README updated with error section and `MAX_FILE_SIZE_MB` notes.
 - Tests: Added unit test for 413 behavior and E2E tests for `exists` validation and `isExpired` presence.
- - Breaking: удалён параметр загрузки `customFilename`; он больше не поддерживается в API, коде и документации.
+- Breaking: удалён параметр загрузки `customFilename`; он больше не поддерживается в API, коде и документации.
+ - Breaking: удалён параметр `includeExpired` во всех эндпоинтах. Просроченные файлы всегда считаются недоступными: их нельзя получить, скачать или проверить существование (они считаются как "не найдены"). Исключения: листинг поддерживает `expiredOnly`, а удаление просроченных доступно с `force=true`.
 
 ## 0.2.1 - 2025-11-02
 

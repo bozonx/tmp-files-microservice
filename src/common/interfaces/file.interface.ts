@@ -24,7 +24,6 @@ export interface CreateFileParams {
   file: UploadedFile;
   ttl: number;
   metadata?: Record<string, any>;
-  allowDuplicate?: boolean;
 }
 
 export interface FileOperationResult<T = FileInfo> {

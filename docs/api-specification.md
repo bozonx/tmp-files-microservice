@@ -31,7 +31,6 @@
   - `file` — бинарное содержимое (обязательно)
   - `ttl` — integer (минуты, по умолчанию 1440 на уровне контроллера)
   - `metadata` — string (JSON), опционально. Любые свои метаданные
-  - `allowDuplicate` — `true|false`, опционально (по умолчанию false)
 - Успешный ответ 201:
 ```json
 {
@@ -46,7 +45,7 @@
     "metadata": {},
     "hash": "sha256...",
     "isExpired": false,
-    "timeRemaining": 3599
+    "timeRemainingMinutes": 3599
   },
   "downloadUrl": "/api/v1/files/uuid/download",
   "infoUrl": "/api/v1/files/uuid",
@@ -74,14 +73,12 @@
 
 ### Информация о файле
 - GET `/{base}/files/:id`
-- Query: `includeExpired=true|false`
 - Ответ 200: как `file` объект из примера выше + `downloadUrl`, `deleteUrl`.
 
-Ошибки: 400 (невалидный `id`), 404 (не найден/истёк без `includeExpired`), 500.
+Ошибки: 400 (невалидный `id`), 404 (не найден или истёк), 500.
 
 ### Скачивание файла
 - GET `/{base}/files/:id/download`
-- Query: `includeExpired=true|false`
 - Ответ: бинарные данные файла + заголовки `Content-Type`, `Content-Length`, `Content-Disposition`.
 
 Ошибки: 400, 404, 500. В ответах также выставляются no-cache заголовки.
@@ -94,7 +91,7 @@
 { "fileId": "uuid", "message": "File deleted successfully", "deletedAt": "2025-11-02T10:00:00.000Z" }
 ```
 
-Ошибки: 400, 404 (не найден/истёк без `force`), 500.
+Ошибки: 400, 404 (не найден или истёк без `force`), 500.
 
 ### Листинг/поиск файлов
 - GET `/{base}/files`
@@ -122,7 +119,6 @@
 
 ### Проверка существования
 - GET `/{base}/files/:id/exists`
-- Query: `includeExpired=true|false`
 - Ответ 200:
 ```json
 { "exists": true, "fileId": "uuid", "isExpired": false }
@@ -144,7 +140,7 @@
 
 ## Ошибки
 - 400: ошибки валидации (ID, TTL, размер и MIME, некорректный JSON)
-- 404: файл не найден или истёк (если не указан `includeExpired`/`force`)
+- 404: файл не найден или истёк (при удалении можно указать `force` для просроченных)
 - 413: файл слишком большой (источник лимита — `MAX_FILE_SIZE_MB`)
 - 500: внутренняя ошибка
 
@@ -163,4 +159,5 @@
 ## Примечания
 - Авторизация отсутствует на уровне сервиса. Применяйте её на API Gateway.
 - Входной параметр `ttl` указывается в минутах. В ответах поле `ttl` возвращается в секундах (отражает фактическое время жизни на стороне сервера).
- - `MAX_FILE_SIZE_MB` — единый источник истины для ограничения размера. Меняйте его в окружении/Compose.
+- Дедупликация управляется только переменной окружения `ENABLE_DEDUPLICATION`. Параметр `allowDuplicate` в API не поддерживается.
+- `MAX_FILE_SIZE_MB` — единый источник истины для ограничения размера. Меняйте его в окружении/Compose.
