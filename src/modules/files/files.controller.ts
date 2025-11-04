@@ -1,6 +1,7 @@
 import { Controller, Post, Get, Delete, Param, Query, Res, Req, HttpStatus, HttpCode, InternalServerErrorException, BadRequestException, NotFoundException } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { FilesService, UploadFileResponse, GetFileInfoResponse, DeleteFileResponse } from './files.service';
+import { ValidationUtil } from '@common/utils/validation.util';
 
 @Controller('files')
 export class FilesController {
@@ -119,16 +120,21 @@ export class FilesController {
 
   @Get(':id/exists')
   @HttpCode(HttpStatus.OK)
-  async checkFileExists(@Param('id') fileId: string, @Query('includeExpired') includeExpired?: string): Promise<{ exists: boolean; fileId: string; isExpired?: boolean }> {
+  async checkFileExists(@Param('id') fileId: string, @Query('includeExpired') includeExpired?: string): Promise<{ exists: boolean; fileId: string; isExpired: boolean }> {
     try {
+      const idValidation = ValidationUtil.validateFileId(fileId);
+      if (!idValidation.isValid) {
+        throw new BadRequestException(`File ID validation failed: ${idValidation.errors.join(', ')}`);
+      }
+
       const exists = await this.filesService.fileExists(fileId, includeExpired === 'true');
-      let isExpired: boolean | undefined;
+      let isExpired: boolean = false;
       if (exists) {
         try {
           const fileInfo = await this.filesService.getFileInfo({ fileId, includeExpired: includeExpired === 'true' });
           isExpired = fileInfo.file.isExpired;
         } catch {
-          isExpired = undefined;
+          isExpired = includeExpired === 'true' ? true : false;
         }
       }
       return { exists, fileId, isExpired };

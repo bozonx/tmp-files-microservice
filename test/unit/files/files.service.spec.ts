@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PayloadTooLargeException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FilesService } from '@/modules/files/files.service';
 import { StorageService } from '@/modules/storage/storage.service';
@@ -29,9 +30,7 @@ describe('FilesService', () => {
             get: (key: string, def?: any) => {
               const cfg: Record<string, any> = {
                 app: { apiBasePath: 'api' },
-                MAX_FILE_SIZE_MB: 100,
-                ALLOWED_MIME_TYPES: [],
-                storage: { maxTtl: 3600 },
+                storage: { maxTtl: 3600, maxFileSize: 1024, allowedMimeTypes: [] },
               };
               return key in cfg ? cfg[key] : def;
             },
@@ -52,5 +51,19 @@ describe('FilesService', () => {
     const res = await service.getFileStats();
     expect(res.stats.totalFiles).toBe(0);
     expect(typeof res.generatedAt).toBe('string');
+  });
+
+  it('uploadFile throws 413 when file exceeds max size', async () => {
+    await expect(
+      service.uploadFile({
+        file: {
+          originalname: 'big.bin',
+          mimetype: 'application/octet-stream',
+          size: 2048, // > 1024 configured above
+          buffer: Buffer.alloc(2048),
+        },
+        ttl: 60,
+      }),
+    ).rejects.toBeInstanceOf(PayloadTooLargeException);
   });
 });

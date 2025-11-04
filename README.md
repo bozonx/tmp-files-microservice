@@ -17,7 +17,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 
 The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttl` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
 
-## Quick start (production)
+## Quick start
 
 Choose one of the options below.
 
@@ -68,6 +68,23 @@ pnpm start:prod
 
 Default base URL: `http://localhost:80/api/v1`
 
+### Option D — Local development (dev)
+
+```bash
+# Install dependencies
+pnpm install
+
+# Configure dev environment
+cp env.development.example .env.development
+# IMPORTANT: set STORAGE_DIR in .env.development before running
+
+# Run in watch mode
+pnpm start:dev
+```
+
+- Default dev base URL: `http://localhost:3000/api/v1`
+- Note: `STORAGE_DIR` is mandatory. The app will fail to start if not set.
+
 ## Environment variables
 
 Source of truth: `.env.production.example`
@@ -98,48 +115,94 @@ Source of truth: `.env.production.example`
 - `GET /{base}/files/:id/exists` — existence check
 - `POST /{base}/cleanup/run` — run cleanup immediately
 
-Details: [api-specification.md](docs/api-specification.md)
+Details: [docs/api-specification.md](docs/api-specification.md)
 
 ## cURL examples
 
-Upload (no auth at service level):
+Define base URL for your environment:
 
 ```bash
-curl -X POST \
-  -F "file=@./README.md" \
-  -F "ttl=60" \
-  http://localhost:8080/api/v1/files | jq
+# For Docker Compose (default in this README)
+BASE_URL="http://localhost:8080/api/v1"
+# For dev mode
+# BASE_URL="http://localhost:3000/api/v1"
 ```
 
-Info:
+- `ttl` is provided in minutes (default 1440 = 1 day). In responses, `ttl` is returned in seconds.
+
+- **Health**
+
+```bash
+curl -s "$BASE_URL/health"
+```
+
+- **Upload**
+
+```bash
+curl -s -X POST \
+  -F "file=@./README.md" \
+  -F "ttl=60" \
+  "$BASE_URL/files" | jq
+```
+
+- **Info**
 
 ```bash
 FILE_ID="<uuid>"
-curl -s http://localhost:8080/api/v1/files/$FILE_ID | jq
+curl -s "$BASE_URL/files/$FILE_ID" | jq
 ```
 
-Download:
+Include expired:
 
 ```bash
-curl -L -o downloaded.bin http://localhost:8080/api/v1/files/$FILE_ID/download
+curl -s "$BASE_URL/files/$FILE_ID?includeExpired=true" | jq
 ```
 
-Delete:
+- **Download**
 
 ```bash
-curl -s -X DELETE http://localhost:8080/api/v1/files/$FILE_ID | jq
+curl -L -o downloaded.bin "$BASE_URL/files/$FILE_ID/download"
 ```
 
-More examples: `docs/usage-examples.md`.
+- **Delete**
 
-## Documentation
+```bash
+curl -s -X DELETE "$BASE_URL/files/$FILE_ID" | jq
+```
 
-- `docs/quick-start.md` — quick start
-- `docs/api-specification.md` — REST API specification
-- `docs/usage-examples.md` — cURL examples
-- `dev_docs/STORAGE_MODULE.md` — storage module details
-- `docs/dev.md` — development guide
-- `docs/CHANGELOG.md` — changes
+Force delete expired:
+
+```bash
+curl -s -X DELETE "$BASE_URL/files/$FILE_ID?force=true" | jq
+```
+
+- **List/Search**
+
+```bash
+curl -s "$BASE_URL/files?mimeType=text/plain&limit=5&offset=0" | jq
+```
+
+- **Stats**
+
+```bash
+curl -s "$BASE_URL/files/stats" | jq
+```
+
+- **Existence check**
+
+```bash
+curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
+```
+
+## More documentation
+
+- REST API specification: [docs/api-specification.md](docs/api-specification.md)
+- Storage module details: [dev_docs/STORAGE_MODULE.md](dev_docs/STORAGE_MODULE.md)
+- Changelog: [docs/CHANGELOG.md](docs/CHANGELOG.md)
+
+## Development
+
+For full development setup, testing, linting, formatting, and debugging instructions, see the guide: [docs/dev.md](docs/dev.md)
 
 ## License
 

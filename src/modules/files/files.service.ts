@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, InternalServerErrorException, PayloadTooLargeException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DateUtil } from '@common/utils/date.util';
 import { StorageService } from '@modules/storage/storage.service';
@@ -52,8 +52,8 @@ export class FilesService {
   private readonly allowedMimeTypes: string[];
 
   constructor(private readonly storageService: StorageService, private readonly configService: ConfigService) {
-    this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE_MB', 100) * 1024 * 1024;
     const storageCfg = this.configService.get<StorageAppConfig>('storage');
+    this.maxFileSize = storageCfg?.maxFileSize ?? 100 * 1024 * 1024;
     this.allowedMimeTypes = storageCfg?.allowedMimeTypes ?? [];
   }
 
@@ -71,7 +71,13 @@ export class FilesService {
       this.logger.log(`Starting file upload: ${params.file.originalname}`);
 
       const v = ValidationUtil.validateUploadedFile(params.file, this.allowedMimeTypes, this.maxFileSize);
-      if (!v.isValid) throw new BadRequestException(`File validation failed: ${v.errors.join(', ')}`);
+      if (!v.isValid) {
+        const tooLarge = v.errors.some((e) => e.includes('exceeds maximum allowed size'));
+        if (tooLarge) {
+          throw new PayloadTooLargeException('File size exceeds the maximum allowed limit');
+        }
+        throw new BadRequestException(`File validation failed: ${v.errors.join(', ')}`);
+      }
 
       const storageCfg = this.configService.get('storage') as any;
       const ttlValidation = ValidationUtil.validateTTL(params.ttl, 60, storageCfg?.maxTtl ?? 31 * 24 * 3600);
