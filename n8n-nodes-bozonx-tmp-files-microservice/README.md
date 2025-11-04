@@ -1,73 +1,108 @@
-# n8n-nodes-bozonx-tmp-files
+# n8n Node: Bozonx Temporary Files
 
-Это пакет community-ноды для n8n. Нода отправляет бинарный файл или URL на файл в микросервис временного хранения и возвращает временную ссылку (URL).
+ Upload a binary file or a file URL to the temporary files microservice and get back a temporary link.
 
-[n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
+ [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 
-[Установка](#installation)
-[Использование](#использование)
-[Поля](#поля)
-[Credentials](#credentials)
-[Совместимость](#совместимость)
-[Ресурсы](#ресурсы)
+ - **[Installation](#installation)**
+ - **[How it works](#how-it-works)**
+ - **[Credentials](#credentials)**
+ - **[Parameters](#parameters)**
+ - **[Usage examples](#usage-examples)**
+ - **[Continue On Fail](#continue-on-fail)**
+ - **[Compatibility](#compatibility)**
+ - **[Resources](#resources)**
 
-## Installation
+ ## Installation
 
-Следуйте официальной инструкции по установке community-нод: [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/).
+ Follow the official guide for installing community nodes: [Community Nodes Installation](https://docs.n8n.io/integrations/community-nodes/installation/).
 
-## Использование
+ Search for and install the package: `n8n-nodes-bozonx-tmp-files-microservice`.
 
-Нода отправляет данные в эндпоинт `POST {{baseUrl}}/api/v1/files`.
+ ## How it works
 
-- Если выбран источник `URL`, отправляется JSON `{ url: string, ttlMinutes: number }`.
-- Если выбран источник `Binary`, отправляется `multipart/form-data` с полями:
-  - `file` — содержимое бинарного поля из входящего item
-  - `ttlMinutes` — строковое значение времени жизни в минутах
+ The node sends a `POST` request to your API Gateway using the following URL pattern:
 
-Базовый URL указывается в Credentials. Авторизация — опциональна: сам микросервис не требует авторизации, аутентификация обычно происходит на уровне API Gateway. В таких случаях используется Basic Auth (username/password) в Credentials.
+ `{{gatewayUrl}}/{{basePath}}/files`
 
-## Поля
+ or for URL uploads:
 
-- **Source Type** — выбор источника данных: `Binary` или `URL`.
-- **Binary Property** — имя бинарного поля из входящих данных (по умолчанию `data`). Видно только при `Binary`.
-- **File URL** — URL файла (видно только при `URL`).
-- **TTL (minutes)** — время жизни файла в минутах (обязательное поле, минимум `1`, по умолчанию `60`).
+ `{{gatewayUrl}}/{{basePath}}/files/url`
 
-## Credentials
+ - `gatewayUrl` comes from Credentials.
+ - `basePath` is a node parameter (default: `tmp-files/api/v1`). Leading and trailing slashes are ignored.
+ - Authorization is injected automatically via a Bearer token from Credentials.
+ - The node returns the service response as JSON unchanged.
 
-Используются кастомные креды `Tmp Files API`:
+ Endpoints and payloads:
 
-- **Base URL** — базовый URL микросервиса (обязательное поле).
-- **Username** — имя пользователя для Basic Auth (опционально; оставьте пустым, если доступ без авторизации).
-- **Password** — пароль для Basic Auth (опционально; оставьте пустым, если доступ без авторизации).
+ - Binary upload: `POST /files` with `multipart/form-data` containing fields `file`, `ttlMinutes`, and optional `metadata`.
+ - URL upload: `POST /files/url` with JSON `{ url: string, ttlMinutes: number, metadata?: string }`.
 
-Поддерживаются выражения, поэтому можно использовать переменные окружения при настройке кредов:
+ ## Credentials
 
-- Для Base URL: `{{$env.TMP_FILES_BASE_URL}}`
-- Для Username: `{{$env.TMP_FILES_USERNAME}}`
-- Для Password: `{{$env.TMP_FILES_PASSWORD}}`
+ Uses custom credentials: `Bozonx Microservices API`.
 
-## Continue On Fail
+ - **Gateway URL** (required)
+   - Example: `https://micros.example.com`
+   - Do not include the API path (no `/api/v1` here).
+ - **API Token** (required)
+   - Used as `Authorization: Bearer <token>`.
 
-Если включить опцию “Continue On Fail” в настройках ноды, обработка не прервётся на первом ошибочном элементе:
+ ### Notes
 
-- Ошибочные элементы будут возвращены с полем `json.error` и с сохранением ссылки на исходный элемент через `pairedItem`.
-- Успешные элементы вернут обычный `json`-ответ сервиса.
+ - The `Gateway URL` must include the protocol (`http://` or `https://`).
+ - Do not add a trailing slash to `Gateway URL` (the node will trim it if present).
+ - `Base Path` may be provided with or without slashes; the node trims leading/trailing slashes.
+ - For URL uploads, `File URL` must be a non-empty absolute URL.
+ - `Metadata (JSON)` is sent as a string field; provide a valid JSON string if your backend validates it.
 
-Где включать:
+ You can use expressions to pull values from environment variables:
 
-- Откройте ноду → вкладка Settings → переключатель “Continue On Fail”.
+ - Gateway URL: `{{$env.GATEWAY_URL}}`
+ - API Token: `{{$env.API_TOKEN}}`
 
-Когда полезно:
+ ## Parameters
 
-- При батчевой загрузке файлов/URL, чтобы единичная ошибка не останавливала весь процесс.
+ - **Base Path** (string, default: `tmp-files/api/v1`)
+   - API base path appended to `Gateway URL`. Leading/trailing slashes are ignored.
+ - **Source Type** (options: `Binary`, `URL`, default: `Binary`)
+ - **Binary Property** (string, default: `data`)
+   - Name of the binary property from the incoming item. Visible only when `Source Type = Binary`.
+ - **File URL** (string)
+   - Direct URL to the file. Visible only when `Source Type = URL`.
+ - **TTL (Minutes)** (number, min: `1`, default: `1440`)
+   - Time to live before the file is removed by the microservice.
+ - **Metadata (JSON)** (string)
+   - Optional JSON string to associate with the file.
 
-Когда не стоит включать:
+ ## Usage examples
 
-## Совместимость
+ - Binary upload
 
-Поддерживается n8n версии `1.60.0` и выше.
+   1. Set `Source Type = Binary`.
+   2. Ensure your incoming item has a binary property (default: `data`).
+   3. Configure `TTL (Minutes)` and optional `Metadata (JSON)`.
 
-## Ресурсы
+ - URL upload
 
-- [Документация по community-нодам n8n](https://docs.n8n.io/integrations/#community-nodes)
+   1. Set `Source Type = URL`.
+   2. Provide the `File URL`.
+   3. Configure `TTL (Minutes)` and optional `Metadata (JSON)`.
+
+ ## Continue On Fail
+
+ When enabled in node Settings, the node does not stop on the first failed item:
+
+ - Failed items are returned with `json.error` and maintain a link to the original via `pairedItem`.
+ - Successful items return the microservice JSON response.
+
+ Enable under: Node → Settings → toggle “Continue On Fail”.
+
+ ## Compatibility
+
+ Works with n8n `1.60.0+`. Newer versions of n8n are recommended.
+
+ ## Resources
+
+ - n8n Community Nodes: https://docs.n8n.io/integrations/#community-nodes
