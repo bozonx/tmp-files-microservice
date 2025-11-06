@@ -16,7 +16,6 @@ export class DownloadController {
       const { buffer, fileInfo } = result;
       res.header('Content-Type', fileInfo.mimeType);
       res.header('Content-Length', fileInfo.size.toString());
-      res.header('Content-Disposition', `attachment; filename="${fileInfo.originalName}"`);
       res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.header('Pragma', 'no-cache');
       res.header('Expires', '0');
