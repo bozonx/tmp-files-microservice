@@ -47,7 +47,7 @@ The service exposes a REST API with no built-in authentication. If protection is
     "isExpired": false,
     "timeRemainingMinutes": 60
   },
-  "downloadUrl": "/api/v1/files/uuid/download",
+  "downloadUrl": "/api/v1/download/uuid",
   "infoUrl": "/api/v1/files/uuid",
   "deleteUrl": "/api/v1/files/uuid",
   "message": "File uploaded successfully"
@@ -90,7 +90,7 @@ Example 413 response:
 Errors: 400 (invalid `id`), 404 (not found or expired), 500.
 
 ### Download file
-- GET `/{base}/files/:id/download`
+- GET `/{base}/download/:id`
 - Response: file binary data with `Content-Type`, `Content-Length`, `Content-Disposition` headers.
 
 Errors: 400, 404, 500. Responses also include no-cache headers.

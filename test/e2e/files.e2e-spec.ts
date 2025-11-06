@@ -103,6 +103,11 @@ describe('Files (e2e)', () => {
       expect(data).toHaveProperty('downloadUrl');
       expect(data).toHaveProperty('infoUrl');
       expect(data).toHaveProperty('deleteUrl');
+
+      // Verify the download endpoint responds and returns the expected content
+      const downloadRes = await app.inject({ method: 'GET', url: data.downloadUrl });
+      expect(downloadRes.statusCode).toBe(200);
+      expect(downloadRes.body).toBe('hello');
     } finally {
       server.close();
     }

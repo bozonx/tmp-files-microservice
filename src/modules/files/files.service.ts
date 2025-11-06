@@ -122,7 +122,7 @@ export class FilesService {
 
       return {
         file: respFile,
-        downloadUrl: this.generateApiUrl('files/:id/download', { id: fileInfo.id }),
+        downloadUrl: this.generateApiUrl('download/:id', { id: fileInfo.id }),
         infoUrl: this.generateApiUrl('files/:id', { id: fileInfo.id }),
         deleteUrl: this.generateApiUrl('files/:id', { id: fileInfo.id }),
         message: 'File uploaded successfully',
@@ -157,7 +157,7 @@ export class FilesService {
       const fileResponse = this.toFileResponse(fileInfo);
       return {
         file: fileResponse,
-        downloadUrl: this.generateApiUrl('files/:id/download', { id: fileInfo.id }),
+        downloadUrl: this.generateApiUrl('download/:id', { id: fileInfo.id }),
         deleteUrl: this.generateApiUrl('files/:id', { id: fileInfo.id }),
       };
     } catch (error: any) {

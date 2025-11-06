@@ -92,7 +92,7 @@ Source of truth: `.env.production.example`
 - `POST /{base}/files` — upload (multipart/form-data)
 - `POST /{base}/files/url` — upload by providing a direct file URL (JSON)
 - `GET /{base}/files/:id` — file info
-- `GET /{base}/files/:id/download` — file download
+- `GET /{base}/download/:id` — file download
 - `DELETE /{base}/files/:id` — delete file
 - `GET /{base}/files` — list/search with filters
 - `GET /{base}/files/stats` — aggregated stats
@@ -155,7 +155,7 @@ curl -s "$BASE_URL/files/$FILE_ID" | jq
 - **Download**
 
 ```bash
-curl -L -o downloaded.bin "$BASE_URL/files/$FILE_ID/download"
+curl -L -o downloaded.bin "$BASE_URL/download/$FILE_ID"
 ```
 
 - **Delete**

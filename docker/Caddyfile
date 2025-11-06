@@ -7,7 +7,7 @@
     # Public: allow unauthenticated file downloads for tmp-files
     @public_tmp_files_download {
         method GET
-        path_regexp public_download ^/tmp-files/api/v1/files/[^/]+/download$
+        path_regexp public_download ^/tmp-files/api/v1/download/[^/]+$
     }
     handle @public_tmp_files_download {
         uri strip_prefix /tmp-files
