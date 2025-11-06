@@ -4,6 +4,24 @@
 }
 
 :80 {
+    # Public: allow unauthenticated file downloads for tmp-files
+    @public_tmp_files_download {
+        method GET
+        path_regexp public_download ^/tmp-files/api/v1/files/[^/]+/download$
+    }
+    handle @public_tmp_files_download {
+        uri strip_prefix /tmp-files
+
+        reverse_proxy tmp-files-microservice:80 {
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-For {http.request.remote.host}
+            header_up X-Real-IP {http.request.remote.host}
+
+            health_uri /api/v1/health
+            health_interval 30s
+        }
+    }
+
     # Shared Bearer auth: single token из {env.AUTH_TOKENS}
     @authed <<CEL
         header_regexp('auth', 'Authorization', '^\\s*Bearer\\s+(.+?)\\s*$') &&
@@ -26,46 +44,6 @@
             }
         }
         
-        handle /stt* {
-            uri strip_prefix /stt
-
-            reverse_proxy stt-gateway-microservice:80 {
-                header_up X-Forwarded-Proto {http.request.scheme}
-                header_up X-Forwarded-For {http.request.remote.host}
-                header_up X-Real-IP {http.request.remote.host}
-
-                health_uri /api/v1/health
-                health_interval 30s
-            }
-        }
-        
-        handle /llm* {
-            uri strip_prefix /llm
-
-            reverse_proxy llm-gateway-microservice:80 {
-                header_up X-Forwarded-Proto {http.request.scheme}
-                header_up X-Forwarded-For {http.request.remote.host}
-                header_up X-Real-IP {http.request.remote.host}
-
-                health_uri /api/v1/health
-                health_interval 30s
-            }
-        }
-        
-        handle /translate* {
-            uri strip_prefix /translate
-
-            reverse_proxy translate-gateway-microservice:80 {
-                header_up X-Forwarded-Proto {http.request.scheme}
-                header_up X-Forwarded-For {http.request.remote.host}
-                header_up X-Real-IP {http.request.remote.host}
-
-                health_uri /api/v1/health
-                health_interval 30s
-            }
-        }
-
-
         # Fallback: authed, но invalid path
         handle {
             respond "Forbidden: Invalid endpoint" 403 {
