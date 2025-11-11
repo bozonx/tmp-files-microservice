@@ -1,6 +1,6 @@
 {
     "name": "n8n-nodes-bozonx-tmp-files-microservice",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "n8n node to upload a binary file or file URL to a temporary files microservice and return a temporary link",
     "license": "MIT",
     "homepage": "",
@@ -8,41 +8,40 @@
         "n8n-community-node-package"
     ],
     "author": {
-        "name": "Ivan",
-        "email": "ipkozyrin@gmail.com"
+        "name": "Ivan K"
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/bozonx/tmp-files-microservice"
     },
-   "scripts": {
-		"build": "n8n-node build",
-		"build:watch": "tsc --watch",
-		"dev": "n8n-node dev",
-		"lint": "n8n-node lint",
+    "scripts": {
+        "build": "n8n-node build",
+        "build:watch": "tsc --watch",
+        "dev": "n8n-node dev",
+        "lint": "n8n-node lint",
         "lint:fix": "n8n-node lint --fix",
-		"release": "n8n-node release",
-		"prepublishOnly": "n8n-node prerelease"
-	},
+        "release:n8n": "n8n-node release",
+        "prepublishOnly:n8n": "n8n-node prerelease"
+    },
     "files": [
         "dist"
     ],
     "n8n": {
-      "n8nNodesApiVersion": 1,
-      "strict": true,
-      "nodes": [
-          "dist/nodes/TmpFiles/BozonxTmpFiles.node.js"
-      ],
-      "credentials": [
-          "dist/credentials/BozonxMicroservicesApi.credentials.js"
-      ]
-  },
+        "n8nNodesApiVersion": 1,
+        "strict": true,
+        "nodes": [
+            "dist/nodes/TmpFiles/BozonxTmpFiles.node.js"
+        ],
+        "credentials": [
+            "dist/credentials/BozonxMicroservicesApi.credentials.js"
+        ]
+    },
     "devDependencies": {
-        "@n8n/node-cli": "*",
-        "eslint": "9.32.0",
+        "@n8n/node-cli": "^0.14.0",
+        "eslint": "9.39.1",
         "prettier": "3.6.2",
-        "release-it": "^19.0.4",
-        "typescript": "5.9.2"
+        "release-it": "^19.0.6",
+        "typescript": "5.9.3"
     },
     "peerDependencies": {
         "n8n-workflow": "*"
