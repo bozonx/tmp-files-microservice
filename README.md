@@ -16,6 +16,14 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 
 The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttlMins` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
 
+### Architecture at a glance
+
+- **NestJS + Fastify** for a high-performance HTTP layer.
+- **StorageService** persists files on the filesystem and maintains metadata in a JSON file.
+- **FilesService** validates inputs, enforces limits, and exposes application use-cases.
+- **CleanupService** periodically removes expired files (interval controlled by `CLEANUP_INTERVAL_MINS`).
+- **Pino logger** with JSON logs in production and pretty logs in development.
+
 ## Quick start
 
 Choose one of the options below.
@@ -79,11 +87,33 @@ Source of truth: `.env.production.example`
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
   - `STORAGE_DIR` — base directory for files and metadata. MANDATORY.
-  - `MAX_FILE_SIZE_MB` — maximum upload size (MB). Source of truth for upload limits; affects both Fastify multipart and service-side validation. Fastify `bodyLimit` is derived as `MAX_FILE_SIZE_MB` (in bytes) plus a fixed overhead to cover multipart boundaries, headers, and fields.
+  - `MAX_FILE_SIZE_MB` — maximum upload size (MB). Single source of truth for upload limits; enforced by both Fastify multipart and service-level validation.
+    - Fastify `bodyLimit` is computed internally as `MAX_FILE_SIZE_MB` (bytes) + overhead for multipart boundaries/headers/fields.
+    - Overhead size is controlled by `HTTP_CONSTANTS.MULTIPART_OVERHEAD_MB` in code and defaults to 2 MiB.
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
   - `CLEANUP_INTERVAL_MINS` — cleanup interval in minutes (default 10, set 0 to disable)
+
+## How uploads, limits and TTL work
+
+- `ttlMins` is provided in minutes by clients (default 1440). Internally it is converted to seconds and clamped against `MAX_TTL_MIN`.
+- The upload size limit is the smaller of:
+  - `MAX_FILE_SIZE_MB` enforced by Fastify multipart (streaming), and
+  - service-level validation in `FilesService`.
+- Exceeding the limit returns HTTP 413.
+
+## Storage layout and metadata
+
+- Files are stored under `STORAGE_DIR` grouped by month (e.g. `YYYY-MM`).
+- Metadata is kept in `data.json` in the storage root and updated atomically.
+- Deduplication: if the same file content (by SHA-256) is uploaded again, existing metadata is reused to avoid duplicate storage.
+
+## Cleanup behavior
+
+- Controlled by `CLEANUP_INTERVAL_MINS`. Set `0` or less to disable scheduling.
+- Expired files are removed from disk and metadata; logs include delete count and freed bytes.
+- You can trigger cleanup manually via `POST /{base}/cleanup/run`.
 
 ## Endpoints (summary)
 
@@ -99,6 +129,36 @@ Source of truth: `.env.production.example`
 - `POST /{base}/cleanup/run` — run cleanup immediately
 
 Details: [docs/api-specification.md](docs/api-specification.md)
+
+## Security and hardening
+
+- The service has no built-in auth; put it behind your API Gateway or reverse proxy.
+- Example Caddy config exposes `/download/:id` publicly while guarding other routes with Bearer auth.
+- Validate inputs at the gateway if needed (rate limits, WAF rules).
+- Consider antivirus/malware scanning in your ingestion pipeline depending on your risk profile.
+- Sensitive headers are redacted in logs.
+
+## Logging
+
+- Production: structured JSON via Pino (level via `LOG_LEVEL`).
+- Development: pretty logs with more verbosity.
+- Health route logs are minimized in production to reduce noise.
+
+## Deployment and reverse proxy
+
+- See Docker Compose and Dockerfile in `docker/` for reference setups.
+- The included Caddyfile shows how to:
+  - expose `GET /download/:id` publicly; and
+  - guard other routes under `/tmp-files` with Bearer tokens.
+- Ensure `STORAGE_DIR` is a persistent volume and has read/write permissions for the container user.
+
+## Troubleshooting
+
+- 413 Payload Too Large: increase `MAX_FILE_SIZE_MB` (and restart) or upload smaller files.
+- 400 Validation errors: check `ttlMins`, JSON `metadata`, or file ID format.
+- 404 Not Found: the file does not exist or has expired.
+- Startup fails with storage error: set `STORAGE_DIR` and ensure the path is writable.
+- Permission denied on writes: fix host directory ownership/permissions or run the container with appropriate user.
 
 ## Errors
 
@@ -187,6 +247,15 @@ curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 - REST API specification: [docs/api-specification.md](docs/api-specification.md)
 - Storage module details: [dev_docs/STORAGE_MODULE.md](dev_docs/STORAGE_MODULE.md)
 - Changelog: [docs/CHANGELOG.md](docs/CHANGELOG.md)
+
+## FAQ
+
+- Why not keep metadata in a database?
+  - This service aims to be lightweight and self-contained. For large-scale needs, you can replace the storage layer with a DB-backed implementation.
+- How do I change the API base path?
+  - Set `API_BASE_PATH` (without slashes). The final base is `/{API_BASE_PATH}/v1`.
+- Can I disable deduplication?
+  - Yes, set `ENABLE_DEDUPLICATION=false`.
 
 ## Development
 

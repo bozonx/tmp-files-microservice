@@ -11,6 +11,8 @@ import { HTTP_CONSTANTS } from '@common/constants/http.constants';
 async function bootstrap() {
   // Create app with bufferLogs enabled to capture early logs
   const maxFileSizeMb = parseInt(process.env.MAX_FILE_SIZE_MB || '100', 10) || 100;
+  // Derive Fastify bodyLimit from MAX_FILE_SIZE_MB plus a fixed multipart overhead to ensure
+  // uploads fail early at the HTTP layer rather than during service validation.
   const bodyLimit = (maxFileSizeMb + HTTP_CONSTANTS.MULTIPART_OVERHEAD_MB) * 1024 * 1024;
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
