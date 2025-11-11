@@ -5,7 +5,7 @@
 - Breaking: API parameter renamed to `ttlMins`. Both requests and responses use minutes (default 1440 = 1 day).
 - Change: Increased default `MAX_TTL_MIN` from 10080 (7 days) to 44640 (31 days). Updated code defaults, env examples, and docker-compose.
 - Breaking: STORAGE_DIR environment variable is now required; service fails to start if missing. Docs and env examples updated.
-- Change: Switched cleanup scheduling from cron to interval via `CLEANUP_INTERVAL_MINUTES` (set `0` to disable). Replaces `CLEANUP_CRON`.
+- Change: Switched cleanup scheduling from cron to interval via `CLEANUP_INTERVAL_MINS` (set `0` to disable). Replaces `CLEANUP_CRON`.
 - Feature: Added REST endpoint `POST /{API_BASE_PATH}/v1/cleanup/run` to trigger cleanup on demand.
 - Docs: README rewritten in English and focused on production usage (Docker/Compose/Bare-metal), env vars summary aligned with `.env.production.example`, cURL and endpoint sections clarified.
 - Docs: `docs/dev.md` translated to English and focused on development workflows (scripts, tests, lint/format, debugging, notes).
