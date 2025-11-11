@@ -15,12 +15,12 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
-    const minutesRaw = this.configService.get<string>('CLEANUP_INTERVAL_MINUTES');
+    const minutesRaw = this.configService.get<string>('CLEANUP_INTERVAL_MINS');
     const minutes = Number(minutesRaw ?? 10);
     const validMinutes = Number.isFinite(minutes) ? Math.floor(minutes) : 10;
 
     if (validMinutes <= 0) {
-      this.logger.log('Cleanup interval disabled (CLEANUP_INTERVAL_MINUTES <= 0)');
+      this.logger.log('Cleanup interval disabled (CLEANUP_INTERVAL_MINS <= 0)');
       return;
     }
 

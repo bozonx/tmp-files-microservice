@@ -15,7 +15,7 @@ The service exposes a REST API with no built-in authentication. If protection is
 
 ## Types and units
 
-- `ttlMinutes` — integer in minutes. Default is `1440` (1 day).
+- `ttlMins` — integer in minutes. Default is `1440` (1 day).
 - Dates use ISO-8601 (UTC).
 - Upload size limit is defined by `MAX_FILE_SIZE_MB` (single source of truth). This value is enforced by both Fastify multipart and service-level validation.
 
@@ -29,7 +29,7 @@ The service exposes a REST API with no built-in authentication. If protection is
 - POST `/{base}/files`
 - Body (multipart/form-data):
   - `file` — binary content (required)
-  - `ttlMinutes` — integer (minutes, controller default is 1440)
+  - `ttlMins` — integer (minutes, controller default is 1440)
   - `metadata` — string (JSON), optional. Arbitrary custom metadata
 - Success 201 response:
 ```json
@@ -40,12 +40,12 @@ The service exposes a REST API with no built-in authentication. If protection is
     "mimeType": "text/plain",
     "size": 12,
     "uploadedAt": "2025-11-02T10:00:00.000Z",
-    "ttlMinutes": 60,
+    "ttlMins": 60,
     "expiresAt": "2025-11-02T11:00:00.000Z",
     "metadata": {},
     "hash": "sha256...",
     "isExpired": false,
-    "timeRemainingMinutes": 60
+    "timeRemainingMins": 60
   },
   "downloadUrl": "/api/v1/download/uuid",
   "infoUrl": "/api/v1/files/uuid",
@@ -75,7 +75,7 @@ Example 413 response:
 - POST `/{base}/files/url`
 - Body (application/json):
   - `url` — string (required). Direct link to the file to be downloaded and stored
-  - `ttlMinutes` — integer (minutes, default 1440)
+  - `ttlMins` — integer (minutes, default 1440)
   - `metadata` — string (JSON) or object, optional. Arbitrary custom metadata
 - Success 201 response: same as for regular upload
 - Errors:
@@ -115,7 +115,7 @@ Errors: 400, 404 (not found), 500.
 - 200 response:
 ```json
 {
-  "files": [ { "id": "uuid", "originalName": "file.txt", "mimeType": "text/plain", "size": 12, "uploadedAt": "...", "ttlMinutes": 60, "expiresAt": "...", "hash": "...", "isExpired": false, "timeRemainingMinutes": 60 } ],
+  "files": [ { "id": "uuid", "originalName": "file.txt", "mimeType": "text/plain", "size": 12, "uploadedAt": "...", "ttlMins": 60, "expiresAt": "...", "hash": "...", "isExpired": false, "timeRemainingMins": 60 } ],
   "total": 1,
   "pagination": { "page": 1, "limit": 10, "totalPages": 1, "hasNext": false, "hasPrev": false }
 }

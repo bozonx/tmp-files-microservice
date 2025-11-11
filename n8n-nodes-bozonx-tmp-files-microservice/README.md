@@ -36,8 +36,8 @@
 
  Endpoints and payloads:
 
- - Binary upload: `POST /files` with `multipart/form-data` containing fields `file`, `ttlMinutes`, and optional `metadata`.
- - URL upload: `POST /files/url` with JSON `{ url: string, ttlMinutes: number, metadata?: string }`.
+ - Binary upload: `POST /files` with `multipart/form-data` containing fields `file`, `ttlMins`, and optional `metadata`.
+ - URL upload: `POST /files/url` with JSON `{ url: string, ttlMins: number, metadata?: string }`.
 
  ## Credentials
 

@@ -14,8 +14,8 @@ export class FilesController {
       const data: any = await (request as any).file();
       if (!data) throw new BadRequestException('No file provided');
 
-      const ttlMinutes = data.fields.ttlMinutes ? parseInt(data.fields.ttlMinutes.value as string) : 1440;
-      const ttl = Math.max(60, Math.floor(ttlMinutes * 60));
+      const ttlMins = data.fields.ttlMins ? parseInt(data.fields.ttlMins.value as string) : 1440;
+      const ttl = Math.max(60, Math.floor(ttlMins * 60));
       let metadata: Record<string, any> = {};
       if (data.fields.metadata) {
         try { metadata = JSON.parse(data.fields.metadata.value as string); } catch { throw new BadRequestException('Invalid metadata JSON format'); }
@@ -47,8 +47,8 @@ export class FilesController {
         throw new BadRequestException('Field "url" is required and must be a string');
       }
 
-      const ttlMinutes = body.ttlMinutes ? parseInt(String(body.ttlMinutes)) : 1440;
-      const ttl = Math.max(60, Math.floor(ttlMinutes * 60));
+      const ttlMins = body.ttlMins ? parseInt(String(body.ttlMins)) : 1440;
+      const ttl = Math.max(60, Math.floor(ttlMins * 60));
 
       let metadata: Record<string, any> | undefined;
       if (body.metadata !== undefined) {

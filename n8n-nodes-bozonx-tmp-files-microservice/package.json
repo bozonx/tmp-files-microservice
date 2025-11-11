@@ -31,7 +31,7 @@
       "n8nNodesApiVersion": 1,
       "strict": true,
       "nodes": [
-          "dist/nodes/TmpFiles/TmpFiles.node.js"
+          "dist/nodes/TmpFiles/BozonxTmpFiles.node.js"
       ],
       "credentials": [
           "dist/credentials/BozonxMicroservicesApi.credentials.js"

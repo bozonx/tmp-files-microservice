@@ -94,7 +94,7 @@ describe('Files (e2e)', () => {
         method: 'POST',
         url: `/api/v1/files/url`,
         headers: { 'content-type': 'application/json' },
-        payload: JSON.stringify({ url: fileUrl, ttlMinutes: 1440, metadata: '{"source":"e2e"}' }),
+        payload: JSON.stringify({ url: fileUrl, ttlMins: 1440, metadata: '{"source":"e2e"}' }),
       });
       expect(res.statusCode).toBe(201);
       const data = JSON.parse(res.body);
@@ -118,7 +118,7 @@ describe('Files (e2e)', () => {
       method: 'POST',
       url: `/api/v1/files/url`,
       headers: { 'content-type': 'application/json' },
-      payload: JSON.stringify({ ttlMinutes: 1440 }),
+      payload: JSON.stringify({ ttlMins: 1440 }),
     });
     expect(res.statusCode).toBe(400);
   });
@@ -145,7 +145,7 @@ describe('Files (e2e)', () => {
         method: 'POST',
         url: `/api/v1/files/url`,
         headers: { 'content-type': 'application/json' },
-        payload: JSON.stringify({ url: fileUrl, ttlMinutes: 1440, metadata: 'not json' }),
+        payload: JSON.stringify({ url: fileUrl, ttlMins: 1440, metadata: 'not json' }),
       });
       expect(res.statusCode).toBe(400);
     } finally {

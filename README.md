@@ -14,7 +14,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 
 ## Overview
 
-The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttlMinutes` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
+The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttlMins` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
 
 ## Quick start
 
@@ -76,15 +76,14 @@ Source of truth: `.env.production.example`
 - `LISTEN_PORT` — e.g. `80` or `3000`
 - `API_BASE_PATH` — API prefix (default `api`)
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
-- `HTTP_REQUEST_BODY_LIMIT_MB` — maximum size of the HTTP request body for Fastify body parser (default 100 MB)
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
   - `STORAGE_DIR` — base directory for files and metadata. MANDATORY.
-  - `MAX_FILE_SIZE_MB` — maximum upload size (MB). Source of truth for upload limits; affects both Fastify multipart and service-side validation.
+  - `MAX_FILE_SIZE_MB` — maximum upload size (MB). Source of truth for upload limits; affects both Fastify multipart and service-side validation. Fastify `bodyLimit` is derived as `MAX_FILE_SIZE_MB` (in bytes) plus a fixed overhead to cover multipart boundaries, headers, and fields.
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
-  - `CLEANUP_INTERVAL_MINUTES` — cleanup interval in minutes (default 10, set 0 to disable)
+  - `CLEANUP_INTERVAL_MINS` — cleanup interval in minutes (default 10, set 0 to disable)
 
 ## Endpoints (summary)
 
@@ -119,7 +118,7 @@ BASE_URL="http://localhost:8080/api/v1"
 # BASE_URL="http://localhost:3000/api/v1"
 ```
 
-- `ttlMinutes` is provided in minutes (default 1440 = 1 day). In responses, `ttlMinutes` is also returned in minutes.
+- `ttlMins` is provided in minutes (default 1440 = 1 day). In responses, `ttlMins` is also returned in minutes.
 
 - **Health**
 
@@ -132,7 +131,7 @@ curl -s "$BASE_URL/health"
 ```bash
 curl -s -X POST \
   -F "file=@./README.md" \
-  -F "ttlMinutes=60" \
+  -F "ttlMins=60" \
   "$BASE_URL/files" | jq
 ```
 
@@ -141,7 +140,7 @@ curl -s -X POST \
 ```bash
 curl -s -X POST \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com/file.bin","ttlMinutes":1440, "metadata":"{\\"source\\":\\"example\\"}"}' \
+  -d '{"url":"https://example.com/file.bin","ttlMins":1440, "metadata":"{\"source\":\"example\"}"}' \
   "$BASE_URL/files/url" | jq
 ```
 

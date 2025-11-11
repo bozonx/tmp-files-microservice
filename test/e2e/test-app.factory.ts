@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { ValidationPipe } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from '@/app.module';
+import { HTTP_CONSTANTS } from '@common/constants/http.constants';
 
 export async function createTestApp(): Promise<NestFastifyApplication> {
   // Ensure defaults the same as in main.ts
@@ -11,11 +12,9 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
     imports: [AppModule],
   }).compile();
 
-  const bodyLimitMb = Math.max(
-    1,
-    parseInt(process.env.HTTP_REQUEST_BODY_LIMIT_MB ?? '100', 10) || 100,
-  );
-  const bodyLimit = bodyLimitMb * 1024 * 1024;
+  const maxFileSizeMb = parseInt(process.env.MAX_FILE_SIZE_MB || '100', 10) || 100;
+  const maxFileSizeBytes = maxFileSizeMb * 1024 * 1024;
+  const bodyLimit = maxFileSizeBytes + HTTP_CONSTANTS.MULTIPART_OVERHEAD_BYTES;
   const app = moduleRef.createNestApplication<NestFastifyApplication>(
     new FastifyAdapter({
       logger: false, // We'll use Pino logger instead

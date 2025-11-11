@@ -25,12 +25,12 @@ export interface FileResponse {
   mimeType: string;
   size: number;
   uploadedAt: string;
-  ttlMinutes: number;
+  ttlMins: number;
   expiresAt: string;
   metadata?: Record<string, any>;
   hash: string;
   isExpired: boolean;
-  timeRemainingMinutes: number;
+  timeRemainingMins: number;
 }
 
 export interface UploadFileResponse {
@@ -266,12 +266,12 @@ export class FilesService {
       mimeType: fileInfo.mimeType,
       size: fileInfo.size,
       uploadedAt: uploadedAt.toISOString(),
-      ttlMinutes: Math.floor(fileInfo.ttl / 60),
+      ttlMins: Math.floor(fileInfo.ttl / 60),
       expiresAt: expiresAt.toISOString(),
       metadata: fileInfo.metadata,
       hash: fileInfo.hash,
       isExpired: DateUtil.isExpired(expiresAt),
-      timeRemainingMinutes: Math.floor(Math.max(0, DateUtil.diffInSeconds(expiresAt, DateUtil.now().toDate())) / 60),
+      timeRemainingMins: Math.floor(Math.max(0, DateUtil.diffInSeconds(expiresAt, DateUtil.now().toDate())) / 60),
     };
   }
 

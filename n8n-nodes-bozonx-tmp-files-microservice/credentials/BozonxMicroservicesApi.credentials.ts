@@ -1,8 +1,9 @@
-import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+import type { ICredentialType, INodeProperties, Icon } from 'n8n-workflow';
 
 export class BozonxMicroservicesApi implements ICredentialType {
 	name = 'bozonxMicroservicesApi';
 	displayName = 'Bozonx Microservices API';
+	icon = 'fa:key' as Icon;
 	documentationUrl = 'https://github.com/bozonx/tmp-files-microservice/tree/main/n8n#readme';
 	properties: INodeProperties[] = [
 		{
@@ -31,6 +32,14 @@ export class BozonxMicroservicesApi implements ICredentialType {
 			headers: {
 				Authorization: '={{"Bearer " + $credentials.apiToken}}',
 			},
+		},
+	};
+
+	test: ICredentialType['test'] = {
+		request: {
+			baseURL: '={{$credentials.gatewayUrl}}',
+			url: '/',
+			method: 'GET',
 		},
 	};
 }

@@ -74,7 +74,7 @@ export class TmpFiles implements INodeType {
             },
             {
                 displayName: 'TTL (Minutes)',
-                name: 'ttlMinutes',
+                name: 'ttlMins',
                 type: 'number',
                 default: 1440,
                 required: true,
@@ -98,8 +98,8 @@ export class TmpFiles implements INodeType {
         for (let i = 0; i < items.length; i++) {
             try {
                 const sourceType = this.getNodeParameter('sourceType', i) as string;
-                const ttlMinutesParam = this.getNodeParameter('ttlMinutes', i) as number;
-                const ttlMinutes = Math.max(1, Math.floor(ttlMinutesParam));
+                const ttlMinsParam = this.getNodeParameter('ttlMins', i) as number;
+                const ttlMins = Math.max(1, Math.floor(ttlMinsParam));
                 const metadata = (this.getNodeParameter('metadata', i) as string) || '';
                 const basePathParam = (this.getNodeParameter('basePath', i) as string) || '';
                 const normalizedBasePath = basePathParam.replace(/^\/+|\/+$/g, '');
@@ -127,7 +127,7 @@ export class TmpFiles implements INodeType {
                         throw new NodeOperationError(this.getNode(), 'File URL is required when source type is "URL"', { itemIndex: i });
                     }
                     options.json = true;
-                    const body: IDataObject = { url: fileUrl, ttlMinutes };
+                    const body: IDataObject = { url: fileUrl, ttlMins };
                     if (metadata && metadata.trim() !== '') body.metadata = metadata;
                     options.url = `${pathPrefix}files/url`;
                     options.body = body;
@@ -150,7 +150,7 @@ export class TmpFiles implements INodeType {
                                 contentType: mimeType || 'application/octet-stream',
                             },
                         },
-                        ttlMinutes: String(ttlMinutes),
+                        ttlMins: String(ttlMins),
                         ...(metadata && metadata.trim() !== '' ? { metadata } : {}),
                     };
                 } else {
