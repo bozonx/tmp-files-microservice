@@ -22,13 +22,13 @@
         }
     }
 
-    # Shared Bearer auth: single token из {env.AUTH_TOKENS}
+    # Shared Bearer auth: single token from {env.AUTH_TOKENS}
     @authed <<CEL
         header_regexp('auth', 'Authorization', '^\\s*Bearer\\s+(.+?)\\s*$') &&
         ((',' + {env.AUTH_TOKENS} + ',').contains(',' + {re.auth.1} + ','))
     CEL
 
-    # Outer handle: только если authed
+    # Outer handle: only if authenticated
     handle @authed {
     
         handle /tmp-files* {
@@ -44,7 +44,7 @@
             }
         }
         
-        # Fallback: authed, но invalid path
+        # Fallback: authenticated but invalid path
         handle {
             respond "Forbidden: Invalid endpoint" 403 {
                 close
@@ -52,7 +52,7 @@
         }
     }
 
-    # Global fallback: не authed
+    # Global fallback: not authenticated
     handle {
         respond "Unauthorized" 401 {
             close

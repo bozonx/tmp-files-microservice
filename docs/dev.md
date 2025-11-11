@@ -14,14 +14,14 @@ pnpm install
 
 # 2) Configure environment (dev)
 cp env.development.example .env.development
-# ВАЖНО: укажите STORAGE_DIR в .env.development перед запуском
+# IMPORTANT: set STORAGE_DIR in .env.development before starting
 
 # 3) Run in development (watch mode)
 pnpm start:dev
 ```
 
-- Базовый URL (dev) по умолчанию: `http://localhost:3000/api/v1`
-- ВАЖНО: `STORAGE_DIR` обязательна; приложение не запустится, если переменная не задана.
+- Default base URL (dev): `http://localhost:3000/api/v1`
+- IMPORTANT: `STORAGE_DIR` is required; the app will not start if it is missing.
 
 ## Tests
 
@@ -61,7 +61,8 @@ pnpm format
 ## Debugging the app
 
 ```bash
-# Start Nest in debug with watchpnpm start:debug
+# Start Nest in debug with watch
+pnpm start:debug
 ```
 
 Attach your debugger to the Node.js inspector port output by the command.

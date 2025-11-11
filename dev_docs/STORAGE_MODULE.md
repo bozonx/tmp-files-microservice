@@ -1,73 +1,72 @@
-# StorageModule - Модуль файлового хранилища
+# StorageModule — File Storage Module
 
-## Обзор
+## Overview
 
-StorageModule реализует функционал для работы с файловым хранилищем. Модуль обеспечивает сохранение, чтение, удаление файлов с поддержкой дедупликации и автоматической организации по датам.
+StorageModule implements a simple, file-system–backed storage used by the service. It supports saving, reading, deleting files, SHA-256–based deduplication, and time-based directory organization.
 
-## Компоненты
+## Components
 
 ### StorageService
 
-Основной сервис для работы с файловым хранилищем.
+Primary service that encapsulates storage operations.
 
-#### Основные возможности:
+#### Capabilities
 
-1. **Сохранение файлов** (`saveFile`)
-   - Валидация размера файла
-   - Безопасное определение MIME типа через file-type
-   - Опциональная валидация MIME типов (если настроена)
-   - Дедупликация файлов по SHA-256 хешу
-   - Организация файлов по датам (YYYY-MM)
-   - Генерация безопасных имен файлов
+1. **Save file** (`saveFile`)
+   - Validates file size against configured limit
+   - Safe MIME detection via `file-type` with graceful fallback
+   - Optional MIME allowlist validation
+   - SHA-256 hash–based deduplication
+   - Date-based directory layout (YYYY-MM)
+   - Safe filename generation
 
-2. **Получение информации о файлах** (`getFileInfo`)
-   - Получение метаданных файла по ID
-   - Проверка истечения срока жизни (TTL)
+2. **Get file info** (`getFileInfo`)
+   - Returns file metadata by ID
+   - Validates expiration (TTL)
 
-3. **Чтение файлов** (`readFile`)
-   - Чтение содержимого файла по ID
-   - Возврат буфера данных
+3. **Read file** (`readFile`)
+   - Reads file content by ID
+   - Returns a Buffer
 
-4. **Удаление файлов** (`deleteFile`)
-   - Удаление файла с диска
-   - Обновление метаданных
+4. **Delete file** (`deleteFile`)
+   - Removes file from disk
+   - Updates metadata atomically
 
-5. **Поиск файлов** (`searchFiles`)
-   - Фильтрация по MIME типу, размеру, дате
-   - Поиск истекших файлов
-   - Пагинация результатов
+5. **Search files** (`searchFiles`)
+   - Filters by MIME type, size range, date range
+   - Supports expired-only search
+   - Pagination via `limit` and `offset`
 
-6. **Статистика** (`getFileStats`)
-   - Общее количество файлов
-   - Общий размер
-   - Группировка по MIME типам и датам
+6. **Statistics** (`getFileStats`)
+   - Total files and size
+   - Grouping by MIME types and upload date
 
-7. **Состояние хранилища** (`getStorageHealth`)
-   - Проверка доступности
-   - Информация о дисковом пространстве
-   - Количество файлов
+7. **Storage health** (`getStorageHealth`)
+   - Availability check
+   - Disk usage info (placeholder implementation)
+   - File count
 
-#### Конфигурация:
+#### Configuration
 
-- `STORAGE_DIR` - базовый путь к хранилищу (обязателен)
-- `MAX_FILE_SIZE_MB` - максимальный размер файла в мегабайтах (по умолчанию: 100MB)
-- `ALLOWED_MIME_TYPES` - список разрешенных MIME типов через запятую (например: `image/jpeg,image/png`). Пустое значение = разрешены все типы.
-- `ENABLE_DEDUPLICATION` - включение дедупликации (по умолчанию: `true`)
-- `MAX_TTL_MIN` - максимальный TTL в минутах (по умолчанию: 44640 = 31 день; используется валидацией на уровне сервиса файлов)
+- `STORAGE_DIR` — base path to storage (required)
+- `MAX_FILE_SIZE_MB` — max upload size in megabytes (default: 100)
+- `ALLOWED_MIME_TYPES` — comma-separated allowlist (e.g., `image/jpeg,image/png`). Empty = allow all
+- `ENABLE_DEDUPLICATION` — enables deduplication (default: `true`)
+- `MAX_TTL_MIN` — maximum TTL in minutes (default: 44640 = 31 days; used by FilesService validation)
 
-## Структура хранилища
+## Storage layout
 
 ```
 storage/
-├── data.json          # Метаданные всех файлов
-└── 2024-01/           # Файлы за январь 2024
+├── data.json          # Metadata for all files
+└── 2024-01/           # Files uploaded in January 2024
     ├── uuid1_file1.jpg
     └── uuid2_file2.pdf
-└── 2024-02/           # Файлы за февраль 2024
+└── 2024-02/
     └── uuid3_file3.txt
 ```
 
-## Метаданные (data.json)
+## Metadata (data.json)
 
 ```json
 {
@@ -93,41 +92,41 @@ storage/
 }
 ```
 
-## Безопасность
+## Security considerations
 
-1. Опциональная валидация MIME типов
-2. Ограничение размера
-3. Безопасные имена файлов
-4. Хеширование (SHA-256)
-5. Безопасное определение MIME типа (file-type)
+1. Optional MIME allowlist validation
+2. File size limits
+3. Safe filename generation
+4. SHA-256 hashing for deduplication
+5. MIME detection via `file-type` with fallback
 
-## Дедупликация
+## Deduplication
 
-При включенной дедупликации:
+When enabled:
 
-- Файлы с одинаковым SHA-256 хешем сохраняются только один раз
-- При повторной загрузке того же файла возвращается ссылка на существующий
-- Обновляется время истечения срока жизни
+- Files with identical SHA-256 hashes are stored only once
+- Re-uploads of the same content return the existing record
+- Expiration time may be refreshed upon re-upload
 
-## Тестирование
+## Testing
 
-Созданы unit тесты для проверки инициализации, статистики, поиска и обработки ошибок.
+Unit tests cover initialization, stats, search, and error handling basics.
 
-## Примеры конфигурации
+## Configuration examples
 
-### Разрешить все типы файлов (по умолчанию)
+### Allow all types (default)
 
 ```
 ALLOWED_MIME_TYPES=
 ```
 
-### Ограничить только изображениями
+### Only images
 
 ```
 ALLOWED_MIME_TYPES=image/jpeg,image/png,image/gif,image/webp
 ```
 
-### Ограничить только документами
+### Only documents
 
 ```
 ALLOWED_MIME_TYPES=application/pdf,text/plain,application/json,text/csv

@@ -14,10 +14,11 @@
 - Docs: Expanded `docs/api-specification.md` with detailed success and error examples, explicit error format, and cleanup endpoint documentation.
 - Docs: README updated with error section and `MAX_FILE_SIZE_MB` notes.
 - Tests: Added unit test for 413 behavior and E2E tests for `exists` validation and `isExpired` presence.
-- Breaking: удалён параметр загрузки `customFilename`; он больше не поддерживается в API, коде и документации.
- - Breaking: удалён параметр `includeExpired` во всех эндпоинтах. Просроченные файлы всегда считаются недоступными: их нельзя получить, скачать или проверить существование (они считаются как "не найдены"). Исключения: листинг поддерживает `expiredOnly`, а удаление просроченных доступно без дополнительных параметров.
- - Breaking: удалена переменная окружения `HTTP_REQUEST_BODY_LIMIT_MB`. Лимит тела HTTP-запроса на уровне Fastify теперь вычисляется как `MAX_FILE_SIZE_MB` (в байтах) плюс фиксированный запас для заголовков/границ/полей.
- - Breaking: изменён путь скачивания файла с `/files/:id/download` на `/download/:id`. Поле `downloadUrl` в ответах теперь указывает на `/download/:id`. В `docker/Caddyfile` открыт новый путь `/download/:id` без авторизации.
+- Breaking: removed upload parameter `customFilename`; it is no longer supported in the API, code, or documentation.
+- Breaking: removed `includeExpired` parameter from all endpoints. Expired files are always considered unavailable: they cannot be retrieved, downloaded, or existence-checked (treated as "not found"). Exceptions: listing supports `expiredOnly`, and deleting expired files is allowed without extra parameters.
+- Breaking: removed environment variable `HTTP_REQUEST_BODY_LIMIT_MB`. Fastify HTTP bodyLimit is now computed as `MAX_FILE_SIZE_MB` (in bytes) plus a fixed overhead for multipart boundaries/headers/fields.
+- Breaking: changed download path from `/files/:id/download` to `/download/:id`. The `downloadUrl` field in responses now points to `/download/:id`. `docker/Caddyfile` exposes the new `/download/:id` path without authentication.
+- Docs: translated development and storage docs to English; translated reverse-proxy (Caddyfile) comments; expanded README with deployment, configuration, security, and troubleshooting sections.
 
 ## 0.2.1 - 2025-11-02
 
