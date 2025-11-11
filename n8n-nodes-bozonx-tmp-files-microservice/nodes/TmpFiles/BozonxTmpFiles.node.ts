@@ -8,7 +8,7 @@ import {
     type IHttpRequestOptions,
 } from 'n8n-workflow';
 
-export class TmpFiles implements INodeType {
+export class BozonxTmpFiles implements INodeType {
     description: INodeTypeDescription = {
         displayName: 'Temporary Files',
         name: 'bozonxTmpFiles',
