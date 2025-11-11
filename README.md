@@ -57,7 +57,7 @@ docker build -f docker/Dockerfile -t tmp-files-microservice:local .
 # 3) Run container (reads env from .env.production)
 cp env.production.example .env.production
 docker run -d --name tmp-files-microservice \
-  --env-file ./.env.production -p 8080:80 \
+  --env-file ./.env.production -p 8080:8080 \
   tmp-files-microservice:local
 
 # 4) Health check
@@ -73,7 +73,7 @@ pnpm build
 pnpm start:prod
 ```
 
-Default base URL: `http://localhost:80/api/v1`
+Default base URL: `http://localhost:8080/api/v1`
 
 ## Environment variables
 
@@ -81,7 +81,7 @@ Source of truth: `.env.production.example`
 
 - `NODE_ENV` — `production|development|test`
 - `LISTEN_HOST` — e.g. `0.0.0.0` or `localhost`
-- `LISTEN_PORT` — e.g. `80` or `3000`
+- `LISTEN_PORT` — e.g. `8080`
 - `API_BASE_PATH` — API prefix (default `api`)
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
 - `TZ` — timezone (default `UTC`)
@@ -175,7 +175,7 @@ Define base URL for your environment:
 # For Docker Compose (default in this README)
 BASE_URL="http://localhost:8080/api/v1"
 # For dev mode
-# BASE_URL="http://localhost:3000/api/v1"
+# BASE_URL="http://localhost:8080/api/v1"
 ```
 
 - `ttlMins` is provided in minutes (default 1440 = 1 day). In responses, `ttlMins` is also returned in minutes.

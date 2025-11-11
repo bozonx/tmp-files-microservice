@@ -20,7 +20,7 @@ cp env.development.example .env.development
 pnpm start:dev
 ```
 
-- Default base URL (dev): `http://localhost:3000/api/v1`
+- Default base URL (dev): `http://localhost:8080/api/v1`
 - IMPORTANT: `STORAGE_DIR` is required; the app will not start if it is missing.
 
 ## Tests
