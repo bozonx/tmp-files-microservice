@@ -15,6 +15,7 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
+    // Read cleanup interval (minutes). 0 or negative disables scheduling.
     const minutesRaw = this.configService.get<string>('CLEANUP_INTERVAL_MINS');
     const minutes = Number(minutesRaw ?? 10);
     const validMinutes = Number.isFinite(minutes) ? Math.floor(minutes) : 10;
@@ -24,6 +25,7 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    // Schedule fixed-interval cleanup; execution logs include deleted files and freed bytes
     const intervalMs = validMinutes * 60_000;
     const intervalRef = setInterval(() => {
       void this.handleScheduledCleanup();

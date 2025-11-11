@@ -82,11 +82,10 @@ export class BozonxTmpFiles implements INodeType {
                 description: 'Time to live before the file is removed',
             },
             {
-                displayName: 'Metadata (JSON, optional)',
+                displayName: 'Metadata (JSON, Optional)',
                 name: 'metadata',
                 type: 'string',
                 default: '',
-                required: false,
                 typeOptions: { rows: 6 },
                 description: 'Optional JSON string with custom metadata to associate with the file',
             },
