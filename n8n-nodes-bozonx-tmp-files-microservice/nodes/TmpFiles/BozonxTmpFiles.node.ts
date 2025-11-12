@@ -192,12 +192,12 @@ export class BozonxTmpFiles implements INodeType {
 					}
 
 					const form = new FormData();
+					form.append('ttlMins', String(ttlMins));
+					if (metadata && metadata.trim() !== '') form.append('metadata', metadata);
 					form.append('file', dataBuffer, {
 						filename: fileName || 'file',
 						contentType: mimeType || 'application/octet-stream',
 					});
-					form.append('ttlMins', String(ttlMins));
-					if (metadata && metadata.trim() !== '') form.append('metadata', metadata);
 
 					// Assign body and merge headers so boundary is included
 					(options as unknown as { body?: unknown }).body = form as unknown as IDataObject;
