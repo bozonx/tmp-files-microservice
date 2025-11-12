@@ -7,6 +7,7 @@ import {
     type INodeTypeDescription,
     type IHttpRequestOptions,
 } from 'n8n-workflow';
+import FormData from 'form-data';
 
 export class BozonxTmpFiles implements INodeType {
     description: INodeTypeDescription = {
@@ -141,9 +142,7 @@ export class BozonxTmpFiles implements INodeType {
                     const dataBuffer = await this.helpers.getBinaryDataBuffer(i, binaryProperty);
                     const { fileName, mimeType } = item.binary[binaryProperty]!;
 
-                    // Ensure multipart/form-data without forcing json
-                    const opts = options as unknown as Record<string, unknown> & { formData?: unknown };
-
+                    // Ensure multipart/form-data using FormData body
                     if (metadata && metadata.trim() !== '') {
                         try {
                             JSON.parse(metadata);
@@ -152,16 +151,20 @@ export class BozonxTmpFiles implements INodeType {
                         }
                     }
 
-                    opts.formData = {
-                        file: {
-                            value: dataBuffer,
-                            options: {
-                                filename: fileName || 'file',
-                                contentType: mimeType || 'application/octet-stream',
-                            },
-                        },
-                        ttlMins: String(ttlMins),
-                        ...(metadata && metadata.trim() !== '' ? { metadata } : {}),
+                    const form = new FormData();
+                    form.append('file', dataBuffer, {
+                        filename: fileName || 'file',
+                        contentType: mimeType || 'application/octet-stream',
+                    });
+                    form.append('ttlMins', String(ttlMins));
+                    if (metadata && metadata.trim() !== '') form.append('metadata', metadata);
+
+                    // Assign body and merge headers so boundary is included
+                    (options as unknown as { body?: unknown }).body = form as unknown as IDataObject;
+                    const formHeaders = (form as unknown as { getHeaders?: () => Record<string, string> }).getHeaders?.() ?? {};
+                    (options as unknown as { headers?: Record<string, string> }).headers = {
+                        ...(options as unknown as { headers?: Record<string, string> }).headers,
+                        ...formHeaders,
                     };
                 } else {
                     throw new NodeOperationError(this.getNode(), `Unsupported source type: ${sourceType}`, { itemIndex: i });
