@@ -19,6 +19,12 @@
 
             health_uri /api/v1/health
             health_interval 30s
+
+            transport http {
+                read_timeout 10m
+                write_timeout 10m
+                response_header_timeout 10m
+            }
         }
     }
 
@@ -41,6 +47,12 @@
 
                 health_uri /api/v1/health
                 health_interval 30s
+                
+                transport http {
+                    read_timeout 10m
+                    write_timeout 10m
+                    response_header_timeout 10m
+                }
             }
         }
         

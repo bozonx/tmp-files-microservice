@@ -143,6 +143,15 @@ export class BozonxTmpFiles implements INodeType {
 
                     // Ensure multipart/form-data without forcing json
                     const opts = options as unknown as Record<string, unknown> & { formData?: unknown };
+
+                    if (metadata && metadata.trim() !== '') {
+                        try {
+                            JSON.parse(metadata);
+                        } catch {
+                            throw new NodeOperationError(this.getNode(), 'Metadata must be a valid JSON string', { itemIndex: i });
+                        }
+                    }
+
                     opts.formData = {
                         file: {
                             value: dataBuffer,
