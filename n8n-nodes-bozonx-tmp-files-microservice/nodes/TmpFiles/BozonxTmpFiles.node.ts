@@ -79,7 +79,6 @@ export class BozonxTmpFiles implements INodeType {
 				name: 'ttlUnit',
 				type: 'options',
 				options: [
-					{ name: 'Seconds', value: 'seconds' },
 					{ name: 'Minutes', value: 'minutes' },
 					{ name: 'Hours', value: 'hours' },
 					{ name: 'Days', value: 'days' },
@@ -118,9 +117,7 @@ export class BozonxTmpFiles implements INodeType {
 				const ttlUnit = this.getNodeParameter('ttlUnit', i) as string;
 				const ttlValue = Math.max(1, ttlValueParam);
 				let ttlMins = 1;
-				if (ttlUnit === 'seconds') {
-					ttlMins = Math.max(1, Math.ceil(ttlValue / 60));
-				} else if (ttlUnit === 'minutes') {
+				if (ttlUnit === 'minutes') {
 					ttlMins = Math.max(1, Math.floor(ttlValue));
 				} else if (ttlUnit === 'hours') {
 					ttlMins = Math.max(1, Math.floor(ttlValue * 60));

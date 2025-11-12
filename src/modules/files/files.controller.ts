@@ -14,12 +14,32 @@ export class FilesController {
       const data: any = await (request as any).file();
       if (!data) throw new BadRequestException('No file provided');
 
-      const ttlField = data.fields.ttlMins?.value as string | undefined;
-      const ttlMins = ttlField !== undefined ? parseInt(ttlField, 10) : 1440;
+      const rawTtlField: any = data.fields?.ttlMins;
+      let ttlMins: number = 1440;
+      if (rawTtlField !== undefined && rawTtlField !== null) {
+        let ttlStr: string | undefined;
+        if (typeof rawTtlField === 'string') ttlStr = rawTtlField;
+        else if (typeof rawTtlField?.value === 'string') ttlStr = rawTtlField.value as string;
+        else if (Array.isArray(rawTtlField)) {
+          const first = rawTtlField[0];
+          ttlStr = typeof first === 'string' ? first : typeof first?.value === 'string' ? first.value : undefined;
+        }
+        if (ttlStr !== undefined) ttlMins = parseInt(ttlStr, 10);
+      }
       const ttl = Math.max(60, Math.floor(ttlMins * 60));
       let metadata: Record<string, any> = {};
-      if (data.fields.metadata) {
-        try { metadata = JSON.parse(data.fields.metadata.value as string); } catch { throw new BadRequestException('Invalid metadata JSON format'); }
+      if (data.fields?.metadata !== undefined) {
+        let metaStr: string | undefined;
+        const rawMeta: any = data.fields.metadata;
+        if (typeof rawMeta === 'string') metaStr = rawMeta;
+        else if (typeof rawMeta?.value === 'string') metaStr = rawMeta.value as string;
+        else if (Array.isArray(rawMeta)) {
+          const first = rawMeta[0];
+          metaStr = typeof first === 'string' ? first : typeof first?.value === 'string' ? first.value : undefined;
+        }
+        if (metaStr && metaStr.trim() !== '') {
+          try { metadata = JSON.parse(metaStr); } catch { throw new BadRequestException('Invalid metadata JSON format'); }
+        }
       }
 
       const fileBuffer = await data.toBuffer();

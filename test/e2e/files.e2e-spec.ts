@@ -18,6 +18,56 @@ describe('Files (e2e)', () => {
     app = await createTestApp();
   });
 
+  it('POST /api/v1/files (multipart) - honors provided ttlMins (e.g., 5)', async () => {
+    const boundary = '----CascadeBoundary5';
+    const parts: Buffer[] = [];
+    const push = (s: string | Buffer) => parts.push(Buffer.isBuffer(s) ? s : Buffer.from(s));
+    push(`--${boundary}\r\n`);
+    push('Content-Disposition: form-data; name="ttlMins"\r\n\r\n');
+    push('5\r\n');
+    push(`--${boundary}\r\n`);
+    push('Content-Disposition: form-data; name="file"; filename="a.txt"\r\n');
+    push('Content-Type: text/plain\r\n\r\n');
+    push('hello');
+    push(`\r\n--${boundary}--\r\n`);
+    const payload = Buffer.concat(parts);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/files`,
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+      payload,
+    });
+    expect(res.statusCode).toBe(201);
+    const data = JSON.parse(res.body);
+    expect(data?.file?.ttlMins).toBe(5);
+  });
+
+  it('POST /api/v1/files (multipart) - ttlMins=0 is treated as present and coerced to minimum 1', async () => {
+    const boundary = '----CascadeBoundary0';
+    const parts: Buffer[] = [];
+    const push = (s: string | Buffer) => parts.push(Buffer.isBuffer(s) ? s : Buffer.from(s));
+    push(`--${boundary}\r\n`);
+    push('Content-Disposition: form-data; name="ttlMins"\r\n\r\n');
+    push('0\r\n');
+    push(`--${boundary}\r\n`);
+    push('Content-Disposition: form-data; name="file"; filename="a.txt"\r\n');
+    push('Content-Type: text/plain\r\n\r\n');
+    push('hello');
+    push(`\r\n--${boundary}--\r\n`);
+    const payload = Buffer.concat(parts);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/files`,
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+      payload,
+    });
+    expect(res.statusCode).toBe(201);
+    const data = JSON.parse(res.body);
+    expect(data?.file?.ttlMins).toBe(1);
+  });
+
   afterEach(async () => {
     if (app) {
       await app.close();

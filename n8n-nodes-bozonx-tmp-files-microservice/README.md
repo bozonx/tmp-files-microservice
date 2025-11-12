@@ -73,7 +73,7 @@
    - Direct URL to the file. Visible only when `Source Type = URL`.
  - **TTL Value** (number, min: `1`, default: `1`)
   - Time to live value before the file is removed by the microservice.
-- **TTL Unit** (options: `Seconds`, `Minutes`, `Hours` [default], `Days`)
+ - **TTL Unit** (options: `Minutes`, `Hours` [default], `Days`)
   - Unit for the TTL value. The node converts this to minutes (`ttlMins`) for the API.
  - **Metadata (JSON)** (string)
    - Optional JSON string to associate with the file.

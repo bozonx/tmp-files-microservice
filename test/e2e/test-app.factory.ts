@@ -21,6 +21,12 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
     })
   );
 
+  await (app as any).register(require('@fastify/multipart'), {
+    limits: {
+      fileSize: maxFileSizeMb * 1024 * 1024,
+    },
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
