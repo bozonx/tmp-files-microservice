@@ -11,41 +11,78 @@ export class FilesController {
   @HttpCode(HttpStatus.CREATED)
   async uploadFile(@Req() request: FastifyRequest): Promise<UploadFileResponse> {
     try {
-      const data: any = await (request as any).file();
-      if (!data) throw new BadRequestException('No file provided');
-
-      const rawTtlField: any = data.fields?.ttlMins;
-      let ttlMins: number = 1440;
-      if (rawTtlField !== undefined && rawTtlField !== null) {
-        let ttlStr: string | undefined;
-        if (typeof rawTtlField === 'string') ttlStr = rawTtlField;
-        else if (typeof rawTtlField?.value === 'string') ttlStr = rawTtlField.value as string;
-        else if (Array.isArray(rawTtlField)) {
-          const first = rawTtlField[0];
-          ttlStr = typeof first === 'string' ? first : typeof first?.value === 'string' ? first.value : undefined;
-        }
-        if (ttlStr !== undefined) ttlMins = parseInt(ttlStr, 10);
-      }
-      const ttl = Math.max(60, Math.floor(ttlMins * 60));
+      let ttlMins: number | undefined;
       let metadata: Record<string, any> = {};
-      if (data.fields?.metadata !== undefined) {
-        let metaStr: string | undefined;
-        const rawMeta: any = data.fields.metadata;
-        if (typeof rawMeta === 'string') metaStr = rawMeta;
-        else if (typeof rawMeta?.value === 'string') metaStr = rawMeta.value as string;
-        else if (Array.isArray(rawMeta)) {
-          const first = rawMeta[0];
-          metaStr = typeof first === 'string' ? first : typeof first?.value === 'string' ? first.value : undefined;
+      let gotMetadata = false;
+      let fileBuffer: Buffer | undefined;
+      let filename: string | undefined;
+      let mimetype: string | undefined;
+
+      const parts = (request as any).parts?.();
+      if (!parts || typeof parts[Symbol.asyncIterator] !== 'function') {
+        const data: any = await (request as any).file();
+        if (!data) throw new BadRequestException('No file provided');
+
+        const rawTtlField: any = data.fields?.ttlMins;
+        if (rawTtlField !== undefined && rawTtlField !== null) {
+          let ttlStr: string | undefined;
+          if (typeof rawTtlField === 'string') ttlStr = rawTtlField;
+          else if (typeof rawTtlField?.value === 'string') ttlStr = rawTtlField.value as string;
+          else if (Array.isArray(rawTtlField)) {
+            const first = rawTtlField[0];
+            ttlStr = typeof first === 'string' ? first : typeof first?.value === 'string' ? first.value : undefined;
+          }
+          if (ttlStr !== undefined) ttlMins = parseInt(ttlStr, 10);
         }
-        if (metaStr && metaStr.trim() !== '') {
-          try { metadata = JSON.parse(metaStr); } catch { throw new BadRequestException('Invalid metadata JSON format'); }
+        if (data.fields?.metadata !== undefined) {
+          let metaStr: string | undefined;
+          const rawMeta: any = data.fields.metadata;
+          if (typeof rawMeta === 'string') metaStr = rawMeta;
+          else if (typeof rawMeta?.value === 'string') metaStr = rawMeta.value as string;
+          else if (Array.isArray(rawMeta)) {
+            const first = rawMeta[0];
+            metaStr = typeof first === 'string' ? first : typeof first?.value === 'string' ? first.value : undefined;
+          }
+          if (metaStr && metaStr.trim() !== '') {
+            try { metadata = JSON.parse(metaStr); gotMetadata = true; } catch { throw new BadRequestException('Invalid metadata JSON format'); }
+          }
+        }
+
+        const buf = await data.toBuffer();
+        fileBuffer = buf;
+        filename = data.filename || 'unknown';
+        mimetype = data.mimetype || 'application/octet-stream';
+      } else {
+        for await (const part of parts) {
+          if (part.type === 'file') {
+            if (part.fieldname !== 'file') continue;
+            filename = part.filename || 'unknown';
+            mimetype = part.mimetype || 'application/octet-stream';
+            const chunks: Buffer[] = [];
+            for await (const chunk of part.file) {
+              chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+            }
+            fileBuffer = Buffer.concat(chunks);
+          } else if (part.type === 'field') {
+            if (part.fieldname === 'ttlMins') {
+              const v = String(part.value ?? '').trim();
+              if (v !== '') ttlMins = parseInt(v, 10);
+            } else if (part.fieldname === 'metadata') {
+              const v = String(part.value ?? '').trim();
+              if (v !== '') {
+                try { metadata = JSON.parse(v); gotMetadata = true; } catch { throw new BadRequestException('Invalid metadata JSON format'); }
+              }
+            }
+          }
         }
       }
 
-      const fileBuffer = await data.toBuffer();
+      if (!fileBuffer) throw new BadRequestException('No file provided');
+
+      const ttl = Math.max(60, Math.floor((ttlMins ?? 1440) * 60));
       const file = {
-        originalname: data.filename || 'unknown',
-        mimetype: data.mimetype || 'application/octet-stream',
+        originalname: filename || 'unknown',
+        mimetype: mimetype || 'application/octet-stream',
         size: fileBuffer.length,
         buffer: fileBuffer,
         path: '',
