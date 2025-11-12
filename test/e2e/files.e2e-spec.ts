@@ -26,6 +26,70 @@ describe('Files (e2e)', () => {
     if (await fs.pathExists(tmpDir)) await fs.remove(tmpDir);
   });
 
+  it('POST /api/v1/files/url - honors provided ttlMins (e.g., 5)', async () => {
+    const server = http.createServer((req, res) => {
+      if (req.url === '/file.bin') {
+        const data = Buffer.from('hello');
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Length', data.length);
+        res.end(data);
+      } else {
+        res.statusCode = 404;
+        res.end();
+      }
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    const port = typeof address === 'object' && address ? address.port : 0;
+    const fileUrl = `http://127.0.0.1:${port}/file.bin`;
+
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/files/url`,
+        headers: { 'content-type': 'application/json' },
+        payload: JSON.stringify({ url: fileUrl, ttlMins: 5 }),
+      });
+      expect(res.statusCode).toBe(201);
+      const data = JSON.parse(res.body);
+      expect(data?.file?.ttlMins).toBe(5);
+    } finally {
+      server.close();
+    }
+  });
+
+  it('POST /api/v1/files/url - ttlMins=0 is treated as present and coerced to minimum 1', async () => {
+    const server = http.createServer((req, res) => {
+      if (req.url === '/file.bin') {
+        const data = Buffer.from('hello');
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Length', data.length);
+        res.end(data);
+      } else {
+        res.statusCode = 404;
+        res.end();
+      }
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    const port = typeof address === 'object' && address ? address.port : 0;
+    const fileUrl = `http://127.0.0.1:${port}/file.bin`;
+
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/files/url`,
+        headers: { 'content-type': 'application/json' },
+        payload: JSON.stringify({ url: fileUrl, ttlMins: 0 }),
+      });
+      expect(res.statusCode).toBe(201);
+      const data = JSON.parse(res.body);
+      expect(data?.file?.ttlMins).toBe(1);
+    } finally {
+      server.close();
+    }
+  });
+
   it('GET /api/v1/files - lists files', async () => {
     const res = await app.inject({ method: 'GET', url: `/api/v1/files` });
     expect(res.statusCode).toBe(200);

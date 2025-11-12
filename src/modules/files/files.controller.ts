@@ -14,7 +14,8 @@ export class FilesController {
       const data: any = await (request as any).file();
       if (!data) throw new BadRequestException('No file provided');
 
-      const ttlMins = data.fields.ttlMins ? parseInt(data.fields.ttlMins.value as string) : 1440;
+      const ttlField = data.fields.ttlMins?.value as string | undefined;
+      const ttlMins = ttlField !== undefined ? parseInt(ttlField, 10) : 1440;
       const ttl = Math.max(60, Math.floor(ttlMins * 60));
       let metadata: Record<string, any> = {};
       if (data.fields.metadata) {
@@ -47,7 +48,8 @@ export class FilesController {
         throw new BadRequestException('Field "url" is required and must be a string');
       }
 
-      const ttlMins = body.ttlMins ? parseInt(String(body.ttlMins)) : 1440;
+      const hasTtl = body.ttlMins !== undefined && body.ttlMins !== null;
+      const ttlMins = hasTtl ? parseInt(String(body.ttlMins), 10) : 1440;
       const ttl = Math.max(60, Math.floor(ttlMins * 60));
 
       let metadata: Record<string, any> | undefined;
