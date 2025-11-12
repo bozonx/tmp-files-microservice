@@ -21,7 +21,8 @@
         "lint": "n8n-node lint",
         "lint:fix": "n8n-node lint --fix",
         "release:n8n": "n8n-node release",
-        "prepublishOnly:n8n": "n8n-node prerelease"
+        "prepublishOnly:n8n": "n8n-node prerelease",
+        "publish:npm": "pnpm build && pnpm publish --access public"
     },
     "files": [
         "dist"
