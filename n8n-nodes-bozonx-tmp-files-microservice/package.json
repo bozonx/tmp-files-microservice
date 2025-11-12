@@ -1,6 +1,6 @@
 {
     "name": "n8n-nodes-bozonx-tmp-files-microservice",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "n8n node to upload a binary file or file URL to a temporary files microservice and return a temporary link",
     "license": "MIT",
     "homepage": "",
