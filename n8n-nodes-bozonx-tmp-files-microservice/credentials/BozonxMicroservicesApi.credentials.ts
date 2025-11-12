@@ -35,11 +35,11 @@ export class BozonxMicroservicesApi implements ICredentialType {
 		},
 	};
 
-	test: ICredentialType['test'] = {
-		request: {
-			baseURL: '={{$credentials.gatewayUrl}}',
-			url: '/',
-			method: 'GET',
-		},
-	};
+	// test: ICredentialType['test'] = {
+	// 	request: {
+	// 		baseURL: '={{$credentials.gatewayUrl}}',
+	// 		url: '/',
+	// 		method: 'GET',
+	// 	},
+	// };
 }
