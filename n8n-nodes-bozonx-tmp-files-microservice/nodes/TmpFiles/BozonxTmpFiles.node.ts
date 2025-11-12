@@ -74,13 +74,26 @@ export class BozonxTmpFiles implements INodeType {
                 description: 'Direct URL to the file to be saved temporarily',
             },
             {
-                displayName: 'TTL (Minutes)',
-                name: 'ttlMins',
+                displayName: 'TTL Value',
+                name: 'ttlValue',
                 type: 'number',
-                default: 1440,
+                default: 1,
                 required: true,
                 typeOptions: { minValue: 1 },
-                description: 'Time to live before the file is removed',
+                description: 'Time to live value before the file is removed',
+            },
+            {
+                displayName: 'TTL Unit',
+                name: 'ttlUnit',
+                type: 'options',
+                options: [
+                    { name: 'Seconds', value: 'seconds' },
+                    { name: 'Minutes', value: 'minutes' },
+                    { name: 'Hours', value: 'hours' },
+                    { name: 'Days', value: 'days' },
+                ],
+                default: 'hours',
+                description: 'Time unit for TTL',
             },
             {
                 displayName: 'Metadata (JSON, Optional)',
@@ -100,8 +113,21 @@ export class BozonxTmpFiles implements INodeType {
         for (let i = 0; i < items.length; i++) {
             try {
                 const sourceType = this.getNodeParameter('sourceType', i) as string;
-                const ttlMinsParam = this.getNodeParameter('ttlMins', i) as number;
-                const ttlMins = Math.max(1, Math.floor(ttlMinsParam));
+                const ttlValueParam = this.getNodeParameter('ttlValue', i) as number;
+                const ttlUnit = this.getNodeParameter('ttlUnit', i) as string;
+                const ttlValue = Math.max(1, ttlValueParam);
+                let ttlMins = 1;
+                if (ttlUnit === 'seconds') {
+                    ttlMins = Math.max(1, Math.ceil(ttlValue / 60));
+                } else if (ttlUnit === 'minutes') {
+                    ttlMins = Math.max(1, Math.floor(ttlValue));
+                } else if (ttlUnit === 'hours') {
+                    ttlMins = Math.max(1, Math.floor(ttlValue * 60));
+                } else if (ttlUnit === 'days') {
+                    ttlMins = Math.max(1, Math.floor(ttlValue * 1440));
+                } else {
+                    ttlMins = Math.max(1, Math.floor(ttlValue * 60));
+                }
                 const metadata = (this.getNodeParameter('metadata', i) as string) || '';
                 const basePathParam = (this.getNodeParameter('basePath', i) as string) || '';
                 const normalizedBasePath = basePathParam.replace(/^\/+|\/+$/g, '');

@@ -71,8 +71,10 @@
    - Name of the binary property from the incoming item. Visible only when `Source Type = Binary`.
  - **File URL** (string)
    - Direct URL to the file. Visible only when `Source Type = URL`.
- - **TTL (Minutes)** (number, min: `1`, default: `1440`)
-   - Time to live before the file is removed by the microservice.
+ - **TTL Value** (number, min: `1`, default: `1`)
+  - Time to live value before the file is removed by the microservice.
+- **TTL Unit** (options: `Seconds`, `Minutes`, `Hours` [default], `Days`)
+  - Unit for the TTL value. The node converts this to minutes (`ttlMins`) for the API.
  - **Metadata (JSON)** (string)
    - Optional JSON string to associate with the file.
 
@@ -82,13 +84,13 @@
 
    1. Set `Source Type = Binary`.
    2. Ensure your incoming item has a binary property (default: `data`).
-   3. Configure `TTL (Minutes)` and optional `Metadata (JSON)`.
+   3. Configure `TTL Value`, `TTL Unit` and optional `Metadata (JSON)`.
 
  - URL upload
 
    1. Set `Source Type = URL`.
    2. Provide the `File URL`.
-   3. Configure `TTL (Minutes)` and optional `Metadata (JSON)`.
+   3. Configure `TTL Value`, `TTL Unit` and optional `Metadata (JSON)`.
 
  ## Continue On Fail
 
