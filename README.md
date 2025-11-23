@@ -128,7 +128,175 @@ Source of truth: `.env.production.example`
 - `GET /{base}/files/:id/exists` — existence check
 - `POST /{base}/cleanup/run` — run cleanup immediately
 
-Details: [docs/api-specification.md](docs/api-specification.md)
+## REST API specification (REST-only)
+
+The service exposes a REST API with no built-in authentication. If protection is required, use an API Gateway. Swagger/OpenAPI and GraphQL are not provided.
+
+### Base path
+
+- The base URL is formed as: `/{API_BASE_PATH}/v1`
+- Default: `/api/v1`
+- The `API_BASE_PATH` variable is set via environment (`.env`), without leading or trailing slashes.
+
+### Data formats
+
+- File upload: `multipart/form-data`
+- Other requests: `application/json`
+
+### Types and units
+
+- `ttlMins` — integer in minutes. Default is `1440` (1 day).
+- Dates use ISO-8601 (UTC).
+- Upload size limit is defined by `MAX_FILE_SIZE_MB` (single source of truth). This value is enforced by both Fastify multipart and service-level validation.
+
+### Endpoints
+
+#### Health
+- GET `/{base}/health`
+- Response: `{ "status": "ok" }`
+
+#### Upload file
+- POST `/{base}/files`
+- Body (multipart/form-data):
+  - `file` — binary content (required)
+  - `ttlMins` — integer (minutes, controller default is 1440)
+  - `metadata` — string (JSON), optional. Arbitrary custom metadata
+- Success 201 response:
+```json
+{
+  "file": {
+    "id": "uuid",
+    "originalName": "file.txt",
+    "mimeType": "text/plain",
+    "size": 12,
+    "uploadedAt": "2025-11-02T10:00:00.000Z",
+    "ttlMins": 60,
+    "expiresAt": "2025-11-02T11:00:00.000Z",
+    "metadata": {},
+    "hash": "sha256...",
+    "isExpired": false,
+    "timeRemainingMins": 60
+  },
+  "downloadUrl": "/api/v1/download/uuid",
+  "infoUrl": "/api/v1/files/uuid",
+  "deleteUrl": "/api/v1/files/uuid",
+  "message": "File uploaded successfully"
+}
+```
+
+- Errors:
+  - 400 — validation errors (e.g., invalid MIME, negative size, malformed JSON in `metadata`)
+  - 413 — file exceeds the maximum allowed size (`MAX_FILE_SIZE_MB`)
+  - 500 — internal error
+
+Example 413 response:
+```json
+{
+  "statusCode": 413,
+  "timestamp": "2025-11-02T10:00:00.000Z",
+  "path": "/api/v1/files",
+  "method": "POST",
+  "message": "File size exceeds the maximum allowed limit",
+  "error": "PayloadTooLargeException"
+}
+```
+
+#### Upload file by URL
+- POST `/{base}/files/url`
+- Body (application/json):
+  - `url` — string (required). Direct link to the file to be downloaded and stored
+  - `ttlMins` — integer (minutes, default 1440)
+  - `metadata` — string (JSON) or object, optional. Arbitrary custom metadata
+- Success 201 response: same as for regular upload
+- Errors:
+  - 400 — invalid URL or malformed `metadata`
+  - 413 — file exceeds the maximum allowed size (`MAX_FILE_SIZE_MB`)
+  - 500 — internal error
+
+#### File info
+- GET `/{base}/files/:id`
+- 200 response: same `file` object as above plus `downloadUrl`, `deleteUrl`.
+
+Errors: 400 (invalid `id`), 404 (not found or expired), 500.
+
+#### Download file
+- GET `/{base}/download/:id`
+- Response: file binary data with `Content-Type`, `Content-Length`, `Content-Disposition` headers.
+
+Errors: 400, 404, 500. Responses also include no-cache headers.
+
+#### Delete file
+- DELETE `/{base}/files/:id`
+- 200 response:
+```json
+{ "fileId": "uuid", "message": "File deleted successfully", "deletedAt": "2025-11-02T10:00:00.000Z" }
+```
+
+Errors: 400, 404 (not found), 500.
+
+#### List/search files
+- GET `/{base}/files`
+- Query (all optional):
+  - `mimeType`
+  - `minSize`, `maxSize` (bytes)
+  - `uploadedAfter`, `uploadedBefore` (ISO date)
+  - `expiredOnly` (true|false)
+  - `limit`, `offset`
+- 200 response:
+```json
+{
+  "files": [ { "id": "uuid", "originalName": "file.txt", "mimeType": "text/plain", "size": 12, "uploadedAt": "...", "ttlMins": 60, "expiresAt": "...", "hash": "...", "isExpired": false, "timeRemainingMins": 60 } ],
+  "total": 1,
+  "pagination": { "page": 1, "limit": 10, "totalPages": 1, "hasNext": false, "hasPrev": false }
+}
+```
+
+#### Stats
+- GET `/{base}/files/stats`
+- 200 response:
+```json
+{ "stats": { /* aggregates */ }, "generatedAt": "2025-11-02T10:00:00.000Z" }
+```
+
+#### Existence check
+- GET `/{base}/files/:id/exists`
+- 200 response:
+```json
+{ "exists": true, "fileId": "uuid", "isExpired": false }
+```
+
+- Behavior:
+  - The `isExpired` field is always present and is a boolean
+  - 400 is returned for an invalid `id`
+
+#### Manual cleanup
+- POST `/{base}/cleanup/run`
+- Description: triggers cleanup of expired files immediately.
+- 200 response:
+```json
+{ "success": true, "message": "Cleanup completed" }
+```
+
+Errors: 500 (if cleanup failed)
+
+### Error handling
+
+- 400: validation errors (ID, TTL, size and MIME, malformed JSON)
+- 404: file not found or expired
+- 413: file too large (limit source — `MAX_FILE_SIZE_MB`)
+- 500: internal error
+
+Unified error structure:
+```json
+{
+  "statusCode": 400,
+  "timestamp": "2025-11-02T10:00:00.000Z",
+  "path": "/api/v1/files/invalid",
+  "method": "GET",
+  "message": "File ID validation failed: File ID must contain only alphanumeric characters, hyphens, and underscores",
+  "error": { }
+}
+```
 
 ## Security and hardening
 
@@ -244,7 +412,6 @@ curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 
 ## More documentation
 
-- REST API specification: [docs/api-specification.md](docs/api-specification.md)
 - Storage module details: [dev_docs/STORAGE_MODULE.md](dev_docs/STORAGE_MODULE.md)
 - Changelog: [docs/CHANGELOG.md](docs/CHANGELOG.md)
 
@@ -259,7 +426,80 @@ curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 
 ## Development
 
-For full development setup, testing, linting, formatting, and debugging instructions, see the guide: [docs/dev.md](docs/dev.md)
+### Requirements
+
+- Node.js 22+
+- pnpm 10+
+- STORAGE_DIR
+
+### Quick start (dev)
+
+```bash
+# 1) Install dependencies
+pnpm install
+
+# 2) Configure environment (dev)
+cp env.development.example .env.development
+# IMPORTANT: set STORAGE_DIR in .env.development before starting
+
+# 3) Run in development (watch mode)
+pnpm start:dev
+```
+
+- Default base URL (dev): `http://localhost:8080/api/v1`
+- IMPORTANT: `STORAGE_DIR` is required; the app will not start if it is missing.
+
+### Tests
+
+Jest projects are split into `unit` and `e2e`.
+
+```bash
+# All tests
+pnpm test
+
+# Unit tests
+pnpm test:unit
+
+# E2E tests
+pnpm test:e2e
+
+# Watch mode
+pnpm test:watch
+
+# Coverage
+pnpm test:cov
+
+# Debug tests
+pnpm test:unit:debug
+pnpm test:e2e:debug
+```
+
+### Code quality
+
+```bash
+# Lint
+pnpm lint
+
+# Format
+pnpm format
+```
+
+### Debugging the app
+
+```bash
+# Start Nest in debug with watch
+pnpm start:debug
+```
+
+Attach your debugger to the Node.js inspector port output by the command.
+
+### Useful notes
+
+- Global `ValidationPipe` is enabled (whitelist, forbidNonWhitelisted, transform).
+- Dev uses `pino-pretty` with more verbose logs; prod uses JSON logs.
+- Health route auto-logging is minimized in prod.
+- Sensitive headers are redacted in logs (`authorization`, `x-api-key`).
+- Path aliases for TypeScript/Jest: `@/*`, `@common/*`, `@modules/*`, `@config/*`, `@test/*`.
 
 ## License
 
