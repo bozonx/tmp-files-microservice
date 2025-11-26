@@ -1,12 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PayloadTooLargeException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { FilesService } from '@/modules/files/files.service';
-import { StorageService } from '@/modules/storage/storage.service';
+import { Test, type TestingModule } from '@nestjs/testing'
+import { PayloadTooLargeException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { FilesService } from '@/modules/files/files.service'
+import { StorageService } from '@/modules/storage/storage.service'
 
 describe('FilesService', () => {
-  let service: FilesService;
-  let storage: jest.Mocked<StorageService>;
+  let service: FilesService
+  let storage: jest.Mocked<StorageService>
 
   beforeEach(async () => {
     storage = {
@@ -18,7 +18,7 @@ describe('FilesService', () => {
       getFileStats: jest.fn(),
       getStorageHealth: jest.fn(),
       getConfigForTesting: jest.fn(),
-    } as any;
+    } as any
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -31,27 +31,32 @@ describe('FilesService', () => {
               const cfg: Record<string, any> = {
                 app: { apiBasePath: 'api' },
                 storage: { maxTtl: 3600, maxFileSize: 1024, allowedMimeTypes: [] },
-              };
-              return key in cfg ? cfg[key] : def;
+              }
+              return key in cfg ? cfg[key] : def
             },
           },
         },
       ],
-    }).compile();
+    }).compile()
 
-    service = module.get(FilesService);
-  });
+    service = module.get(FilesService)
+  })
 
   it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
+    expect(service).toBeDefined()
+  })
 
   it('getFileStats delegates to storage and returns generatedAt', async () => {
-    storage.getFileStats.mockResolvedValue({ totalFiles: 0, totalSize: 0, filesByMimeType: {}, filesByDate: {} });
-    const res = await service.getFileStats();
-    expect(res.stats.totalFiles).toBe(0);
-    expect(typeof res.generatedAt).toBe('string');
-  });
+    storage.getFileStats.mockResolvedValue({
+      totalFiles: 0,
+      totalSize: 0,
+      filesByMimeType: {},
+      filesByDate: {},
+    })
+    const res = await service.getFileStats()
+    expect(res.stats.totalFiles).toBe(0)
+    expect(typeof res.generatedAt).toBe('string')
+  })
 
   it('uploadFile throws 413 when file exceeds max size', async () => {
     await expect(
@@ -63,7 +68,7 @@ describe('FilesService', () => {
           buffer: Buffer.alloc(2048),
         },
         ttl: 60,
-      }),
-    ).rejects.toBeInstanceOf(PayloadTooLargeException);
-  });
-});
+      })
+    ).rejects.toBeInstanceOf(PayloadTooLargeException)
+  })
+})

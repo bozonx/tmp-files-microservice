@@ -5,8 +5,8 @@
  * All mocks follow the DRY principle and provide type-safe implementations.
  */
 
-import type { PinoLogger } from 'nestjs-pino';
-import type { ConfigService } from '@nestjs/config';
+import type { PinoLogger } from 'nestjs-pino'
+import type { ConfigService } from '@nestjs/config'
 
 /**
  * Creates a mock PinoLogger instance with all required methods
@@ -23,7 +23,7 @@ export const createMockLogger = (): PinoLogger =>
     log: jest.fn(),
     fatal: jest.fn(),
     trace: jest.fn(),
-  }) as unknown as PinoLogger;
+  }) as unknown as PinoLogger
 
 /**
  * Placeholder for future HTTP-related mocks if needed.
@@ -44,12 +44,12 @@ export const createMockLogger = (): PinoLogger =>
 export const createMockConfigService = (overrides: Record<string, any> = {}) =>
   ({
     get: jest.fn((key: string, defaultValue?: any) => {
-      return overrides[key] ?? defaultValue;
+      return overrides[key] ?? defaultValue
     }),
     getOrThrow: jest.fn((key: string) => {
       if (!(key in overrides)) {
-        throw new Error(`Configuration key "${key}" not found`);
+        throw new Error(`Configuration key "${key}" not found`)
       }
-      return overrides[key];
+      return overrides[key]
     }),
-  }) as unknown as ConfigService;
+  }) as unknown as ConfigService

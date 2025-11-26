@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common'
 
 /**
  * Simple health check controller
@@ -11,6 +11,6 @@ export class HealthController {
    */
   @Get()
   public check() {
-    return { status: 'ok' };
+    return { status: 'ok' }
   }
 }

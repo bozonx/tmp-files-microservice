@@ -11,18 +11,18 @@
  * - Override per-test if needed using jest.setTimeout() or passing timeout as third arg to it()
  */
 
-import nock from 'nock';
+import nock from 'nock'
 
 // Block all external network calls; allow localhost for tests that use local adapters
 beforeAll(() => {
-  nock.disableNetConnect();
-  nock.enableNetConnect('127.0.0.1');
-});
+  nock.disableNetConnect()
+  nock.enableNetConnect('127.0.0.1')
+})
 
 afterEach(() => {
-  nock.cleanAll();
-});
+  nock.cleanAll()
+})
 
 afterAll(() => {
-  nock.enableNetConnect();
-});
+  nock.enableNetConnect()
+})

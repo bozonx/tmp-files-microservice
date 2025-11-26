@@ -1,16 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { StorageService } from '@/modules/storage/storage.service';
-import * as fs from 'fs-extra';
-import * as path from 'path';
+import { Test, type TestingModule } from '@nestjs/testing'
+import { ConfigService } from '@nestjs/config'
+import { StorageService } from '@/modules/storage/storage.service'
+import * as fs from 'fs-extra'
+import * as path from 'path'
 
 describe('StorageService (basic)', () => {
-  let service: StorageService;
-  let testStoragePath: string;
+  let service: StorageService
+  let testStoragePath: string
 
   beforeAll(async () => {
-    testStoragePath = path.join(__dirname, '..', '..', '.tmp-storage');
-    await fs.ensureDir(testStoragePath);
+    testStoragePath = path.join(__dirname, '..', '..', '.tmp-storage')
+    await fs.ensureDir(testStoragePath)
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -26,37 +26,37 @@ describe('StorageService (basic)', () => {
                   allowedMimeTypes: [],
                   enableDeduplication: true,
                   maxTtl: 3600,
-                };
+                }
               }
               const legacyEnvLike: Record<string, any> = {
                 STORAGE_DIR: testStoragePath,
                 MAX_FILE_SIZE_MB: 1,
                 ALLOWED_MIME_TYPES: [],
                 ENABLE_DEDUPLICATION: true,
-              };
-              return key in legacyEnvLike ? legacyEnvLike[key] : def;
+              }
+              return key in legacyEnvLike ? legacyEnvLike[key] : def
             },
           },
         },
       ],
-    }).compile();
+    }).compile()
 
-    service = module.get(StorageService);
-  });
+    service = module.get(StorageService)
+  })
 
   afterAll(async () => {
     if (await fs.pathExists(testStoragePath)) {
-      await fs.remove(testStoragePath);
+      await fs.remove(testStoragePath)
     }
-  });
+  })
 
   it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
+    expect(service).toBeDefined()
+  })
 
   it('should initialize storage and return empty stats', async () => {
-    const stats = await service.getFileStats();
-    expect(stats.totalFiles).toBeDefined();
-    expect(stats.totalSize).toBeDefined();
-  });
-});
+    const stats = await service.getFileStats()
+    expect(stats.totalFiles).toBeDefined()
+    expect(stats.totalSize).toBeDefined()
+  })
+})

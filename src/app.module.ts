@@ -1,17 +1,17 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER } from '@nestjs/core';
-import { LoggerModule } from 'nestjs-pino';
-import { HealthModule } from '@modules/health/health.module';
-import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
-import appConfig from '@config/app.config';
-import type { AppConfig } from '@config/app.config';
-import storageConfig from '@config/storage.config';
-import { ScheduleModule } from '@nestjs/schedule';
-import { StorageModule } from '@modules/storage/storage.module';
-import { FilesModule } from '@modules/files/files.module';
-import { CleanupModule } from '@modules/cleanup/cleanup.module';
-import pkg from '../package.json';
+import { Module } from '@nestjs/common'
+import { ConfigModule, ConfigService } from '@nestjs/config'
+import { APP_FILTER } from '@nestjs/core'
+import { LoggerModule } from 'nestjs-pino'
+import { HealthModule } from '@modules/health/health.module'
+import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter'
+import appConfig from '@config/app.config'
+import type { AppConfig } from '@config/app.config'
+import storageConfig from '@config/storage.config'
+import { ScheduleModule } from '@nestjs/schedule'
+import { StorageModule } from '@modules/storage/storage.module'
+import { FilesModule } from '@modules/files/files.module'
+import { CleanupModule } from '@modules/cleanup/cleanup.module'
+import pkg from '../package.json'
 
 @Module({
   imports: [
@@ -25,8 +25,8 @@ import pkg from '../package.json';
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const appConfig = configService.get<AppConfig>('app')!;
-        const isDev = appConfig.nodeEnv === 'development';
+        const appConfig = configService.get<AppConfig>('app')!
+        const isDev = appConfig.nodeEnv === 'development'
 
         return {
           pinoHttp: {
@@ -49,7 +49,7 @@ import pkg from '../package.json';
                 }
               : undefined,
             serializers: {
-              req: req => ({
+              req: (req) => ({
                 id: req.id,
                 method: req.method,
                 url: req.url,
@@ -57,10 +57,10 @@ import pkg from '../package.json';
                 remoteAddress: req.ip,
                 remotePort: req.socket?.remotePort,
               }),
-              res: res => ({
+              res: (res) => ({
                 statusCode: res.statusCode,
               }),
-              err: err => ({
+              err: (err) => ({
                 type: err.type,
                 message: err.message,
                 stack: err.stack,
@@ -72,26 +72,26 @@ import pkg from '../package.json';
             },
             customLogLevel: (req, res, err) => {
               if (res.statusCode >= 500 || err) {
-                return 'error';
+                return 'error'
               }
               if (res.statusCode >= 400) {
-                return 'warn';
+                return 'warn'
               }
               if (res.statusCode >= 300) {
-                return 'info';
+                return 'info'
               }
-              return 'info';
+              return 'info'
             },
             autoLogging: {
-              ignore: req => {
+              ignore: (req) => {
                 if (appConfig.nodeEnv === 'production') {
-                  return req.url?.includes('/health') || false;
+                  return req.url?.includes('/health') || false
                 }
-                return false;
+                return false
               },
             },
           },
-        };
+        }
       },
     }),
     HealthModule,

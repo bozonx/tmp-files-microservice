@@ -12,7 +12,7 @@
 
 // Set global timeout for all e2e tests to 30 seconds
 // This prevents individual tests from needing to specify timeout manually
-jest.setTimeout(30000);
+jest.setTimeout(30000)
 
 // Ensure storage dir is set for e2e runs
-process.env.STORAGE_DIR = process.env.STORAGE_DIR ?? 'test/.tmp-storage-e2e';
+process.env.STORAGE_DIR = process.env.STORAGE_DIR ?? 'test/.tmp-storage-e2e'
