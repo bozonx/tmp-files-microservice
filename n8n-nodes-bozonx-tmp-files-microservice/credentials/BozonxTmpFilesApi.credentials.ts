@@ -11,7 +11,7 @@ export class BozonxTmpFilesApi implements ICredentialType {
 			displayName: 'Base URL',
 			name: 'baseUrl',
 			type: 'string',
-			default: 'https://tmp-files.example.com/api/v1',
+			default: 'https://tmp-files-microservice:8080/api/v1',
 			placeholder: 'https://tmp-files.example.com/api/v1',
 			required: true,
 			description:
