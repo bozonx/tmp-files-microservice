@@ -31,7 +31,7 @@ export class BozonxTmpFiles implements INodeType {
 		},
 		credentials: [
 			{
-				name: 'bozonxMicroservicesApi',
+				name: 'bozonxTmpFilesApi',
 				required: true,
 			},
 		],
@@ -120,7 +120,7 @@ export class BozonxTmpFiles implements INodeType {
 				}
 				const metadata = (this.getNodeParameter('metadata', i) as string) || '';
 
-				const creds = await this.getCredentials('bozonxMicroservicesApi');
+				const creds = await this.getCredentials('bozonxTmpFilesApi');
 				let baseURL = ((creds?.baseUrl as string) || '').trim();
 				if (!baseURL) {
 					throw new NodeOperationError(this.getNode(), 'Base URL is required in credentials', {
@@ -204,7 +204,7 @@ export class BozonxTmpFiles implements INodeType {
 
 				const response = await this.helpers.httpRequestWithAuthentication.call(
 					this,
-					'bozonxMicroservicesApi',
+					'bozonxTmpFilesApi',
 					options,
 				);
 				returnData.push({ json: response as IDataObject, pairedItem: { item: i } });

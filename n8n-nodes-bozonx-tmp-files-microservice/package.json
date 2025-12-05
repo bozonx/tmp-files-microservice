@@ -1,6 +1,6 @@
 {
     "name": "n8n-nodes-bozonx-tmp-files-microservice",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "n8n node to upload a binary file or file URL to a temporary files microservice and return a temporary link",
     "license": "MIT",
     "homepage": "",
@@ -34,7 +34,7 @@
             "dist/nodes/TmpFiles/BozonxTmpFiles.node.js"
         ],
         "credentials": [
-            "dist/credentials/BozonxMicroservicesApi.credentials.js"
+            "dist/credentials/BozonxTmpFilesApi.credentials.js"
         ]
     },
     "dependencies": {

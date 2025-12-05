@@ -1,7 +1,7 @@
 import type { ICredentialType, INodeProperties, Icon } from 'n8n-workflow';
 
-export class BozonxMicroservicesApi implements ICredentialType {
-	name = 'bozonxMicroservicesApi';
+export class BozonxTmpFilesApi implements ICredentialType {
+	name = 'bozonxTmpFilesApi';
 	displayName = 'Tmp Files API';
 	documentationUrl =
 		'https://github.com/bozonx/tmp-files-microservice/tree/main/n8n-nodes-bozonx-tmp-files-microservice#readme';
