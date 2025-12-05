@@ -24,7 +24,7 @@ export class BozonxTmpFiles implements INodeType {
 		inputs: ['main'],
 		outputs: ['main'],
 		requestDefaults: {
-			baseURL: '={{$credentials.gatewayUrl}}',
+			baseURL: '={{$credentials.baseUrl}}',
 			headers: {
 				Accept: 'application/json',
 			},
@@ -36,14 +36,6 @@ export class BozonxTmpFiles implements INodeType {
 			},
 		],
 		properties: [
-			{
-				displayName: 'Base Path',
-				name: 'basePath',
-				type: 'string',
-				default: 'tmp-files/api/v1',
-				description:
-					'API base path appended to the Gateway URL (leading/trailing slashes are ignored)',
-			},
 			{
 				displayName: 'Source Type',
 				name: 'sourceType',
@@ -127,21 +119,18 @@ export class BozonxTmpFiles implements INodeType {
 					ttlMins = Math.max(1, Math.floor(ttlValue * 60));
 				}
 				const metadata = (this.getNodeParameter('metadata', i) as string) || '';
-				const basePathParam = (this.getNodeParameter('basePath', i) as string) || '';
-				const normalizedBasePath = basePathParam.replace(/^\/+|\/+$/g, '');
-				const pathPrefix = normalizedBasePath ? `${normalizedBasePath}/` : '';
 
 				const creds = await this.getCredentials('bozonxMicroservicesApi');
-				let baseURL = ((creds?.gatewayUrl as string) || '').trim();
+				let baseURL = ((creds?.baseUrl as string) || '').trim();
 				if (!baseURL) {
-					throw new NodeOperationError(this.getNode(), 'Gateway URL is required in credentials', {
+					throw new NodeOperationError(this.getNode(), 'Base URL is required in credentials', {
 						itemIndex: i,
 					});
 				}
 				if (!/^https?:\/\//i.test(baseURL)) {
 					throw new NodeOperationError(
 						this.getNode(),
-						'Gateway URL must include protocol (http:// or https://)',
+						'Base URL must include protocol (http:// or https://)',
 						{ itemIndex: i },
 					);
 				}
@@ -149,7 +138,7 @@ export class BozonxTmpFiles implements INodeType {
 
 				const options: IHttpRequestOptions = {
 					method: 'POST',
-					url: `${pathPrefix}files`,
+					url: 'files',
 				};
 				(options as unknown as { baseURL?: string }).baseURL = baseURL;
 
@@ -165,7 +154,7 @@ export class BozonxTmpFiles implements INodeType {
 					options.json = true;
 					const body: IDataObject = { url: fileUrl, ttlMins };
 					if (metadata && metadata.trim() !== '') body.metadata = metadata;
-					options.url = `${pathPrefix}files/url`;
+					options.url = 'files/url';
 					options.body = body;
 				} else if (sourceType === 'binary') {
 					const binaryProperty = this.getNodeParameter('binaryProperty', i) as string;
