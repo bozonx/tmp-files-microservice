@@ -137,6 +137,7 @@ The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScri
 - Root path `/` is registered directly with Fastify to serve `index.html`
 - The UI makes requests to the REST API at `/{API_BASE_PATH}/v1/files`
 - All client-side code is in `public/` directory (not included in the build output)
+- **Environment variables**: The UI automatically adapts to `LISTEN_HOST`, `LISTEN_PORT`, and `API_BASE_PATH` through runtime configuration injection
 
 ## Endpoints (summary)
 

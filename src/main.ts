@@ -64,7 +64,19 @@ async function bootstrap() {
   fastifyInstance.get('/', async (request, reply) => {
     const { readFile } = await import('fs/promises')
     const indexPath = join(process.cwd(), 'public', 'index.html')
-    const html = await readFile(indexPath, 'utf-8')
+    let html = await readFile(indexPath, 'utf-8')
+
+    // Inject runtime configuration
+    const configScript = `
+    <script>
+      window.APP_CONFIG = {
+        apiBasePath: '${appConfig.apiBasePath || 'api'}'
+      };
+    </script>
+    `
+    // Insert config before the main app script
+    html = html.replace('<script src="/public/app.js"></script>', `${configScript}<script src="/public/app.js"></script>`)
+
     reply.type('text/html').send(html)
   })
 

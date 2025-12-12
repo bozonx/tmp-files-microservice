@@ -11,7 +11,9 @@ const ttlMinsInput = document.getElementById('ttlMins');
 const metadataInput = document.getElementById('metadata');
 
 // Get API base URL from current location
-const API_BASE_URL = `${window.location.origin}/api/v1`;
+// Get API base URL from current location and injected config
+const apiBasePath = window.APP_CONFIG?.apiBasePath || 'api';
+const API_BASE_URL = `${window.location.origin}/${apiBasePath}/v1`;
 
 // Drag and drop handlers
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
