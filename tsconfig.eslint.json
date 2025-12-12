@@ -1,10 +1,36 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src/**/*", "test/**/*", "eslint.config.js", "jest.config.ts"],
-  "exclude": ["node_modules", "dist", "coverage"],
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "eslint.config.js",
+    "jest.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage"
+  ],
   "compilerOptions": {
     "allowJs": true,
     "checkJs": false,
-    "moduleResolution": "node16"
+    "moduleResolution": "node16",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@common/*": [
+        "src/common/*"
+      ],
+      "@modules/*": [
+        "src/modules/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@test/*": [
+        "test/*"
+      ]
+    }
   }
 }

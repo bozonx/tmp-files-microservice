@@ -19,24 +19,7 @@
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "@common/*": [
-        "src/common/*"
-      ],
-      "@modules/*": [
-        "src/modules/*"
-      ],
-      "@config/*": [
-        "src/config/*"
-      ],
-      "@test/*": [
-        "test/*"
-      ]
-    }
+    "noFallthroughCasesInSwitch": true
   },
   "include": [
     "src/**/*"
