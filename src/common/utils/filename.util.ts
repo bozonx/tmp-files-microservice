@@ -1,6 +1,6 @@
 import { extname, basename, dirname } from 'path'
 import { randomUUID } from 'node:crypto'
-import { HashUtil } from './hash.util'
+import { HashUtil } from './hash.util.js'
 
 export class FilenameUtil {
   private static readonly MAX_FILENAME_LENGTH = 255

@@ -1,4 +1,4 @@
-import type { FileInfo, UploadedFile } from '@common/interfaces/file.interface'
+import type { FileInfo, UploadedFile } from '../interfaces/file.interface.js'
 
 export class ValidationUtil {
   private static readonly DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024

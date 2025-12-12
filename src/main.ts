@@ -4,9 +4,10 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Logger } from 'nestjs-pino'
-import { AppModule } from '@/app.module'
-import type { AppConfig } from '@config/app.config'
-import { HTTP_CONSTANTS } from '@common/constants/http.constants'
+import { AppModule } from './app.module.js'
+import type { AppConfig } from './config/app.config.js'
+import { HTTP_CONSTANTS } from './common/constants/http.constants.js'
+import fastifyMultipart from '@fastify/multipart'
 
 async function bootstrap() {
   // Create app with bufferLogs enabled to capture early logs
@@ -34,7 +35,7 @@ async function bootstrap() {
   const appConfig = configService.get<AppConfig>('app')!
 
   // Register multipart for file uploads with size limits from storage config
-  await (app as any).register(require('@fastify/multipart'), {
+  await (app as any).register(fastifyMultipart, {
     limits: {
       fileSize: configService.get('storage')?.maxFileSize ?? 100 * 1024 * 1024,
     },

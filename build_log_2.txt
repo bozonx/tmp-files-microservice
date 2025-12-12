@@ -1,0 +1,160 @@
+
+> tmp-files-microservice@1.2.0 build /mnt/disk2/workspace/tmp-files-microservice
+> nest build
+
+[96msrc/common/utils/date.util.ts[0m:[93m5[0m:[93m17[0m - [91merror[0m[90m TS2307: [0mCannot find module 'dayjs/plugin/utc' or its corresponding type declarations.
+
+[7m5[0m import utc from 'dayjs/plugin/utc'
+[7m [0m [91m                ~~~~~~~~~~~~~~~~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m6[0m:[93m22[0m - [91merror[0m[90m TS2307: [0mCannot find module 'dayjs/plugin/timezone' or its corresponding type declarations.
+
+[7m6[0m import timezone from 'dayjs/plugin/timezone'
+[7m [0m [91m                     ~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m13[0m:[93m20[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m13[0m     return dayjs().utc()
+[7m  [0m [91m                   ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m17[0m:[93m20[0m - [91merror[0m[90m TS2339: [0mProperty 'tz' does not exist on type 'Dayjs'.
+
+[7m17[0m     return dayjs().tz(tz)
+[7m  [0m [91m                   ~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m21[0m:[93m20[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m21[0m     return dayjs().utc().add(amount, unit)
+[7m  [0m [91m                   ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m25[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m25[0m     return dayjs(date).utc().add(amount, unit)
+[7m  [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m29[0m:[93m20[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m29[0m     return dayjs().utc().isAfter(dayjs(expiresAt).utc())
+[7m  [0m [91m                   ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m29[0m:[93m51[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m29[0m     return dayjs().utc().isAfter(dayjs(expiresAt).utc())
+[7m  [0m [91m                                                  ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m33[0m:[93m20[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m33[0m     return dayjs().utc().add(ttlSeconds, 'seconds').toDate()
+[7m  [0m [91m                   ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m37[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m37[0m     return dayjs(date).utc().add(ttlSeconds, 'seconds').toDate()
+[7m  [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m41[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m41[0m     return dayjs(date).utc().format(format)
+[7m  [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m45[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'tz' does not exist on type 'Dayjs'.
+
+[7m45[0m     return dayjs(date).tz(tz).format(format)
+[7m  [0m [91m                       ~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m49[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m49[0m     return dayjs(date).utc()
+[7m  [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m53[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'tz' does not exist on type 'Dayjs'.
+
+[7m53[0m     return dayjs(date).tz(tz)
+[7m  [0m [91m                       ~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m57[0m:[93m25[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m57[0m     return dayjs(date1).utc().isAfter(dayjs(date2).utc())
+[7m  [0m [91m                        ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m57[0m:[93m52[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m57[0m     return dayjs(date1).utc().isAfter(dayjs(date2).utc())
+[7m  [0m [91m                                                   ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m61[0m:[93m25[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m61[0m     return dayjs(date1).utc().isBefore(dayjs(date2).utc())
+[7m  [0m [91m                        ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m61[0m:[93m53[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m61[0m     return dayjs(date1).utc().isBefore(dayjs(date2).utc())
+[7m  [0m [91m                                                    ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m65[0m:[93m25[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m65[0m     return dayjs(date1).utc().isSame(dayjs(date2).utc())
+[7m  [0m [91m                        ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m65[0m:[93m51[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m65[0m     return dayjs(date1).utc().isSame(dayjs(date2).utc())
+[7m  [0m [91m                                                  ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m69[0m:[93m25[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m69[0m     return dayjs(date1).utc().diff(dayjs(date2).utc(), 'seconds')
+[7m  [0m [91m                        ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m69[0m:[93m49[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m69[0m     return dayjs(date1).utc().diff(dayjs(date2).utc(), 'seconds')
+[7m  [0m [91m                                                ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m73[0m:[93m25[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m73[0m     return dayjs(date1).utc().diff(dayjs(date2).utc(), 'minutes')
+[7m  [0m [91m                        ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m73[0m:[93m49[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m73[0m     return dayjs(date1).utc().diff(dayjs(date2).utc(), 'minutes')
+[7m  [0m [91m                                                ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m77[0m:[93m25[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m77[0m     return dayjs(date1).utc().diff(dayjs(date2).utc(), 'hours')
+[7m  [0m [91m                        ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m77[0m:[93m49[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m77[0m     return dayjs(date1).utc().diff(dayjs(date2).utc(), 'hours')
+[7m  [0m [91m                                                ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m81[0m:[93m25[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m81[0m     return dayjs(date1).utc().diff(dayjs(date2).utc(), 'days')
+[7m  [0m [91m                        ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m81[0m:[93m49[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m81[0m     return dayjs(date1).utc().diff(dayjs(date2).utc(), 'days')
+[7m  [0m [91m                                                ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m85[0m:[93m30[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m85[0m     return dayjs(dateString).utc()
+[7m  [0m [91m                             ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m89[0m:[93m29[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m89[0m     return dayjs(timestamp).utc()
+[7m  [0m [91m                            ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m93[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m93[0m     return dayjs(date).utc().valueOf()
+[7m  [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m97[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m97[0m     return dayjs(date).utc().toISOString()
+[7m  [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m105[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m105[0m     return dayjs(date).utc().startOf('day')
+[7m   [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m109[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m109[0m     return dayjs(date).utc().endOf('day')
+[7m   [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m113[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m113[0m     return dayjs(date).utc().startOf('month')
+[7m   [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m117[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m117[0m     return dayjs(date).utc().endOf('month')
+[7m   [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m121[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m121[0m     return dayjs(date).utc().startOf('year')
+[7m   [0m [91m                       ~~~[0m
+[96msrc/common/utils/date.util.ts[0m:[93m125[0m:[93m24[0m - [91merror[0m[90m TS2339: [0mProperty 'utc' does not exist on type 'Dayjs'.
+
+[7m125[0m     return dayjs(date).utc().endOf('year')
+[7m   [0m [91m                       ~~~[0m
+
+Found 38 error(s).
+
+ ELIFECYCLE  Command failed with exit code 1.

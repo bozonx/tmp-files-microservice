@@ -8,7 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import type { FastifyReply } from 'fastify'
-import { FilesService } from './files.service'
+import { FilesService } from './files.service.js'
 
 @Controller('download')
 export class DownloadController {

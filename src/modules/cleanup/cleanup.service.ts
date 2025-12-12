@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { SchedulerRegistry } from '@nestjs/schedule'
 import { ConfigService } from '@nestjs/config'
-import { StorageService } from '@modules/storage/storage.service'
+import { StorageService } from '../storage/storage.service.js'
 
 @Injectable()
 export class CleanupService implements OnModuleInit, OnModuleDestroy {

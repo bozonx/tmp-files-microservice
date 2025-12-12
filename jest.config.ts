@@ -1,7 +1,19 @@
 import type { Config } from 'jest';
 
 // Common module name mapper for path aliases
+const transform = {
+  '^.+\\.ts$': [
+    'ts-jest',
+    {
+      useESM: true,
+      tsconfig: 'tsconfig.spec.json',
+    },
+  ],
+};
+
+// Map .js imports to .ts files and handle aliases
 const moduleNameMapper = {
+  '^(\\.{1,2}/.*)\\.js$': '$1',
   '^@/(.*)$': '<rootDir>/src/$1',
   '^@common/(.*)$': '<rootDir>/src/common/$1',
   '^@modules/(.*)$': '<rootDir>/src/modules/$1',
@@ -12,17 +24,8 @@ const moduleNameMapper = {
 // Common module file extensions
 const moduleFileExtensions = ['ts', 'js', 'json'];
 
-// Common transform configuration
-const transform = {
-  '^.+\\.ts$': [
-    'ts-jest',
-    {
-      tsconfig: 'tsconfig.spec.json',
-    },
-  ],
-};
-
 const config: Config = {
+  extensionsToTreatAsEsm: ['.ts'],
   // Parallel test execution - use 50% of CPU cores locally, limit to 2 in CI
   maxWorkers: process.env.CI ? 2 : '50%',
   // Stop test execution on first failure in CI for faster feedback
@@ -34,7 +37,7 @@ const config: Config = {
     // Unit tests configuration
     {
       displayName: 'unit',
-      preset: 'ts-jest',
+      preset: 'ts-jest/presets/default-esm',
       testEnvironment: 'node',
       moduleFileExtensions,
       rootDir: '.',
@@ -54,7 +57,7 @@ const config: Config = {
     // E2E tests configuration
     {
       displayName: 'e2e',
-      preset: 'ts-jest',
+      preset: 'ts-jest/presets/default-esm',
       testEnvironment: 'node',
       moduleFileExtensions,
       rootDir: '.',

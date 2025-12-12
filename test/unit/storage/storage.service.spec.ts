@@ -1,8 +1,13 @@
 import { Test, type TestingModule } from '@nestjs/testing'
 import { ConfigService } from '@nestjs/config'
 import { StorageService } from '@/modules/storage/storage.service'
-import * as fs from 'fs-extra'
+import fs from 'fs-extra'
 import * as path from 'path'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 describe('StorageService (basic)', () => {
   let service: StorageService

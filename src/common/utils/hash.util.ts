@@ -1,5 +1,6 @@
 import { createHash } from 'crypto'
-import { readFile } from 'fs-extra'
+import fs from 'fs-extra'
+const { readFile } = fs
 
 export class HashUtil {
   static async hashFile(filePath: string): Promise<string> {

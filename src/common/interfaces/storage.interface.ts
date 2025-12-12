@@ -1,5 +1,5 @@
 /** Storage interfaces */
-import type { FileInfo } from '@common/interfaces/file.interface'
+import type { FileInfo } from './file.interface.js'
 
 export interface StorageConfig {
   basePath: string

@@ -7,12 +7,12 @@ import {
   PayloadTooLargeException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { DateUtil } from '@common/utils/date.util'
-import { StorageService } from '@modules/storage/storage.service'
-import { ValidationUtil } from '@common/utils/validation.util'
-import { UploadedFile, FileInfo } from '@common/interfaces/file.interface'
-import type { AppConfig } from '@config/app.config'
-import type { StorageAppConfig } from '@config/storage.config'
+import { DateUtil } from '../../common/utils/date.util.js'
+import { StorageService } from '../storage/storage.service.js'
+import { ValidationUtil } from '../../common/utils/validation.util.js'
+import { UploadedFile, FileInfo } from '../../common/interfaces/file.interface.js'
+import type { AppConfig } from '../../config/app.config.js'
+import type { StorageAppConfig } from '../../config/storage.config.js'
 import * as http from 'http'
 import * as https from 'https'
 

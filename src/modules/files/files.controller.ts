@@ -19,8 +19,8 @@ import {
   UploadFileResponse,
   GetFileInfoResponse,
   DeleteFileResponse,
-} from './files.service'
-import { ValidationUtil } from '@common/utils/validation.util'
+} from './files.service.js'
+import { ValidationUtil } from '../../common/utils/validation.util.js'
 
 @Controller('files')
 export class FilesController {

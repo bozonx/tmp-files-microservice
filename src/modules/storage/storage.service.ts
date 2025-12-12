@@ -1,17 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import * as fs from 'fs-extra'
+import fs from 'fs-extra'
 import * as path from 'path'
 // Use dynamic import for ESM-only module 'file-type' inside methods to avoid CJS interop issues
 import { randomUUID } from 'node:crypto'
-import type { StorageAppConfig } from '@config/storage.config'
+import type { StorageAppConfig } from '../../config/storage.config.js'
 
 import {
   FileInfo,
   CreateFileParams,
   FileOperationResult,
   FileStats,
-} from '@common/interfaces/file.interface'
+} from '../../common/interfaces/file.interface.js'
 import {
   StorageConfig,
   StorageMetadata,
@@ -19,11 +19,11 @@ import {
   StorageHealth,
   FileSearchParams,
   FileSearchResult,
-} from '@common/interfaces/storage.interface'
-import { HashUtil } from '@common/utils/hash.util'
-import { FilenameUtil } from '@common/utils/filename.util'
-import { DateUtil } from '@common/utils/date.util'
-import { STORAGE_CONSTANTS } from '@common/constants/storage.constants'
+} from '../../common/interfaces/storage.interface.js'
+import { HashUtil } from '../../common/utils/hash.util.js'
+import { FilenameUtil } from '../../common/utils/filename.util.js'
+import { DateUtil } from '../../common/utils/date.util.js'
+import { STORAGE_CONSTANTS } from '../../common/constants/storage.constants.js'
 
 @Injectable()
 export class StorageService {

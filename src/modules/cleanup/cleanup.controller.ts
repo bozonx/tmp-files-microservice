@@ -6,7 +6,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common'
-import { CleanupService } from './cleanup.service'
+import { CleanupService } from './cleanup.service.js'
 
 @Controller('cleanup')
 export class CleanupController {

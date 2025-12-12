@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { AppModule } from '@/app.module'
 import { HTTP_CONSTANTS } from '@common/constants/http.constants'
+import fastifyMultipart from '@fastify/multipart'
 
 export async function createTestApp(): Promise<NestFastifyApplication> {
   // Ensure defaults the same as in main.ts
@@ -21,7 +22,7 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
     })
   )
 
-  await (app as any).register(require('@fastify/multipart'), {
+  await (app as any).register(fastifyMultipart, {
     limits: {
       fileSize: maxFileSizeMb * 1024 * 1024,
     },

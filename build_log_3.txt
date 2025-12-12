@@ -1,0 +1,4 @@
+
+> tmp-files-microservice@1.2.0 build /mnt/disk2/workspace/tmp-files-microservice
+> nest build
+
