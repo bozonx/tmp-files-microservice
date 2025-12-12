@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Temporary Files Upload</title>
+  <meta name="description" content="Upload temporary files with configurable TTL">
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Temporary Files Upload</h1>
+      <p>Upload files with automatic expiration</p>
+    </header>
+
+    <main>
+      <form id="uploadForm">
+        <div class="upload-area" id="uploadArea">
+          <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <p class="upload-text">
+            <span class="upload-text-main">Click to upload</span>
+            <span class="upload-text-sub">or drag and drop</span>
+          </p>
+          <input type="file" id="fileInput" name="file" required>
+          <p class="file-name" id="fileName"></p>
+        </div>
+
+        <div class="form-group">
+          <label for="ttlMins">
+            Time to Live (minutes)
+            <span class="label-hint">Default: 1440 (1 day)</span>
+          </label>
+          <input type="number" id="ttlMins" name="ttlMins" min="1" placeholder="1440">
+        </div>
+
+        <div class="form-group">
+          <label for="metadata">
+            Metadata (JSON)
+            <span class="label-hint">Optional</span>
+          </label>
+          <textarea id="metadata" name="metadata" rows="3" placeholder='{"key": "value"}'></textarea>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn-primary">
+          <span id="btnText">Upload File</span>
+          <span id="btnLoader" class="loader hidden"></span>
+        </button>
+      </form>
+
+      <div id="result" class="result hidden"></div>
+    </main>
+
+    <footer>
+      <p>Temporary Files Microservice</p>
+    </footer>
+  </div>
+
+  <script src="/public/app.js"></script>
+</body>
+</html>

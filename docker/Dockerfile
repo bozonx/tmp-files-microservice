@@ -21,6 +21,9 @@ RUN pnpm install --prod --frozen-lockfile --prefer-offline || pnpm install --pro
 # Copy pre-built application
 COPY dist ./dist
 
+# Copy Web UI static files
+COPY public ./public
+
 EXPOSE 8080
 
 CMD ["node", "dist/src/main.js"]

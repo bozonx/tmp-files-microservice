@@ -4,6 +4,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 
 ## What’s included
 
+- **Web UI** for file uploads at `/` (root path)
 - Health-check endpoint `/{API_BASE_PATH}/v1/health`
 - JSON logging via Pino (minimal in production)
 - Global error filter and validation
@@ -75,6 +76,8 @@ pnpm start:prod
 
 Default base URL: `http://localhost:8080/api/v1`
 
+**Web UI**: After starting the service, open `http://localhost:8080/` in your browser to access the upload interface.
+
 ## Environment variables
 
 Source of truth: `.env.production.example`
@@ -114,6 +117,26 @@ Source of truth: `.env.production.example`
 - Controlled by `CLEANUP_INTERVAL_MINS`. Set `0` or less to disable scheduling.
 - Expired files are removed from disk and metadata; logs include delete count and freed bytes.
 - You can trigger cleanup manually via `POST /{base}/cleanup/run`.
+
+## Web UI
+
+The service includes a simple web interface for uploading files, accessible at the root path `/`.
+
+- **URL**: `http://localhost:8080/` (adjust host/port based on your configuration)
+- **Features**:
+  - Drag & drop file upload
+  - Configure TTL (time to live) in minutes
+  - Add optional JSON metadata
+  - View upload results with download, info, and delete links
+- **Security**: The UI has no built-in authentication. In production, protect it using your reverse proxy (e.g., Basic Auth, IP whitelist, or OAuth).
+
+The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScript with no external dependencies.
+
+**Technical details**:
+- Static files (CSS, JS) are served via `@fastify/static` plugin with `/public/` prefix
+- Root path `/` is registered directly with Fastify to serve `index.html`
+- The UI makes requests to the REST API at `/{API_BASE_PATH}/v1/files`
+- All client-side code is in `public/` directory (not included in the build output)
 
 ## Endpoints (summary)
 
@@ -412,6 +435,7 @@ curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 
 ## More documentation
 
+- Web UI usage guide: [docs/WEB_UI.md](docs/WEB_UI.md)
 - Storage module details: [dev_docs/STORAGE_MODULE.md](dev_docs/STORAGE_MODULE.md)
 - Changelog: [docs/CHANGELOG.md](docs/CHANGELOG.md)
 

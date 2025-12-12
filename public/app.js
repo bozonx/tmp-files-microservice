@@ -1,0 +1,226 @@
+// Get DOM elements
+const uploadForm = document.getElementById('uploadForm');
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+const fileName = document.getElementById('fileName');
+const submitBtn = document.getElementById('submitBtn');
+const btnText = document.getElementById('btnText');
+const btnLoader = document.getElementById('btnLoader');
+const resultDiv = document.getElementById('result');
+const ttlMinsInput = document.getElementById('ttlMins');
+const metadataInput = document.getElementById('metadata');
+
+// Get API base URL from current location
+const API_BASE_URL = `${window.location.origin}/api/v1`;
+
+// Drag and drop handlers
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    uploadArea.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    uploadArea.addEventListener(eventName, () => {
+        uploadArea.classList.add('drag-over');
+    }, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    uploadArea.addEventListener(eventName, () => {
+        uploadArea.classList.remove('drag-over');
+    }, false);
+});
+
+uploadArea.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+
+    if (files.length > 0) {
+        fileInput.files = files;
+        updateFileName(files[0].name);
+    }
+}
+
+// File input change handler
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        updateFileName(e.target.files[0].name);
+    }
+});
+
+function updateFileName(name) {
+    fileName.textContent = `Selected: ${name}`;
+}
+
+// Form submission
+uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const file = fileInput.files[0];
+    if (!file) {
+        showError('Please select a file');
+        return;
+    }
+
+    // Validate metadata if provided
+    const metadataValue = metadataInput.value.trim();
+    if (metadataValue) {
+        try {
+            JSON.parse(metadataValue);
+        } catch (err) {
+            showError('Invalid JSON in metadata field');
+            return;
+        }
+    }
+
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const ttlValue = ttlMinsInput.value.trim();
+    if (ttlValue) {
+        formData.append('ttlMins', ttlValue);
+    }
+
+    if (metadataValue) {
+        formData.append('metadata', metadataValue);
+    }
+
+    // Show loading state
+    setLoading(true);
+    hideResult();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/files`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        showSuccess(data);
+        uploadForm.reset();
+        fileName.textContent = '';
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        setLoading(false);
+    }
+});
+
+function setLoading(loading) {
+    submitBtn.disabled = loading;
+    if (loading) {
+        btnText.classList.add('hidden');
+        btnLoader.classList.remove('hidden');
+    } else {
+        btnText.classList.remove('hidden');
+        btnLoader.classList.add('hidden');
+    }
+}
+
+function hideResult() {
+    resultDiv.classList.add('hidden');
+    resultDiv.classList.remove('success', 'error');
+}
+
+function showSuccess(data) {
+    const { file, downloadUrl, infoUrl, deleteUrl, message } = data;
+
+    const expiresAt = new Date(file.expiresAt).toLocaleString();
+    const uploadedAt = new Date(file.uploadedAt).toLocaleString();
+
+    resultDiv.innerHTML = `
+    <div class="result-title">✓ ${message || 'File uploaded successfully'}</div>
+    <div class="result-info"><strong>File ID:</strong> ${file.id}</div>
+    <div class="result-info"><strong>Name:</strong> ${file.originalName}</div>
+    <div class="result-info"><strong>Size:</strong> ${formatBytes(file.size)}</div>
+    <div class="result-info"><strong>Type:</strong> ${file.mimeType}</div>
+    <div class="result-info"><strong>Uploaded:</strong> ${uploadedAt}</div>
+    <div class="result-info"><strong>Expires:</strong> ${expiresAt}</div>
+    <div class="result-info"><strong>TTL:</strong> ${file.ttlMins} minutes</div>
+    <div class="result-links">
+      <a href="${downloadUrl}" target="_blank">Download</a>
+      <a href="${infoUrl}" target="_blank">Info</a>
+      <a href="${deleteUrl}" data-method="DELETE" onclick="handleDelete(event, '${file.id}')">Delete</a>
+    </div>
+  `;
+
+    resultDiv.classList.remove('hidden', 'error');
+    resultDiv.classList.add('success');
+    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showError(message) {
+    resultDiv.innerHTML = `
+    <div class="result-title">✗ Error</div>
+    <div>${message}</div>
+  `;
+
+    resultDiv.classList.remove('hidden', 'success');
+    resultDiv.classList.add('error');
+    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Delete handler
+async function handleDelete(event, fileId) {
+    event.preventDefault();
+
+    if (!confirm('Are you sure you want to delete this file?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/files/${fileId}`, {
+            method: 'DELETE',
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        showSuccess({
+            file: { id: fileId, originalName: '', size: 0, mimeType: '', uploadedAt: '', expiresAt: '', ttlMins: 0 },
+            message: data.message || 'File deleted successfully',
+            downloadUrl: '',
+            infoUrl: '',
+            deleteUrl: '',
+        });
+
+        // Show simplified success message for deletion
+        resultDiv.innerHTML = `
+      <div class="result-title">✓ ${data.message || 'File deleted successfully'}</div>
+      <div class="result-info"><strong>File ID:</strong> ${fileId}</div>
+      <div class="result-info"><strong>Deleted at:</strong> ${new Date(data.deletedAt).toLocaleString()}</div>
+    `;
+        resultDiv.classList.remove('hidden', 'error');
+        resultDiv.classList.add('success');
+    } catch (error) {
+        showError(error.message);
+    }
+}
+
+// Helper function to format bytes
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}

@@ -8,6 +8,8 @@ import { AppModule } from './app.module.js'
 import type { AppConfig } from './config/app.config.js'
 import { HTTP_CONSTANTS } from './common/constants/http.constants.js'
 import fastifyMultipart from '@fastify/multipart'
+import fastifyStatic from '@fastify/static'
+import { join } from 'path'
 
 async function bootstrap() {
   // Create app with bufferLogs enabled to capture early logs
@@ -41,13 +43,30 @@ async function bootstrap() {
     },
   })
 
+  // Register static file serving for UI
+  await (app as any).register(fastifyStatic, {
+    root: join(process.cwd(), 'public'),
+    prefix: '/public/',
+  })
+
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })
   )
 
   // Configure global API prefix from configuration
   const globalPrefix = `${appConfig.apiBasePath}/v1`
-  app.setGlobalPrefix(globalPrefix)
+  app.setGlobalPrefix(globalPrefix, {
+    exclude: [{ path: '/', method: 'GET' as any }],
+  })
+
+  // Register root route for UI directly with Fastify (bypasses global prefix)
+  const fastifyInstance = app.getHttpAdapter().getInstance()
+  fastifyInstance.get('/', async (request, reply) => {
+    const { readFile } = await import('fs/promises')
+    const indexPath = join(process.cwd(), 'public', 'index.html')
+    const html = await readFile(indexPath, 'utf-8')
+    reply.type('text/html').send(html)
+  })
 
   // Enable graceful shutdown
   app.enableShutdownHooks()
