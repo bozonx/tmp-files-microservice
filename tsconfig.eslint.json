@@ -14,7 +14,7 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": false,
-    "moduleResolution": "node16",
+    "moduleResolution": "NodeNext",
     "paths": {
       "@/*": [
         "src/*"
