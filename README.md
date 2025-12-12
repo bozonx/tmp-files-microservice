@@ -125,9 +125,11 @@ The service includes a simple web interface for uploading files, accessible at t
 - **URL**: `http://localhost:8080/` (adjust host/port based on your configuration)
 - **Features**:
   - Drag & drop file upload
+  - Upload files from URL
   - Configure TTL (time to live) in minutes
   - Add optional JSON metadata
   - View upload results with download, info, and delete links
+  - Priority: local files take precedence over URL uploads when both are provided
 - **Security**: The UI has no built-in authentication. In production, protect it using your reverse proxy (e.g., Basic Auth, IP whitelist, or OAuth).
 
 The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScript with no external dependencies.

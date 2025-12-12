@@ -129,7 +129,14 @@ label {
   margin-left: 0.5rem;
 }
 
+.field-hint {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
 input[type="number"],
+input[type="url"],
 textarea {
   width: 100%;
   padding: 0.625rem 0.75rem;
@@ -141,6 +148,7 @@ textarea {
 }
 
 input[type="number"]:focus,
+input[type="url"]:focus,
 textarea:focus {
   outline: none;
   border-color: #3b82f6;
@@ -190,7 +198,9 @@ textarea {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .hidden {

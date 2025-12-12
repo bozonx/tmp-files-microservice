@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Feature: Added Web UI for file uploads at root path `/` with drag & drop support, TTL configuration, and metadata input. UI is served from `public/` directory using vanilla HTML/CSS/JavaScript. Automatically adapts to `LISTEN_HOST`, `LISTEN_PORT`, and `API_BASE_PATH` environment variables through runtime configuration injection.
+- Feature: Added Web UI for file uploads at root path `/` with drag & drop support, URL upload, TTL configuration, and metadata input. UI is served from `public/` directory using vanilla HTML/CSS/JavaScript. Automatically adapts to `LISTEN_HOST`, `LISTEN_PORT`, and `API_BASE_PATH` environment variables through runtime configuration injection. Local files take priority over URL uploads when both are provided.
 - Breaking: API parameter renamed to `ttlMins`. Both requests and responses use minutes (default 1440 = 1 day).
 - Change: Increased default `MAX_TTL_MIN` from 10080 (7 days) to 44640 (31 days). Updated code defaults, env examples, and docker-compose.
 - Breaking: STORAGE_DIR environment variable is now required; service fails to start if missing. Docs and env examples updated.

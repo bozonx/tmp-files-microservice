@@ -3,6 +3,7 @@ const uploadForm = document.getElementById('uploadForm');
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
 const fileName = document.getElementById('fileName');
+const fileUrlInput = document.getElementById('fileUrl');
 const submitBtn = document.getElementById('submitBtn');
 const btnText = document.getElementById('btnText');
 const btnLoader = document.getElementById('btnLoader');
@@ -10,7 +11,6 @@ const resultDiv = document.getElementById('result');
 const ttlMinsInput = document.getElementById('ttlMins');
 const metadataInput = document.getElementById('metadata');
 
-// Get API base URL from current location
 // Get API base URL from current location and injected config
 const apiBasePath = window.APP_CONFIG?.apiBasePath || 'api';
 const API_BASE_URL = `${window.location.origin}/${apiBasePath}/v1`;
@@ -65,8 +65,11 @@ uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const file = fileInput.files[0];
-    if (!file) {
-        showError('Please select a file');
+    const fileUrl = fileUrlInput.value.trim();
+
+    // Validate: at least one source must be provided
+    if (!file && !fileUrl) {
+        showError('Please select a file or provide a URL');
         return;
     }
 
@@ -81,28 +84,55 @@ uploadForm.addEventListener('submit', async (e) => {
         }
     }
 
-    // Prepare form data
-    const formData = new FormData();
-    formData.append('file', file);
-
     const ttlValue = ttlMinsInput.value.trim();
-    if (ttlValue) {
-        formData.append('ttlMins', ttlValue);
-    }
-
-    if (metadataValue) {
-        formData.append('metadata', metadataValue);
-    }
 
     // Show loading state
     setLoading(true);
     hideResult();
 
     try {
-        const response = await fetch(`${API_BASE_URL}/files`, {
-            method: 'POST',
-            body: formData,
-        });
+        let response;
+
+        // Priority: local file over URL
+        if (file) {
+            // Upload local file using multipart/form-data
+            const formData = new FormData();
+            formData.append('file', file);
+
+            if (ttlValue) {
+                formData.append('ttlMins', ttlValue);
+            }
+
+            if (metadataValue) {
+                formData.append('metadata', metadataValue);
+            }
+
+            response = await fetch(`${API_BASE_URL}/files`, {
+                method: 'POST',
+                body: formData,
+            });
+        } else {
+            // Upload from URL using JSON
+            const payload = {
+                url: fileUrl,
+            };
+
+            if (ttlValue) {
+                payload.ttlMins = parseInt(ttlValue, 10);
+            }
+
+            if (metadataValue) {
+                payload.metadata = metadataValue;
+            }
+
+            response = await fetch(`${API_BASE_URL}/files/url`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+        }
 
         const data = await response.json();
 

@@ -16,9 +16,23 @@ http://localhost:8080/
 
 ### Upload Files
 
+You can upload files in two ways:
+
+**Option 1: Local file upload**
+
 1. **Select a file**:
    - Click on the upload area, or
    - Drag and drop a file onto the upload area
+
+**Option 2: Upload from URL**
+
+1. **Enter a file URL**:
+   - Paste a direct link to the file in the "Or upload from URL" field
+   - Example: `https://example.com/document.pdf`
+
+**Priority**: If both a local file and URL are provided, the local file takes priority.
+
+**Common options** (for both methods):
 
 2. **Configure TTL (optional)**:
    - Enter the time-to-live in minutes (default: 1440 = 1 day)
