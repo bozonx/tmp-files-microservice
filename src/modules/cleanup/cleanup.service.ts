@@ -8,11 +8,14 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CleanupService.name)
   private readonly intervalName = 'cleanup'
 
+  private isCleaning = false
+  private shutdownPromise: Promise<void> | null = null
+
   constructor(
     private readonly storageService: StorageService,
     private readonly configService: ConfigService,
     private readonly schedulerRegistry: SchedulerRegistry
-  ) {}
+  ) { }
 
   onModuleInit(): void {
     // Read cleanup interval (minutes). 0 or negative disables scheduling.
@@ -28,14 +31,15 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
     // Schedule fixed-interval cleanup; execution logs include deleted files and freed bytes
     const intervalMs = validMinutes * 60_000
     const intervalRef = setInterval(() => {
-      void this.handleScheduledCleanup()
+      this.shutdownPromise = this.handleScheduledCleanup()
     }, intervalMs)
 
     this.schedulerRegistry.addInterval(this.intervalName, intervalRef)
     this.logger.log(`Scheduled cleanup with interval: every ${validMinutes} minute(s)`)
   }
 
-  onModuleDestroy(): void {
+  async onModuleDestroy(): Promise<void> {
+    this.logger.log('Cleanup service shutting down...')
     try {
       const interval = this.schedulerRegistry.getInterval(this.intervalName)
       clearInterval(interval)
@@ -43,9 +47,16 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
     } catch {
       // ignore if not registered
     }
+
+    if (this.isCleaning && this.shutdownPromise) {
+      this.logger.log('Waiting for active cleanup task to complete...')
+      await this.shutdownPromise
+    }
   }
 
   async handleScheduledCleanup(): Promise<void> {
+    if (this.isCleaning) return
+    this.isCleaning = true
     this.logger.log('Starting scheduled cleanup')
     const start = Date.now()
     try {
@@ -64,6 +75,8 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
       )
     } catch (e: any) {
       this.logger.error(`Scheduled cleanup failed: ${e.message}`)
+    } finally {
+      this.isCleaning = false
     }
   }
 }
