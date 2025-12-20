@@ -1,5 +1,5 @@
 services:
-  tmp-files-microservice:
+  microservice:
     image: ghcr.io/bozonx/tmp-files-microservice:latest
     container_name: tmp-files-microservice
     hostname: tmp-files-microservice
@@ -19,7 +19,7 @@ services:
     volumes:
       - ./storage:/storage
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/api/v1/health || exit 1']
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/api/v1/health || exit 1' ]
       interval: 30s
       timeout: 3s
       retries: 3

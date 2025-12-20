@@ -56,7 +56,7 @@ pnpm build
 docker build -f docker/Dockerfile -t tmp-files-microservice:local .
 
 # 3) Run container (reads env from .env.production)
-cp env.production.example .env.production
+cp .env.production.example .env.production
 docker run -d --name tmp-files-microservice \
   --env-file ./.env.production -p 8080:8080 \
   tmp-files-microservice:local
@@ -69,7 +69,7 @@ curl http://localhost:8080/api/v1/health
 
 ```bash
 pnpm install
-cp env.production.example .env.production
+cp .env.production.example .env.production
 pnpm build
 pnpm start:prod
 ```
