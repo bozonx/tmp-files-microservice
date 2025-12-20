@@ -17,7 +17,7 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
     private readonly storageService: StorageService,
     private readonly configService: ConfigService,
     private readonly schedulerRegistry: SchedulerRegistry
-  ) { }
+  ) {}
 
   markAsShuttingDown(): void {
     this.isShuttingDown = true
@@ -80,7 +80,10 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
       this.logger.log('Starting scheduled cleanup')
       const start = Date.now()
       try {
-        const expired = await this.storageService.searchFiles({ expiredOnly: true, limit: CLEANUP_BATCH_SIZE })
+        const expired = await this.storageService.searchFiles({
+          expiredOnly: true,
+          limit: CLEANUP_BATCH_SIZE,
+        })
         let deleted = 0
         let freed = 0
         for (const file of expired.files) {

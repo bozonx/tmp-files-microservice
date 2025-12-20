@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import fs from 'fs-extra'
+import { createReadStream, type ReadStream } from 'fs'
 import * as path from 'path'
 // Use dynamic import for ESM-only module 'file-type' inside methods to avoid CJS interop issues
 import { randomUUID } from 'node:crypto'
@@ -236,6 +237,26 @@ export class StorageService {
     } catch (error: any) {
       this.logger.error(`Failed to read file with ID: ${fileId}`, error)
       return { success: false, error: `Failed to read file: ${error.message}` }
+    }
+  }
+
+  async createFileReadStream(fileId: string): Promise<StorageOperationResult<ReadStream>> {
+    try {
+      const fileInfoResult = await this.getFileInfo(fileId)
+      if (!fileInfoResult.success) {
+        return { success: false, error: fileInfoResult.error }
+      }
+
+      const fileInfo = fileInfoResult.data as FileInfo
+      if (!(await fs.pathExists(fileInfo.filePath))) {
+        return { success: false, error: `File not found on disk: ${fileInfo.filePath}` }
+      }
+
+      const stream = createReadStream(fileInfo.filePath)
+      return { success: true, data: stream }
+    } catch (error: any) {
+      this.logger.error(`Failed to create read stream for file with ID: ${fileId}`, error)
+      return { success: false, error: `Failed to create read stream: ${error.message}` }
     }
   }
 

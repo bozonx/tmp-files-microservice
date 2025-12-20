@@ -7,9 +7,12 @@ import {
   PayloadTooLargeException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import type { FastifyRequest } from 'fastify'
+import type { ReadStream } from 'fs'
 import { DateUtil } from '../../common/utils/date.util.js'
 import { StorageService } from '../storage/storage.service.js'
 import { ValidationUtil } from '../../common/utils/validation.util.js'
+import { RequestUtil } from '../../common/utils/request.util.js'
 import { UploadedFile, FileInfo } from '../../common/interfaces/file.interface.js'
 import type { AppConfig } from '../../config/app.config.js'
 import type { StorageAppConfig } from '../../config/storage.config.js'
@@ -84,6 +87,7 @@ export class FilesService {
     url: string
     ttl: number
     metadata?: Record<string, any>
+    request?: FastifyRequest
   }): Promise<UploadFileResponse> {
     const startTime = Date.now()
     try {
@@ -91,7 +95,12 @@ export class FilesService {
         throw new BadRequestException('Invalid URL')
       }
 
-      const file = await this.fetchRemoteFile(params.url)
+      // Check if request was aborted before starting remote fetch
+      if (params.request) {
+        RequestUtil.throwIfAborted(params.request, 'File upload by URL aborted by client')
+      }
+
+      const file = await this.fetchRemoteFile(params.url, params.request)
       // Reuse existing validation and save pipeline
       return await this.uploadFile({ file, ttl: params.ttl, metadata: params.metadata })
     } catch (error: any) {
@@ -258,6 +267,50 @@ export class FilesService {
     }
   }
 
+  async downloadFileStream(
+    params: DownloadFileParams
+  ): Promise<{ stream: ReadStream; fileInfo: FileInfo }> {
+    const startTime = Date.now()
+    try {
+      const idValidation = ValidationUtil.validateFileId(params.fileId)
+      if (!idValidation.isValid)
+        throw new BadRequestException(
+          `File ID validation failed: ${idValidation.errors.join(', ')}`
+        )
+
+      const fileResult = await this.storageService.getFileInfo(params.fileId)
+      if (!fileResult.success) {
+        if (fileResult.error?.includes('not found'))
+          throw new NotFoundException(`File with ID ${params.fileId} not found`)
+        if (fileResult.error?.includes('expired'))
+          throw new NotFoundException(`File with ID ${params.fileId} has expired`)
+        throw new InternalServerErrorException(`Failed to get file info: ${fileResult.error}`)
+      }
+      const fileInfo = fileResult.data as FileInfo
+
+      const streamResult = await this.storageService.createFileReadStream(params.fileId)
+      if (!streamResult.success)
+        throw new InternalServerErrorException(
+          `Failed to create read stream: ${streamResult.error}`
+        )
+
+      return { stream: streamResult.data as ReadStream, fileInfo }
+    } catch (error: any) {
+      const executionTime = Date.now() - startTime
+      this.logger.error(
+        `File download stream failed: ${error.message} (${executionTime}ms)`,
+        error.stack
+      )
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof InternalServerErrorException
+      )
+        throw error
+      throw new InternalServerErrorException(`File download stream failed: ${error.message}`)
+    }
+  }
+
   async deleteFile(params: DeleteFileParams): Promise<DeleteFileResponse> {
     const startTime = Date.now()
     try {
@@ -364,13 +417,38 @@ export class FilesService {
     }
   }
 
-  private async fetchRemoteFile(urlStr: string, redirectCount = 0): Promise<UploadedFile> {
+  private async fetchRemoteFile(
+    urlStr: string,
+    clientRequest?: FastifyRequest,
+    redirectCount = 0
+  ): Promise<UploadedFile> {
     return new Promise<UploadedFile>((resolve, reject) => {
       try {
         const urlObj = new URL(urlStr)
         const lib = urlObj.protocol === 'https:' ? https : http
 
-        const req = lib.get(urlObj, (res) => {
+        let abortCleanup: (() => void) | undefined
+        let httpRequest: http.ClientRequest | undefined
+
+        // Setup abort listener if client request is provided
+        if (clientRequest) {
+          abortCleanup = RequestUtil.onRequestAborted(clientRequest, () => {
+            this.logger.warn('Remote file fetch aborted due to client disconnect')
+            if (httpRequest) {
+              httpRequest.destroy()
+            }
+            reject(new BadRequestException('File upload by URL aborted by client'))
+          })
+        }
+
+        httpRequest = lib.get(urlObj, (res) => {
+          // Check if client aborted before processing response
+          if (clientRequest && RequestUtil.isRequestAborted(clientRequest)) {
+            res.destroy()
+            if (abortCleanup) abortCleanup()
+            return reject(new BadRequestException('File upload by URL aborted by client'))
+          }
+
           // Handle redirects (up to 5)
           if (
             res.statusCode &&
@@ -378,14 +456,19 @@ export class FilesService {
             res.statusCode < 400 &&
             res.headers.location
           ) {
-            if (redirectCount >= 5) return reject(new BadRequestException('Too many redirects'))
+            if (redirectCount >= 5) {
+              if (abortCleanup) abortCleanup()
+              return reject(new BadRequestException('Too many redirects'))
+            }
             const nextUrl = new URL(res.headers.location, urlObj).toString()
             res.resume()
-            return resolve(this.fetchRemoteFile(nextUrl, redirectCount + 1))
+            if (abortCleanup) abortCleanup()
+            return resolve(this.fetchRemoteFile(nextUrl, clientRequest, redirectCount + 1))
           }
 
           if (res.statusCode !== 200) {
             res.resume()
+            if (abortCleanup) abortCleanup()
             return reject(new BadRequestException(`Failed to fetch URL. Status: ${res.statusCode}`))
           }
 
@@ -394,6 +477,7 @@ export class FilesService {
           const declaredLength = contentLengthHeader ? parseInt(String(contentLengthHeader), 10) : 0
           if (declaredLength && declaredLength > this.maxFileSize) {
             res.destroy()
+            if (abortCleanup) abortCleanup()
             return reject(
               new PayloadTooLargeException('File size exceeds the maximum allowed limit')
             )
@@ -402,16 +486,28 @@ export class FilesService {
           const chunks: Buffer[] = []
           let total = 0
           res.on('data', (chunk: Buffer) => {
+            // Check if client aborted during download
+            if (clientRequest && RequestUtil.isRequestAborted(clientRequest)) {
+              res.destroy()
+              chunks.length = 0 // Clear chunks to free memory
+              if (abortCleanup) abortCleanup()
+              return reject(new BadRequestException('File upload by URL aborted by client'))
+            }
+
             total += chunk.length
             if (total > this.maxFileSize) {
               res.destroy(
                 new PayloadTooLargeException('File size exceeds the maximum allowed limit')
               )
+              chunks.length = 0
+              if (abortCleanup) abortCleanup()
               return
             }
             chunks.push(chunk)
           })
           res.on('end', () => {
+            if (abortCleanup) abortCleanup()
+
             const buffer = Buffer.concat(chunks)
             const size = buffer.length
 
@@ -437,9 +533,15 @@ export class FilesService {
             }
             resolve(uploaded)
           })
-          res.on('error', (err) => reject(err))
+          res.on('error', (err) => {
+            if (abortCleanup) abortCleanup()
+            reject(err)
+          })
         })
-        req.on('error', (err) => reject(err))
+        httpRequest.on('error', (err) => {
+          if (abortCleanup) abortCleanup()
+          reject(err)
+        })
       } catch (err) {
         reject(err)
       }

@@ -43,7 +43,10 @@ describe('CleanupService', () => {
     } as any)
     storage.deleteFile.mockResolvedValue({ success: true, data: { id: '1', size: 10 } } as any)
     await service.handleScheduledCleanup()
-    expect(storage.searchFiles).toHaveBeenCalledWith({ expiredOnly: true, limit: CLEANUP_BATCH_SIZE })
+    expect(storage.searchFiles).toHaveBeenCalledWith({
+      expiredOnly: true,
+      limit: CLEANUP_BATCH_SIZE,
+    })
     expect(storage.deleteFile).toHaveBeenCalledTimes(2)
   })
 })

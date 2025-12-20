@@ -12,6 +12,7 @@ import {
   InternalServerErrorException,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import {
@@ -21,19 +22,34 @@ import {
   DeleteFileResponse,
 } from './files.service.js'
 import { ValidationUtil } from '../../common/utils/validation.util.js'
+import { RequestUtil } from '../../common/utils/request.util.js'
 
 @Controller('files')
 export class FilesController {
+  private readonly logger = new Logger(FilesController.name)
+
   constructor(private readonly filesService: FilesService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async uploadFile(@Req() request: FastifyRequest): Promise<UploadFileResponse> {
+    let fileBuffer: Buffer | undefined
+    let cleanupAbortListener: (() => void) | undefined
+
     try {
+      // Check if request is already aborted
+      RequestUtil.throwIfAborted(request, 'File upload aborted by client')
+
+      // Setup abort listener to cleanup resources
+      let aborted = false
+      cleanupAbortListener = RequestUtil.onRequestAborted(request, () => {
+        aborted = true
+        this.logger.warn('File upload aborted by client during processing')
+      })
+
       let ttlMins: number | undefined
       let metadata: Record<string, any> = {}
       let gotMetadata = false
-      let fileBuffer: Buffer | undefined
       let filename: string | undefined
       let mimetype: string | undefined
 
@@ -41,6 +57,9 @@ export class FilesController {
       if (!parts || typeof parts[Symbol.asyncIterator] !== 'function') {
         const data: any = await (request as any).file()
         if (!data) throw new BadRequestException('No file provided')
+
+        // Check abort before processing fields
+        if (aborted) throw new BadRequestException('File upload aborted by client')
 
         const rawTtlField: any = data.fields?.ttlMins
         if (rawTtlField !== undefined && rawTtlField !== null) {
@@ -82,18 +101,30 @@ export class FilesController {
           }
         }
 
+        // Check abort before reading buffer
+        if (aborted) throw new BadRequestException('File upload aborted by client')
+
         const buf = await data.toBuffer()
         fileBuffer = buf
         filename = data.filename || 'unknown'
         mimetype = data.mimetype || 'application/octet-stream'
       } else {
         for await (const part of parts) {
+          // Check abort on each iteration
+          if (aborted) throw new BadRequestException('File upload aborted by client')
+
           if (part.type === 'file') {
             if (part.fieldname !== 'file') continue
             filename = part.filename || 'unknown'
             mimetype = part.mimetype || 'application/octet-stream'
             const chunks: Buffer[] = []
             for await (const chunk of part.file) {
+              // Check abort while reading chunks
+              if (aborted) {
+                // Clear chunks to free memory
+                chunks.length = 0
+                throw new BadRequestException('File upload aborted by client')
+              }
               chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
             }
             fileBuffer = Buffer.concat(chunks)
@@ -118,6 +149,12 @@ export class FilesController {
 
       if (!fileBuffer) throw new BadRequestException('No file provided')
 
+      // Final abort check before saving
+      if (aborted) {
+        fileBuffer = undefined
+        throw new BadRequestException('File upload aborted by client')
+      }
+
       const ttl = Math.max(60, Math.floor((ttlMins ?? 1440) * 60))
       const file = {
         originalname: filename || 'unknown',
@@ -129,9 +166,17 @@ export class FilesController {
 
       return await this.filesService.uploadFile({ file, ttl, metadata })
     } catch (error: any) {
+      // Clear buffer on error to free memory
+      fileBuffer = undefined
+
       if (error instanceof BadRequestException || error instanceof InternalServerErrorException)
         throw error
       throw new InternalServerErrorException(`File upload failed: ${error.message}`)
+    } finally {
+      // Always cleanup abort listener
+      if (cleanupAbortListener) {
+        cleanupAbortListener()
+      }
     }
   }
 
@@ -139,6 +184,9 @@ export class FilesController {
   @HttpCode(HttpStatus.CREATED)
   async uploadFileFromUrl(@Req() request: FastifyRequest): Promise<UploadFileResponse> {
     try {
+      // Check if request is already aborted
+      RequestUtil.throwIfAborted(request, 'File upload by URL aborted by client')
+
       const body: any = (request as any).body || {}
       const url = body.url
       if (!url || typeof url !== 'string') {
@@ -162,7 +210,7 @@ export class FilesController {
         }
       }
 
-      return await this.filesService.uploadFileFromUrl({ url, ttl, metadata })
+      return await this.filesService.uploadFileFromUrl({ url, ttl, metadata, request })
     } catch (error: any) {
       if (error instanceof BadRequestException || error instanceof InternalServerErrorException)
         throw error

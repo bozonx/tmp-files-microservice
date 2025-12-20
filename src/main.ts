@@ -87,7 +87,10 @@ async function bootstrap() {
     </script>
     `
     // Insert config before the main app script
-    html = html.replace('<script src="public/app.js"></script>', `${configScript}<script src="public/app.js"></script>`)
+    html = html.replace(
+      '<script src="public/app.js"></script>',
+      `${configScript}<script src="public/app.js"></script>`
+    )
 
     reply.type('text/html').send(html)
   }
@@ -129,7 +132,10 @@ async function bootstrap() {
     try {
       // 1. Prevent new cleanup tasks
       cleanupService.markAsShuttingDown()
-      logger.log(`✓ Cleanup service marked as shutting down (${Date.now() - startTime}ms)`, 'Bootstrap')
+      logger.log(
+        `✓ Cleanup service marked as shutting down (${Date.now() - startTime}ms)`,
+        'Bootstrap'
+      )
 
       // 2. Stop accepting new connections
       // Fastify close() stops the server from accepting new connections and closes existing ones
