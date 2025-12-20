@@ -11,7 +11,7 @@ import fastifyMultipart from '@fastify/multipart'
 import fastifyStatic from '@fastify/static'
 import { join } from 'path'
 import { CleanupService } from './modules/cleanup/cleanup.service.js'
-import { GRACEFUL_SHUTDOWN_TIMEOUT_MS } from './common/constants/app.constants.js'
+import { APP_CLOSE_TIMEOUT_MS } from './common/constants/app.constants.js'
 
 async function bootstrap() {
   // Create app with bufferLogs enabled to capture early logs
@@ -122,26 +122,40 @@ async function bootstrap() {
   const shutdown = async (signal: string) => {
     if (isShuttingDown) return
     isShuttingDown = true
+
+    const startTime = Date.now()
     logger.log(`🛑 Shutdown signal ${signal} received. Starting graceful shutdown...`, 'Bootstrap')
 
-    // 1. Prevent new cleanup tasks
-    cleanupService.markAsShuttingDown()
+    try {
+      // 1. Prevent new cleanup tasks
+      cleanupService.markAsShuttingDown()
+      logger.log(`✓ Cleanup service marked as shutting down (${Date.now() - startTime}ms)`, 'Bootstrap')
 
-    // 2. Stop accepting new connections
-    // Fastify close() stops the server from accepting new connections
-    logger.log('🛑 Closing HTTP server to new connections...', 'Bootstrap')
-    await app.getHttpAdapter().getInstance().close()
+      // 2. Stop accepting new connections
+      // Fastify close() stops the server from accepting new connections and closes existing ones
+      // due to forceCloseConnections: true
+      logger.log('🛑 Closing HTTP server...', 'Bootstrap')
+      await app.getHttpAdapter().getInstance().close()
+      logger.log(`✓ HTTP server closed (${Date.now() - startTime}ms)`, 'Bootstrap')
 
-    // 3. Wait for existing connections to finish (hardcoded requirement)
-    logger.log(`⏳ Waiting ${GRACEFUL_SHUTDOWN_TIMEOUT_MS}ms for active connections to drain...`, 'Bootstrap')
-    await new Promise((resolve) => setTimeout(resolve, GRACEFUL_SHUTDOWN_TIMEOUT_MS))
+      // 3. Close the NestJS application (triggers OnModuleDestroy, waiting for active cleanup)
+      logger.log('🛑 Closing NestJS application...', 'Bootstrap')
+      await Promise.race([
+        app.close(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('App close timeout')), APP_CLOSE_TIMEOUT_MS)
+        ),
+      ])
+      logger.log(`✓ NestJS application closed (${Date.now() - startTime}ms)`, 'Bootstrap')
 
-    // 4. Close the NestJS application (triggers OnModuleDestroy, waiting for active cleanup)
-    logger.log('🛑 Closing NestJS application...', 'Bootstrap')
-    await app.close()
-
-    logger.log('✅ Graceful shutdown completed.', 'Bootstrap')
-    process.exit(0)
+      logger.log(`✅ Graceful shutdown completed in ${Date.now() - startTime}ms`, 'Bootstrap')
+      process.exit(0)
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error))
+      logger.error(`❌ Error during graceful shutdown: ${err.message}`, err.stack, 'Bootstrap')
+      logger.error(`Shutdown failed after ${Date.now() - startTime}ms, forcing exit`, 'Bootstrap')
+      process.exit(1)
+    }
   }
 
   process.on('SIGTERM', () => shutdown('SIGTERM'))

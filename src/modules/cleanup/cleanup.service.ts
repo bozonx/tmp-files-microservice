@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { SchedulerRegistry } from '@nestjs/schedule'
 import { ConfigService } from '@nestjs/config'
 import { StorageService } from '../storage/storage.service.js'
+import { CLEANUP_BATCH_SIZE } from '../../common/constants/app.constants.js'
 
 @Injectable()
 export class CleanupService implements OnModuleInit, OnModuleDestroy {
@@ -10,7 +11,7 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
 
   private isShuttingDown = false
   private isCleaning = false
-  private shutdownPromise: Promise<void> | null = null
+  private activeCleanupPromise: Promise<void> | null = null
 
   constructor(
     private readonly storageService: StorageService,
@@ -37,7 +38,10 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
     // Schedule fixed-interval cleanup; execution logs include deleted files and freed bytes
     const intervalMs = validMinutes * 60_000
     const intervalRef = setInterval(() => {
-      this.shutdownPromise = this.handleScheduledCleanup()
+      this.activeCleanupPromise = this.handleScheduledCleanup().catch((err: unknown) => {
+        const error = err instanceof Error ? err : new Error(String(err))
+        this.logger.error(`Unhandled cleanup error: ${error.message}`, error.stack)
+      })
     }, intervalMs)
 
     this.schedulerRegistry.addInterval(this.intervalName, intervalRef)
@@ -54,9 +58,9 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
       // ignore if not registered
     }
 
-    if (this.isCleaning && this.shutdownPromise) {
+    if (this.isCleaning && this.activeCleanupPromise) {
       this.logger.log('Waiting for active cleanup task to complete...')
-      await this.shutdownPromise
+      await this.activeCleanupPromise
     }
   }
 
@@ -65,33 +69,43 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
       this.logger.debug('Skipping scheduled cleanup because service is shutting down')
       return
     }
-    if (this.isCleaning) return
-    this.isCleaning = true
-    this.logger.log('Starting scheduled cleanup')
-    const start = Date.now()
-    try {
-      const expired = await this.storageService.searchFiles({ expiredOnly: true, limit: 10000 })
-      let deleted = 0
-      let freed = 0
-      for (const file of expired.files) {
-        if (this.isShuttingDown) {
-          // Optional: break early if we wanted to be very aggressive, but usually "completing current task" means finishing the whole batch logic or at least getting to a safe state.
-          // The prompt says "wait for it to complete", so we generally let it finish the loop or at least the critical section.
-          // Leaving it to run to completion is safer for "wait until complete".
-        }
-        const res = await this.storageService.deleteFile(file.id)
-        if (res.success) {
-          deleted += 1
-          freed += file.size
-        }
-      }
-      this.logger.log(
-        `Cleanup completed: ${deleted} files deleted, freed ${freed} bytes in ${Date.now() - start}ms`
-      )
-    } catch (e: any) {
-      this.logger.error(`Scheduled cleanup failed: ${e.message}`)
-    } finally {
-      this.isCleaning = false
+    if (this.isCleaning) {
+      this.logger.warn('Cleanup already in progress, skipping concurrent execution')
+      return
     }
+    this.isCleaning = true
+
+    // Store the promise for all cleanup invocations (scheduled and manual)
+    const cleanupPromise = (async () => {
+      this.logger.log('Starting scheduled cleanup')
+      const start = Date.now()
+      try {
+        const expired = await this.storageService.searchFiles({ expiredOnly: true, limit: CLEANUP_BATCH_SIZE })
+        let deleted = 0
+        let freed = 0
+        for (const file of expired.files) {
+          if (this.isShuttingDown) {
+            this.logger.log(`Cleanup interrupted by shutdown after processing ${deleted} files`)
+            break
+          }
+          const res = await this.storageService.deleteFile(file.id)
+          if (res.success) {
+            deleted += 1
+            freed += file.size
+          }
+        }
+        this.logger.log(
+          `Cleanup completed: ${deleted} files deleted, freed ${freed} bytes in ${Date.now() - start}ms`
+        )
+      } catch (e: unknown) {
+        const error = e instanceof Error ? e : new Error(String(e))
+        this.logger.error(`Scheduled cleanup failed: ${error.message}`, error.stack)
+      } finally {
+        this.isCleaning = false
+      }
+    })()
+
+    this.activeCleanupPromise = cleanupPromise
+    await cleanupPromise
   }
 }

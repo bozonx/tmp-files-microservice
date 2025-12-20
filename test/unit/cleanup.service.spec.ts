@@ -4,6 +4,7 @@ import { CleanupService } from '@/modules/cleanup/cleanup.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { ConfigService } from '@nestjs/config'
 import { SchedulerRegistry } from '@nestjs/schedule'
+import { CLEANUP_BATCH_SIZE } from '@/common/constants/app.constants'
 
 describe('CleanupService', () => {
   let service: CleanupService
@@ -42,7 +43,7 @@ describe('CleanupService', () => {
     } as any)
     storage.deleteFile.mockResolvedValue({ success: true, data: { id: '1', size: 10 } } as any)
     await service.handleScheduledCleanup()
-    expect(storage.searchFiles).toHaveBeenCalledWith({ expiredOnly: true, limit: 10000 })
+    expect(storage.searchFiles).toHaveBeenCalledWith({ expiredOnly: true, limit: CLEANUP_BATCH_SIZE })
     expect(storage.deleteFile).toHaveBeenCalledTimes(2)
   })
 })
