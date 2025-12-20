@@ -10,6 +10,8 @@ import { HTTP_CONSTANTS } from './common/constants/http.constants.js'
 import fastifyMultipart from '@fastify/multipart'
 import fastifyStatic from '@fastify/static'
 import { join } from 'path'
+import { CleanupService } from './modules/cleanup/cleanup.service.js'
+import { GRACEFUL_SHUTDOWN_TIMEOUT_MS } from './common/constants/app.constants.js'
 
 async function bootstrap() {
   // Create app with bufferLogs enabled to capture early logs
@@ -101,7 +103,7 @@ async function bootstrap() {
   }
 
   // Enable graceful shutdown
-  app.enableShutdownHooks()
+  // app.enableShutdownHooks() <--- REPLACED WITH CUSTOM LOGIC BELOW
 
   await app.listen(appConfig.port, appConfig.host)
 
@@ -113,7 +115,37 @@ async function bootstrap() {
   logger.log(`📝 Log level: ${appConfig.logLevel}`, 'Bootstrap')
   logger.log(`🏠 UI Path: http://${appConfig.host}:${appConfig.port}${uiPath}`, 'Bootstrap')
 
-  // Rely on enableShutdownHooks for graceful shutdown
+  // Custom Graceful Shutdown Orchestration
+  const cleanupService = app.get(CleanupService)
+  let isShuttingDown = false
+
+  const shutdown = async (signal: string) => {
+    if (isShuttingDown) return
+    isShuttingDown = true
+    logger.log(`🛑 Shutdown signal ${signal} received. Starting graceful shutdown...`, 'Bootstrap')
+
+    // 1. Prevent new cleanup tasks
+    cleanupService.markAsShuttingDown()
+
+    // 2. Stop accepting new connections
+    // Fastify close() stops the server from accepting new connections
+    logger.log('🛑 Closing HTTP server to new connections...', 'Bootstrap')
+    await app.getHttpAdapter().getInstance().close()
+
+    // 3. Wait for existing connections to finish (hardcoded requirement)
+    logger.log(`⏳ Waiting ${GRACEFUL_SHUTDOWN_TIMEOUT_MS}ms for active connections to drain...`, 'Bootstrap')
+    await new Promise((resolve) => setTimeout(resolve, GRACEFUL_SHUTDOWN_TIMEOUT_MS))
+
+    // 4. Close the NestJS application (triggers OnModuleDestroy, waiting for active cleanup)
+    logger.log('🛑 Closing NestJS application...', 'Bootstrap')
+    await app.close()
+
+    logger.log('✅ Graceful shutdown completed.', 'Bootstrap')
+    process.exit(0)
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'))
+  process.on('SIGINT', () => shutdown('SIGINT'))
 }
 
 void bootstrap()

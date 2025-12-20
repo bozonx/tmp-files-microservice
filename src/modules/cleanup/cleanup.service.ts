@@ -8,6 +8,7 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CleanupService.name)
   private readonly intervalName = 'cleanup'
 
+  private isShuttingDown = false
   private isCleaning = false
   private shutdownPromise: Promise<void> | null = null
 
@@ -16,6 +17,11 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
     private readonly schedulerRegistry: SchedulerRegistry
   ) { }
+
+  markAsShuttingDown(): void {
+    this.isShuttingDown = true
+    this.logger.log('Cleanup service marked as shutting down. New cleanup tasks will be prevented.')
+  }
 
   onModuleInit(): void {
     // Read cleanup interval (minutes). 0 or negative disables scheduling.
@@ -55,6 +61,10 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
   }
 
   async handleScheduledCleanup(): Promise<void> {
+    if (this.isShuttingDown) {
+      this.logger.debug('Skipping scheduled cleanup because service is shutting down')
+      return
+    }
     if (this.isCleaning) return
     this.isCleaning = true
     this.logger.log('Starting scheduled cleanup')
@@ -64,6 +74,11 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
       let deleted = 0
       let freed = 0
       for (const file of expired.files) {
+        if (this.isShuttingDown) {
+          // Optional: break early if we wanted to be very aggressive, but usually "completing current task" means finishing the whole batch logic or at least getting to a safe state.
+          // The prompt says "wait for it to complete", so we generally let it finish the loop or at least the critical section.
+          // Leaving it to run to completion is safer for "wait until complete".
+        }
         const res = await this.storageService.deleteFile(file.id)
         if (res.success) {
           deleted += 1
