@@ -17,7 +17,7 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
     private readonly storageService: StorageService,
     private readonly configService: ConfigService,
     private readonly schedulerRegistry: SchedulerRegistry
-  ) {}
+  ) { }
 
   markAsShuttingDown(): void {
     this.isShuttingDown = true
@@ -100,6 +100,9 @@ export class CleanupService implements OnModuleInit, OnModuleDestroy {
         this.logger.log(
           `Cleanup completed: ${deleted} files deleted, freed ${freed} bytes in ${Date.now() - start}ms`
         )
+
+        // Also clean up orphaned files
+        await this.storageService.deleteOrphanedFiles()
       } catch (e: unknown) {
         const error = e instanceof Error ? e : new Error(String(e))
         this.logger.error(`Scheduled cleanup failed: ${error.message}`, error.stack)

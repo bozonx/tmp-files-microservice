@@ -32,7 +32,7 @@ export class StorageService {
   private config!: StorageConfig
   private metadataPath!: string
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
   private getConfig(): StorageConfig {
     if (!this.config) {
@@ -473,6 +473,84 @@ export class StorageService {
     } catch (error: any) {
       this.logger.error('Failed to find file by hash', error)
       return null
+    }
+  }
+
+  async deleteOrphanedFiles(): Promise<{ deleted: number; freed: number }> {
+    const startTime = Date.now()
+    let deleted = 0
+    let freed = 0
+
+    try {
+      const config = this.getConfig()
+      const metadata = await this.loadMetadata()
+
+      // Create a Set of all valid file paths (normalized)
+      const validFilePaths = new Set(
+        Object.values(metadata.files).map((f) => path.resolve(f.filePath))
+      )
+
+      // Helper to process directories recursively
+      const processDirectory = async (dirParams: string) => {
+        const items = await fs.readdir(dirParams, { withFileTypes: true })
+
+        for (const item of items) {
+          const fullPath = path.join(dirParams, item.name)
+
+          if (item.isDirectory()) {
+            await processDirectory(fullPath)
+
+            // Remove empty directories
+            const remaining = await fs.readdir(fullPath)
+            if (remaining.length === 0) {
+              await fs.rmdir(fullPath)
+            }
+          } else if (item.isFile()) {
+            // Skip metadata files
+            if (item.name.startsWith('data.json')) {
+              continue
+            }
+
+            // Check if file is in metadata
+            if (!validFilePaths.has(path.resolve(fullPath))) {
+              try {
+                const stat = await fs.stat(fullPath)
+                // Double check if file is really old enough (e.g. > 1 min) to avoid race conditions with ongoing uploads
+                // where the file is created but metadata not yet updated?
+                // Our saveFile updates metadata closely after writing file.
+                // But let's add a small safety buffer: files modified < 1 minute ago are skipped.
+                // This handles the "Scenario 1: Interruption between file write and metadata update" partially,
+                // waiting for the next cleanup cycle to delete it if it was indeed abandoned.
+                const ageMs = Date.now() - stat.mtimeMs
+                if (ageMs < 60000) {
+                  continue
+                }
+
+                await fs.remove(fullPath)
+                deleted++
+                freed += stat.size
+                this.logger.warn(`Deleted orphaned file: ${fullPath}`)
+              } catch (err) {
+                this.logger.warn(`Failed to process potential orphan: ${fullPath}`, err)
+              }
+            }
+          }
+        }
+      }
+
+      await processDirectory(config.basePath)
+
+      if (deleted > 0) {
+        this.logger.log(
+          `Orphan cleanup completed: ${deleted} files deleted, freed ${freed} bytes in ${Date.now() - startTime
+          }ms`
+        )
+      }
+
+      return { deleted, freed }
+    } catch (error: any) {
+      this.logger.error('Failed to clean orphaned files', error)
+      return { deleted, freed }
     }
   }
 }

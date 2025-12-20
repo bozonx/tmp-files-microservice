@@ -116,6 +116,13 @@ Source of truth: `.env.production.example`
 
 - Controlled by `CLEANUP_INTERVAL_MINS`. Set `0` or less to disable scheduling.
 - Expired files are removed from disk and metadata; logs include delete count and freed bytes.
+- Orphaned files (files on disk but missing from metadata) are automatically identified and removed to reclaim space.
+
+## Graceful Shutdown
+
+- The service handles `SIGTERM` and `SIGINT` signals.
+- It stops accepting new connections and gives active requests (including uploads) up to 60 seconds to complete before forcing exit.
+- Cleanup tasks are paused during shutdown to prevent consistency issues.
 - You can trigger cleanup manually via `POST /{base}/cleanup/run`.
 
 ## Web UI

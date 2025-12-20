@@ -24,7 +24,7 @@ async function bootstrap() {
     new FastifyAdapter({
       logger: false, // We'll use Pino logger instead
       bodyLimit,
-      forceCloseConnections: true,
+      forceCloseConnections: false,
     }),
     {
       bufferLogs: true,
