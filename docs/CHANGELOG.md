@@ -2,12 +2,13 @@
 
 ## Unreleased
 
-- Feature: Added Web UI for file uploads at root path `/` with drag & drop support, URL upload, TTL configuration, and metadata input. UI is served from `public/` directory using vanilla HTML/CSS/JavaScript. Automatically adapts to `LISTEN_HOST`, `LISTEN_PORT`, and `API_BASE_PATH` environment variables through runtime configuration injection. Local files take priority over URL uploads when both are provided.
+- Feature: Added Web UI for file uploads at root path `/{BASE_PATH}` with drag & drop support, URL upload, TTL configuration, and metadata input. UI is served from `public/` directory using vanilla HTML/CSS/JavaScript. Automatically adapts to `LISTEN_HOST`, `LISTEN_PORT`, and `BASE_PATH` environment variables through runtime configuration injection. Local files take priority over URL uploads when both are provided.
+- Change: Refactored `API_BASE_PATH` to `BASE_PATH`. Both UI (at the root) and API (at `/api/v1`) are now served relative to `BASE_PATH`. `BASE_PATH` is empty by default.
 - Breaking: API parameter renamed to `ttlMins`. Both requests and responses use minutes (default 1440 = 1 day).
 - Change: Increased default `MAX_TTL_MIN` from 10080 (7 days) to 44640 (31 days). Updated code defaults, env examples, and docker-compose.
 - Breaking: STORAGE_DIR environment variable is now required; service fails to start if missing. Docs and env examples updated.
 - Change: Switched cleanup scheduling from cron to interval via `CLEANUP_INTERVAL_MINS` (set `0` to disable). Replaces `CLEANUP_CRON`.
-- Feature: Added REST endpoint `POST /{API_BASE_PATH}/v1/cleanup/run` to trigger cleanup on demand.
+- Feature: Added REST endpoint `POST /{BASE_PATH}/api/v1/cleanup/run` to trigger cleanup on demand.
 - Docs: README rewritten in English and focused on production usage (Docker/Compose/Bare-metal), env vars summary aligned with `.env.production.example`, cURL and endpoint sections clarified.
 - Docs: `docs/dev.md` translated to English and focused on development workflows (scripts, tests, lint/format, debugging, notes).
 - Change: Standardized 413 (Payload Too Large) for oversized uploads; `MAX_FILE_SIZE_MB` is the single source of truth for upload size across multipart and service validation.

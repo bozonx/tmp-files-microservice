@@ -9,7 +9,7 @@ services:
       - '8080:8080'
     environment:
       - TZ=UTC
-      - API_BASE_PATH=api
+      - BASE_PATH=
       - LOG_LEVEL=warn
       - MAX_FILE_SIZE_MB=100
       #- ALLOWED_MIME_TYPES=

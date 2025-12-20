@@ -30,7 +30,7 @@ describe('FilesService', () => {
           useValue: {
             get: (key: string, def?: any) => {
               const cfg: Record<string, any> = {
-                app: { apiBasePath: 'api' },
+                app: { basePath: '' },
                 storage: { maxTtl: 3600, maxFileSize: 1024, allowedMimeTypes: [] },
               }
               return key in cfg ? cfg[key] : def

@@ -112,7 +112,8 @@ export class FilesService {
 
   private generateApiUrl(endpoint: string, params: Record<string, string> = {}): string {
     const appCfg = this.configService.get<AppConfig>('app')!
-    const prefix = `${appCfg.apiBasePath}/v1`
+    const apiPrefix = 'api/v1'
+    const prefix = appCfg.basePath ? `${appCfg.basePath}/${apiPrefix}` : apiPrefix
     let url = `/${prefix}/${endpoint}`
     Object.entries(params).forEach(([k, v]) => (url = url.replace(`:${k}`, v)))
     return url

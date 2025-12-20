@@ -44,24 +44,33 @@ async function bootstrap() {
   })
 
   // Register static file serving for UI
+  const basePath = appConfig.basePath
+  const apiPrefix = 'api/v1'
+  const fullApiPrefix = basePath ? `${basePath}/${apiPrefix}` : apiPrefix
+  const staticPrefix = basePath ? `/${basePath}/public/` : '/public/'
+  const uiPath = basePath ? `/${basePath}` : '/'
+
   await (app as any).register(fastifyStatic, {
     root: join(process.cwd(), 'public'),
-    prefix: '/public/',
+    prefix: staticPrefix,
   })
 
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })
   )
 
-  // Configure global API prefix from configuration
-  const globalPrefix = `${appConfig.apiBasePath}/v1`
-  app.setGlobalPrefix(globalPrefix, {
-    exclude: [{ path: '/', method: 'GET' as any }],
+  // Configure global API prefix
+  app.setGlobalPrefix(fullApiPrefix, {
+    exclude: [
+      { path: uiPath, method: 'GET' as any },
+      { path: `${uiPath}/`.replace(/\/+$/, '/'), method: 'GET' as any },
+    ],
   })
 
   // Register root route for UI directly with Fastify (bypasses global prefix)
   const fastifyInstance = app.getHttpAdapter().getInstance()
-  fastifyInstance.get('/', async (request, reply) => {
+
+  const serveIndex = async (request: any, reply: any) => {
     const { readFile } = await import('fs/promises')
     const indexPath = join(process.cwd(), 'public', 'index.html')
     let html = await readFile(indexPath, 'utf-8')
@@ -70,15 +79,25 @@ async function bootstrap() {
     const configScript = `
     <script>
       window.APP_CONFIG = {
-        apiBasePath: '${appConfig.apiBasePath || 'api'}'
+        basePath: '${basePath}'
       };
     </script>
     `
     // Insert config before the main app script
-    html = html.replace('<script src="/public/app.js"></script>', `${configScript}<script src="/public/app.js"></script>`)
+    html = html.replace('<script src="public/app.js"></script>', `${configScript}<script src="public/app.js"></script>`)
 
     reply.type('text/html').send(html)
-  })
+  }
+
+  if (basePath) {
+    // Redirect /sub to /sub/ so that relative paths in index.html work correctly
+    fastifyInstance.get(uiPath, async (request, reply) => {
+      reply.redirect(`${uiPath}/`)
+    })
+    fastifyInstance.get(`${uiPath}/`, serveIndex)
+  } else {
+    fastifyInstance.get('/', serveIndex)
+  }
 
   // Enable graceful shutdown
   app.enableShutdownHooks()
@@ -86,11 +105,12 @@ async function bootstrap() {
   await app.listen(appConfig.port, appConfig.host)
 
   logger.log(
-    `🚀 NestJS service is running on: http://${appConfig.host}:${appConfig.port}/${globalPrefix}`,
+    `🚀 NestJS service is running on: http://${appConfig.host}:${appConfig.port}/${fullApiPrefix}`,
     'Bootstrap'
   )
   logger.log(`📊 Environment: ${appConfig.nodeEnv}`, 'Bootstrap')
   logger.log(`📝 Log level: ${appConfig.logLevel}`, 'Bootstrap')
+  logger.log(`🏠 UI Path: http://${appConfig.host}:${appConfig.port}${uiPath}`, 'Bootstrap')
 
   // Rely on enableShutdownHooks for graceful shutdown
 }
