@@ -136,6 +136,9 @@ export class BozonxTmpFiles implements INodeType {
 				}
 				baseURL = baseURL.replace(/\/+$/g, '');
 
+				const apiPrefix = 'api/v1';
+				baseURL = `${baseURL}/${apiPrefix}`;
+
 				const options: IHttpRequestOptions = {
 					method: 'POST',
 					url: 'files',

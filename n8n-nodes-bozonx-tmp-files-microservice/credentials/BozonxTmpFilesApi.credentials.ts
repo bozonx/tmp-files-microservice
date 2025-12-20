@@ -11,11 +11,11 @@ export class BozonxTmpFilesApi implements ICredentialType {
 			displayName: 'Base URL',
 			name: 'baseUrl',
 			type: 'string',
-			default: 'http://tmp-files-microservice:8080/api/v1',
-			placeholder: 'https://tmp-files.example.com/api/v1',
+			default: 'http://tmp-files-microservice:8080',
+			placeholder: 'https://tmp-files.example.com',
 			required: true,
 			description:
-				'Full base URL of the Tmp Files microservice API (including /api/v1 or custom path)',
+				'Base URL of the Tmp Files microservice. The /api/v1 prefix is added automatically.',
 		},
 		{
 			displayName: 'Authentication',
@@ -94,7 +94,7 @@ export class BozonxTmpFilesApi implements ICredentialType {
 	test: ICredentialType['test'] = {
 		request: {
 			baseURL: '={{$credentials.baseUrl}}',
-			url: '/health',
+			url: '/api/v1/health',
 		},
 	};
 }
