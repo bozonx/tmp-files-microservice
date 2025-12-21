@@ -29,5 +29,5 @@ COPY public ./public
 
 EXPOSE 8080
 
-ENTRYPOINT ["/sbin/tini", "--"]
+ENTRYPOINT ["tini", "--"]
 CMD ["node", "dist/src/main.js"]
