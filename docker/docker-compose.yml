@@ -5,7 +5,6 @@ services:
     hostname: tmp-files-microservice
     restart: unless-stopped
     stop_grace_period: 30s
-    user: '1000:1000'
     ports:
       - '8080:8080'
     environment:
@@ -18,10 +17,13 @@ services:
       - MAX_TTL_MIN=44640
       - CLEANUP_INTERVAL_MINS=10
     volumes:
-      - ./storage:/storage
+      - storage:/storage
     healthcheck:
       test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/api/v1/health || exit 1' ]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 5s
+
+volumes:
+  storage:
