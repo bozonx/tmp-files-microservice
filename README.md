@@ -4,7 +4,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 
 ## What’s included
 
-- **Web UI** for file uploads at `/{BASE_PATH}` (root path)
+- **Web UI** for file uploads at `/{BASE_PATH}/ui`
 - Health-check endpoint `/{BASE_PATH}/api/v1/health`
 - JSON logging via Pino (minimal in production)
 - Global error filter and validation
@@ -76,7 +76,7 @@ pnpm start:prod
 
 Default base URL: `http://localhost:8080/api/v1`
 
-**Web UI**: After starting the service, open `http://localhost:8080/` in your browser to access the upload interface.
+**Web UI**: After starting the service, open `http://localhost:8080/ui/` in your browser to access the upload interface.
 
 ## Environment variables
 
@@ -127,9 +127,9 @@ Source of truth: `.env.production.example`
 
 ## Web UI
 
-The service includes a simple web interface for uploading files, accessible at the root path `/`.
+The service includes a simple web interface for uploading files, accessible at `/ui/`.
 
-- **URL**: `http://localhost:8080/` (adjust host/port based on your configuration)
+- **URL**: `http://localhost:8080/ui/` (adjust host/port based on your configuration)
 - **Features**:
   - Drag & drop file upload
   - Upload files from URL
@@ -142,9 +142,11 @@ The service includes a simple web interface for uploading files, accessible at t
 The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScript with no external dependencies.
 
 **Technical details**:
-- Static files (CSS, JS) are served via `@fastify/static` plugin with `/{BASE_PATH}/public/` prefix
-- UI root is registered directly with Fastify to serve `index.html` at `/{BASE_PATH}`
-- The UI makes requests to the REST API relative to its own URL path (computed from `window.location.pathname`), e.g. if UI is served at `/tmp-files/` then API calls go to `/tmp-files/api/v1/files`
+- Static files (CSS, JS) are served via `@fastify/static` plugin with `/{BASE_PATH}/ui/public/` prefix
+- UI root is registered directly with Fastify to serve `index.html` at `/{BASE_PATH}/ui/`
+- The UI makes requests to the REST API relative to its own URL path (computed from `window.location.pathname`), but strips the `/ui` segment first. For example:
+  - If UI is served at `/ui/`, API calls go to `/api/v1/files`
+  - If UI is served at `/tmp-files/ui/`, API calls go to `/tmp-files/api/v1/files`
 - All client-side code is in `public/` directory (not included in the build output)
 - The UI does not use `BASE_PATH` directly; it derives the API base path from the current browser URL
 
@@ -168,8 +170,8 @@ The service exposes a REST API with no built-in authentication. If protection is
 ### Base path
 
 - The base URL for API is formed as: `/{BASE_PATH}/api/v1`
-- The base URL for UI is: `/{BASE_PATH}`
-- Default: `/api/v1` (API) and `/` (UI)
+- The base URL for UI is: `/{BASE_PATH}/ui`
+- Default: `/api/v1` (API) and `/ui` (UI)
 - The `BASE_PATH` variable is set via environment (`.env`), without leading or trailing slashes. It is empty by default.
 
 ### Data formats
@@ -455,7 +457,7 @@ curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 - Why not keep metadata in a database?
   - This service aims to be lightweight and self-contained. For large-scale needs, you can replace the storage layer with a DB-backed implementation.
 - How do I change the base path?
-  - Set `BASE_PATH` (without slashes). The UI will be served at `/{BASE_PATH}` and the API will be served at `/{BASE_PATH}/api/v1`. The Web UI does not read `BASE_PATH` directly; it derives the API base path from the current browser URL.
+  - Set `BASE_PATH` (without slashes). The UI will be served at `/{BASE_PATH}/ui` and the API will be served at `/{BASE_PATH}/api/v1`. The Web UI does not read `BASE_PATH` directly; it derives the API base path from the current browser URL.
 - Can I disable deduplication?
   - Yes, set `ENABLE_DEDUPLICATION=false`.
 

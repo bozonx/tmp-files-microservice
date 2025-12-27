@@ -7,7 +7,7 @@ The Temporary Files Microservice includes a simple web interface for uploading f
 After starting the service, open your browser and navigate to:
 
 ```
-http://localhost:8080/
+http://localhost:8080/ui/
 ```
 
 (Adjust the host and port based on your configuration)
@@ -78,7 +78,9 @@ In production environments:
 ## Technical Details
 
 - The UI uses vanilla HTML/CSS/JavaScript (no external dependencies)
-- All requests are made to the REST API relative to the current UI URL path, e.g. if UI is served at `/tmp-files/` then API calls go to `/tmp-files/api/v1/files`
+- All requests are made to the REST API relative to the current UI URL path, but the `/ui` segment is stripped first. For example:
+  - If UI is served at `/ui/`, API calls go to `/api/v1/files`
+  - If UI is served at `/tmp-files/ui/`, API calls go to `/tmp-files/api/v1/files`
 - Static files are served from the `public/` directory
 - The UI works in all modern browsers
 

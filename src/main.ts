@@ -50,8 +50,10 @@ async function bootstrap() {
   const basePath = appConfig.basePath
   const apiPrefix = 'api/v1'
   const fullApiPrefix = basePath ? `${basePath}/${apiPrefix}` : apiPrefix
-  const staticPrefix = basePath ? `/${basePath}/public/` : '/public/'
-  const uiPath = basePath ? `/${basePath}` : '/'
+  const uiSegment = 'ui'
+  const staticPrefix = basePath ? `/${basePath}/${uiSegment}/public/` : `/${uiSegment}/public/`
+  const uiPath = basePath ? `/${basePath}/${uiSegment}` : `/${uiSegment}`
+  const baseRootPath = basePath ? `/${basePath}` : '/'
 
   await (app as any).register(fastifyStatic, {
     root: join(process.cwd(), 'public'),
@@ -80,15 +82,14 @@ async function bootstrap() {
     reply.type('text/html').send(html)
   }
 
-  if (basePath) {
-    // Redirect /sub to /sub/ so that relative paths in index.html work correctly
-    fastifyInstance.get(uiPath, async (request, reply) => {
-      reply.redirect(`${uiPath}/`)
-    })
-    fastifyInstance.get(`${uiPath}/`, serveIndex)
-  } else {
-    fastifyInstance.get('/', serveIndex)
-  }
+  // Redirect base root and /ui to /ui/ so that relative paths in index.html work correctly
+  fastifyInstance.get(baseRootPath, async (request, reply) => {
+    reply.redirect(`${uiPath}/`)
+  })
+  fastifyInstance.get(uiPath, async (request, reply) => {
+    reply.redirect(`${uiPath}/`)
+  })
+  fastifyInstance.get(`${uiPath}/`, serveIndex)
 
   // Enable graceful shutdown
   // app.enableShutdownHooks() <--- REPLACED WITH CUSTOM LOGIC BELOW

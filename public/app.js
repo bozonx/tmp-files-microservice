@@ -19,7 +19,8 @@ const uiDirPath = pathname.endsWith('/')
         ? pathname.replace(/\/[^/]*$/, '/')
         : `${pathname}/`;
 const uiBasePath = uiDirPath === '/' ? '' : uiDirPath.replace(/\/+$/, '');
-const API_BASE_URL = `${window.location.origin}${uiBasePath}/api/v1`;
+const apiBasePath = uiBasePath.replace(/\/ui$/, '');
+const API_BASE_URL = `${window.location.origin}${apiBasePath}/api/v1`;
 
 // Drag and drop handlers
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {

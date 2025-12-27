@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-- Feature: Added Web UI for file uploads at root path `/{BASE_PATH}` with drag & drop support, URL upload, TTL configuration, and metadata input. UI is served from `public/` directory using vanilla HTML/CSS/JavaScript. UI derives API base path from the current browser URL (no runtime BASE_PATH injection). Local files take priority over URL uploads when both are provided.
+- Feature: Added Web UI for file uploads at `/{BASE_PATH}/ui` with drag & drop support, URL upload, TTL configuration, and metadata input. UI is served from `public/` directory using vanilla HTML/CSS/JavaScript. UI derives API base path from the current browser URL and strips `/ui` from the path before calling the API (no runtime BASE_PATH injection). Local files take priority over URL uploads when both are provided.
 - Change: Improved graceful shutdown to allow active uploads up to 60 seconds to complete (`forceCloseConnections: false`).
 - Feature: Cleanup process now automatically removes orphaned files (files on disk not present in metadata).
-- Change: Refactored `API_BASE_PATH` to `BASE_PATH`. Both UI (at the root) and API (at `/api/v1`) are now served relative to `BASE_PATH`. `BASE_PATH` is empty by default.
+- Change: Refactored `API_BASE_PATH` to `BASE_PATH`. Both UI (at `/ui`) and API (at `/api/v1`) are now served relative to `BASE_PATH`. `BASE_PATH` is empty by default.
 - Breaking: API parameter renamed to `ttlMins`. Both requests and responses use minutes (default 1440 = 1 day).
 - Change: Increased default `MAX_TTL_MIN` from 10080 (7 days) to 44640 (31 days). Updated code defaults, env examples, and docker-compose.
 - Breaking: STORAGE_DIR environment variable is now required; service fails to start if missing. Docs and env examples updated.

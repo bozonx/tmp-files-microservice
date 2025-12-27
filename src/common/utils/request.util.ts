@@ -8,8 +8,15 @@ export class RequestUtil {
    * Check if the client has aborted the request
    */
   public static isRequestAborted(request: FastifyRequest): boolean {
-    // Check if raw request exists and is aborted
-    return request.raw?.destroyed === true || (request.raw as unknown as { aborted?: boolean })?.aborted === true
+    const raw = request.raw as unknown as
+      | { aborted?: boolean; destroyed?: boolean; complete?: boolean }
+      | undefined
+    if (!raw) return false
+
+    if (raw.aborted === true) return true
+
+    // `destroyed` can be true for normal request lifecycle; treat it as abort only when request is incomplete.
+    return raw.destroyed === true && raw.complete === false
   }
 
   /**
@@ -19,19 +26,27 @@ export class RequestUtil {
   public static onRequestAborted(request: FastifyRequest, callback: () => void): () => void {
     if (!request.raw) {
       // If no raw request, return no-op cleanup
-      return (): void => { }
+      return (): void => {}
     }
 
     const abortHandler = (): void => {
       callback()
     }
 
-    // Listen for close event which fires when connection is closed
-    request.raw.on('close', abortHandler)
+    const closeHandler = (): void => {
+      const raw = request.raw as unknown as { complete?: boolean } | undefined
+      if (raw?.complete === false) {
+        callback()
+      }
+    }
+
+    request.raw.on('aborted', abortHandler)
+    request.raw.on('close', closeHandler)
 
     // Return cleanup function
     return (): void => {
-      request.raw?.removeListener('close', abortHandler)
+      request.raw?.removeListener('aborted', abortHandler)
+      request.raw?.removeListener('close', closeHandler)
     }
   }
 
@@ -49,11 +64,20 @@ export class RequestUtil {
         }
       }
 
-      request.raw.on('close', abortHandler)
+      const closeHandler = (): void => {
+        const raw = request.raw as unknown as { complete?: boolean } | undefined
+        if (raw?.complete === false) {
+          abortHandler()
+        }
+      }
+
+      request.raw.on('aborted', abortHandler)
+      request.raw.on('close', closeHandler)
 
       // Cleanup when signal is aborted
       controller.signal.addEventListener('abort', () => {
-        request.raw?.removeListener('close', abortHandler)
+        request.raw?.removeListener('aborted', abortHandler)
+        request.raw?.removeListener('close', closeHandler)
       })
     }
 
@@ -63,7 +87,10 @@ export class RequestUtil {
   /**
    * Throw an error if the request has been aborted
    */
-  public static throwIfAborted(request: FastifyRequest, message = 'Request aborted by client'): void {
+  public static throwIfAborted(
+    request: FastifyRequest,
+    message = 'Request aborted by client'
+  ): void {
     if (this.isRequestAborted(request)) {
       const error = new Error(message)
       error.name = 'RequestAbortedError'

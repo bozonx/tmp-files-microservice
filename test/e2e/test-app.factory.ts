@@ -4,6 +4,8 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { AppModule } from '@/app.module'
 import { HTTP_CONSTANTS } from '@common/constants/http.constants'
 import fastifyMultipart from '@fastify/multipart'
+import fastifyStatic from '@fastify/static'
+import { join } from 'path'
 
 export async function createTestApp(): Promise<NestFastifyApplication> {
   const moduleRef = await Test.createTestingModule({
@@ -32,7 +34,38 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
   const basePath = (process.env.BASE_PATH || '').replace(/^\/+|\/+$/g, '')
   const apiPrefix = 'api/v1'
   const fullApiPrefix = basePath ? `${basePath}/${apiPrefix}` : apiPrefix
-  app.setGlobalPrefix(fullApiPrefix)
+  const uiSegment = 'ui'
+  const staticPrefix = basePath ? `/${basePath}/${uiSegment}/public/` : `/${uiSegment}/public/`
+  const uiPath = basePath ? `/${basePath}/${uiSegment}` : `/${uiSegment}`
+  const baseRootPath = basePath ? `/${basePath}` : '/'
+
+  await (app as any).register(fastifyStatic, {
+    root: join(process.cwd(), 'public'),
+    prefix: staticPrefix,
+  })
+
+  app.setGlobalPrefix(fullApiPrefix, {
+    exclude: [
+      { path: uiPath, method: 'GET' as any },
+      { path: `${uiPath}/`.replace(/\/+$/, '/'), method: 'GET' as any },
+    ],
+  })
+
+  const fastifyInstance = app.getHttpAdapter().getInstance()
+  const serveIndex = async (request: any, reply: any) => {
+    const { readFile } = await import('fs/promises')
+    const indexPath = join(process.cwd(), 'public', 'index.html')
+    const html = await readFile(indexPath, 'utf-8')
+    reply.type('text/html').send(html)
+  }
+
+  fastifyInstance.get(baseRootPath, async (request, reply) => {
+    reply.redirect(`${uiPath}/`)
+  })
+  fastifyInstance.get(uiPath, async (request, reply) => {
+    reply.redirect(`${uiPath}/`)
+  })
+  fastifyInstance.get(`${uiPath}/`, serveIndex)
 
   await app.init()
   // Ensure Fastify has completed plugin registration and routing before tests
