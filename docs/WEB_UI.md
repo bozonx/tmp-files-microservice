@@ -78,7 +78,7 @@ In production environments:
 ## Technical Details
 
 - The UI uses vanilla HTML/CSS/JavaScript (no external dependencies)
-- All requests are made to the REST API at `/{BASE_PATH}/api/v1/files`
+- All requests are made to the REST API relative to the current UI URL path, e.g. if UI is served at `/tmp-files/` then API calls go to `/tmp-files/api/v1/files`
 - Static files are served from the `public/` directory
 - The UI works in all modern browsers
 
@@ -87,7 +87,6 @@ In production environments:
 The UI automatically adapts to the following environment variables:
 
 - **`LISTEN_HOST` and `LISTEN_PORT`**: The UI uses `window.location.origin`, so it automatically connects to the host and port you're accessing it from
-- **`BASE_PATH`**: The backend injects the configured base path into the HTML at runtime, so the UI always uses the correct API endpoint and static assets relative path
 
 This means you can change these variables without modifying any frontend code. The UI will automatically use the correct configuration.
 

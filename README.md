@@ -144,9 +144,9 @@ The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScri
 **Technical details**:
 - Static files (CSS, JS) are served via `@fastify/static` plugin with `/{BASE_PATH}/public/` prefix
 - UI root is registered directly with Fastify to serve `index.html` at `/{BASE_PATH}`
-- The UI makes requests to the REST API at `/{BASE_PATH}/api/v1/files`
+- The UI makes requests to the REST API relative to its own URL path (computed from `window.location.pathname`), e.g. if UI is served at `/tmp-files/` then API calls go to `/tmp-files/api/v1/files`
 - All client-side code is in `public/` directory (not included in the build output)
-- **Environment variables**: The UI automatically adapts to `LISTEN_HOST`, `LISTEN_PORT`, and `BASE_PATH` through runtime configuration injection
+- The UI does not use `BASE_PATH` directly; it derives the API base path from the current browser URL
 
 ## Endpoints (summary)
 
@@ -455,7 +455,7 @@ curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 - Why not keep metadata in a database?
   - This service aims to be lightweight and self-contained. For large-scale needs, you can replace the storage layer with a DB-backed implementation.
 - How do I change the base path?
-  - Set `BASE_PATH` (without slashes). The UI will be at `/{BASE_PATH}` and API at `/{BASE_PATH}/api/v1`.
+  - Set `BASE_PATH` (without slashes). The UI will be served at `/{BASE_PATH}` and the API will be served at `/{BASE_PATH}/api/v1`. The Web UI does not read `BASE_PATH` directly; it derives the API base path from the current browser URL.
 - Can I disable deduplication?
   - Yes, set `ENABLE_DEDUPLICATION=false`.
 

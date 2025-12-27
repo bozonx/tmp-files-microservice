@@ -12,8 +12,14 @@ const ttlMinsInput = document.getElementById('ttlMins');
 const metadataInput = document.getElementById('metadata');
 
 // Get API base URL from current location and injected config
-const basePath = window.APP_CONFIG?.basePath || '';
-const API_BASE_URL = basePath ? `${window.location.origin}/${basePath}/api/v1` : `${window.location.origin}/api/v1`;
+const pathname = window.location.pathname;
+const uiDirPath = pathname.endsWith('/')
+    ? pathname
+    : (pathname.split('/').pop() || '').includes('.')
+        ? pathname.replace(/\/[^/]*$/, '/')
+        : `${pathname}/`;
+const uiBasePath = uiDirPath === '/' ? '' : uiDirPath.replace(/\/+$/, '');
+const API_BASE_URL = `${window.location.origin}${uiBasePath}/api/v1`;
 
 // Drag and drop handlers
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {

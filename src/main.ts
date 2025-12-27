@@ -76,22 +76,7 @@ async function bootstrap() {
   const serveIndex = async (request: any, reply: any) => {
     const { readFile } = await import('fs/promises')
     const indexPath = join(process.cwd(), 'public', 'index.html')
-    let html = await readFile(indexPath, 'utf-8')
-
-    // Inject runtime configuration
-    const configScript = `
-    <script>
-      window.APP_CONFIG = {
-        basePath: '${basePath}'
-      };
-    </script>
-    `
-    // Insert config before the main app script
-    html = html.replace(
-      '<script src="public/app.js"></script>',
-      `${configScript}<script src="public/app.js"></script>`
-    )
-
+    const html = await readFile(indexPath, 'utf-8')
     reply.type('text/html').send(html)
   }
 
