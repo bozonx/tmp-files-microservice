@@ -22,6 +22,27 @@ const uiBasePath = uiDirPath === '/' ? '' : uiDirPath.replace(/\/+$/, '');
 const apiBasePath = uiBasePath.replace(/\/ui$/, '');
 const API_BASE_URL = `${window.location.origin}${apiBasePath}/api/v1`;
 
+function normalizeApiActionUrl(value) {
+    if (!value || typeof value !== 'string') {
+        return '';
+    }
+
+    let url;
+    try {
+        url = new URL(value);
+    } catch {
+        url = new URL(value, window.location.origin);
+    }
+
+    let pathname = url.pathname || '';
+    if (pathname.startsWith('/api/v1/')) {
+        pathname = `${apiBasePath}${pathname}`;
+    }
+    pathname = pathname.replace(/\/{2,}/g, '/');
+
+    return `${window.location.origin}${pathname}${url.search || ''}${url.hash || ''}`;
+}
+
 // Drag and drop handlers
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     uploadArea.addEventListener(eventName, preventDefaults, false);
@@ -176,6 +197,10 @@ function hideResult() {
 function showSuccess(data) {
     const { file, downloadUrl, infoUrl, deleteUrl, message } = data;
 
+    const normalizedDownloadUrl = normalizeApiActionUrl(downloadUrl);
+    const normalizedInfoUrl = normalizeApiActionUrl(infoUrl);
+    const normalizedDeleteUrl = normalizeApiActionUrl(deleteUrl);
+
     const expiresAt = new Date(file.expiresAt).toLocaleString();
     const uploadedAt = new Date(file.uploadedAt).toLocaleString();
 
@@ -189,9 +214,9 @@ function showSuccess(data) {
     <div class="result-info"><strong>Expires:</strong> ${expiresAt}</div>
     <div class="result-info"><strong>TTL:</strong> ${file.ttlMins} minutes</div>
     <div class="result-links">
-      <a href="${downloadUrl}" target="_blank">Download</a>
-      <a href="${infoUrl}" target="_blank">Info</a>
-      <a href="${deleteUrl}" data-method="DELETE" onclick="handleDelete(event, '${file.id}')">Delete</a>
+      <a href="${normalizedDownloadUrl}" target="_blank">Download</a>
+      <a href="${normalizedInfoUrl}" target="_blank">Info</a>
+      <a href="${normalizedDeleteUrl}" data-method="DELETE" onclick="handleDelete(event, '${file.id}')">Delete</a>
     </div>
   `;
 

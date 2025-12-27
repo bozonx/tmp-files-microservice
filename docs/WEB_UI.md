@@ -81,6 +81,7 @@ In production environments:
 - All requests are made to the REST API relative to the current UI URL path, but the `/ui` segment is stripped first. For example:
   - If UI is served at `/ui/`, API calls go to `/api/v1/files`
   - If UI is served at `/tmp-files/ui/`, API calls go to `/tmp-files/api/v1/files`
+- The action URLs returned by the API (`downloadUrl`, `infoUrl`, `deleteUrl`) are normalized in the browser to match the same base path. This ensures the links work when the service is mounted behind a reverse-proxy path prefix (e.g. `/tmp-files`).
 - Static files are served from the `public/` directory
 - The UI works in all modern browsers
 
