@@ -9,6 +9,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 - JSON logging via Pino (minimal in production)
 - Global error filter and validation
 - Fast and lightweight Fastify HTTP server
+- **Full Streaming Support**: Efficiently handles large files via streams for both uploads and downloads
 - Unit and E2E tests (Jest)
 - Docker/Docker Compose support
 - No built-in auth; expose behind your API Gateway
@@ -117,11 +118,12 @@ Source of truth: `.env.production.example`
 - Controlled by `CLEANUP_INTERVAL_MINS`. Set `0` or less to disable scheduling.
 - Expired files are removed from disk and metadata; logs include delete count and freed bytes.
 - Orphaned files (files on disk but missing from metadata) are automatically identified and removed to reclaim space.
+- Processing is done in batches of 1000 files (`CLEANUP_BATCH_SIZE`) to manage memory usage.
 
 ## Graceful Shutdown
 
 - The service handles `SIGTERM` and `SIGINT` signals.
-- It stops accepting new connections and gives active requests (including uploads) up to 60 seconds to complete before forcing exit.
+- It stops accepting new connections and gives active requests (including uploads) up to 25 seconds to complete before forcing exit.
 - Cleanup tasks are paused during shutdown to prevent consistency issues.
 - You can trigger cleanup manually via `POST /{base}/cleanup/run`.
 
