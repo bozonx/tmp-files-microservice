@@ -73,4 +73,73 @@ describe('FilesService', () => {
       })
     ).rejects.toBeInstanceOf(PayloadTooLargeException)
   })
+
+  it('uploadFile returns downloadPath and full downloadUrl', async () => {
+    const fileId = 'test-id'
+    storage.saveFile.mockResolvedValue({
+      success: true,
+      data: {
+        id: fileId,
+        originalName: 'test.txt',
+        mimeType: 'text/plain',
+        size: 10,
+        uploadedAt: new Date(),
+        ttl: 3600,
+        expiresAt: new Date(Date.now() + 3600 * 1000),
+        hash: 'abc',
+      } as any,
+    })
+
+    const res = await service.uploadFile({
+      file: {
+        originalname: 'test.txt',
+        mimetype: 'text/plain',
+        size: 10,
+        stream: Readable.from(Buffer.from('hello')),
+      },
+      ttl: 3600,
+    })
+
+    expect(res.downloadPath).toBe('/api/v1/download/test-id')
+    expect(res.downloadUrl).toBe('/api/v1/download/test-id') // base path is empty in mock
+  })
+
+  it('getFileInfo returns downloadPath and full downloadUrl with base URL', async () => {
+    // Override ConfigService for this test
+    const module = await Test.createTestingModule({
+      providers: [
+        FilesService,
+        { provide: StorageService, useValue: storage },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: (key: string) => {
+              if (key === 'app') return { basePath: '', downloadBaseUrl: 'https://cdn.example.com' }
+              if (key === 'storage') return { maxTtl: 3600, maxFileSize: 1024, allowedMimeTypes: [] }
+            },
+          },
+        },
+      ],
+    }).compile()
+    const testService = module.get(FilesService)
+
+    storage.getFileInfo.mockResolvedValue({
+      success: true,
+      data: {
+        id: 'test-id',
+        originalName: 'test.txt',
+        mimeType: 'text/plain',
+        size: 10,
+        uploadedAt: new Date(),
+        ttl: 3600,
+        expiresAt: new Date(Date.now() + 3600 * 1000),
+        hash: 'abc',
+      } as any,
+    })
+
+    const res = await testService.getFileInfo({ fileId: 'test-id' })
+
+    expect(res.downloadPath).toBe('/api/v1/download/test-id')
+    expect(res.downloadUrl).toBe('https://cdn.example.com/api/v1/download/test-id')
+  })
 })

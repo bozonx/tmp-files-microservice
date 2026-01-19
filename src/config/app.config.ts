@@ -17,9 +17,12 @@ export class AppConfig {
   @IsIn(['development', 'production', 'test'])
   public nodeEnv!: string
 
-  // Allow only Pino log levels
+  @IsString()
   @IsIn(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'])
   public logLevel!: string
+
+  @IsString()
+  public downloadBaseUrl!: string
 }
 
 export default registerAs('app', (): AppConfig => {
@@ -29,6 +32,7 @@ export default registerAs('app', (): AppConfig => {
     basePath: (process.env.BASE_PATH ?? '').replace(/^\/+|\/+$/g, ''),
     nodeEnv: process.env.NODE_ENV ?? 'production',
     logLevel: process.env.LOG_LEVEL ?? 'warn',
+    downloadBaseUrl: (process.env.DOWNLOAD_BASE_URL ?? '').replace(/\/+$/, ''),
   })
 
   const errors = validateSync(config, {

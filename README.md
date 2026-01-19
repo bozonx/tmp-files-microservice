@@ -98,6 +98,7 @@ Source of truth: `.env.production.example`
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
   - `CLEANUP_INTERVAL_MINS` — cleanup interval in minutes (default 10, set 0 to disable)
+  - `DOWNLOAD_BASE_URL` — Base URL for `downloadUrl` in responses (e.g. `https://files.example.com`). If not set, `downloadUrl` will be relative.
 
 ## How uploads, limits and TTL work
 
@@ -215,7 +216,8 @@ The service exposes a REST API with no built-in authentication. If protection is
     "isExpired": false,
     "timeRemainingMins": 60
   },
-  "downloadUrl": "/api/v1/download/uuid",
+  "downloadUrl": "https://api.example.com/api/v1/download/uuid",
+  "downloadPath": "/api/v1/download/uuid",
   "infoUrl": "/api/v1/files/uuid",
   "deleteUrl": "/api/v1/files/uuid",
   "message": "File uploaded successfully"
@@ -253,7 +255,7 @@ Example 413 response:
 
 #### File info
 - GET `/{base}/files/:id`
-- 200 response: same `file` object as above plus `downloadUrl`, `deleteUrl`.
+- 200 response: same `file` object as above plus `downloadUrl`, `downloadPath`, `deleteUrl`.
 
 Errors: 400 (invalid `id`), 404 (not found or expired), 500.
 

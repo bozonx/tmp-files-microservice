@@ -52,6 +52,7 @@ export interface FileResponse {
 export interface UploadFileResponse {
   file: FileResponse
   downloadUrl: string
+  downloadPath: string
   infoUrl: string
   deleteUrl: string
   message: string
@@ -60,6 +61,7 @@ export interface UploadFileResponse {
 export interface GetFileInfoResponse {
   file: FileResponse
   downloadUrl: string
+  downloadPath: string
   deleteUrl: string
 }
 export interface DeleteFileResponse {
@@ -128,6 +130,12 @@ export class FilesService {
     return url
   }
 
+  private getFullDownloadUrl(downloadPath: string): string {
+    const appCfg = this.configService.get<AppConfig>('app')!
+    if (!appCfg.downloadBaseUrl) return downloadPath
+    return `${appCfg.downloadBaseUrl}${downloadPath}`
+  }
+
   async uploadFile(params: UploadFileParams): Promise<UploadFileResponse> {
     const startTime = Date.now()
     try {
@@ -171,10 +179,12 @@ export class FilesService {
 
       const fileInfo = saveResult.data as FileInfo
       const respFile = this.toFileResponse(fileInfo)
+      const downloadPath = this.generateApiUrl('download/:id', { id: fileInfo.id })
 
       return {
         file: respFile,
-        downloadUrl: this.generateApiUrl('download/:id', { id: fileInfo.id }),
+        downloadUrl: this.getFullDownloadUrl(downloadPath),
+        downloadPath,
         infoUrl: this.generateApiUrl('files/:id', { id: fileInfo.id }),
         deleteUrl: this.generateApiUrl('files/:id', { id: fileInfo.id }),
         message: 'File uploaded successfully',
@@ -212,9 +222,12 @@ export class FilesService {
 
       const fileInfo = fileResult.data as FileInfo
       const fileResponse = this.toFileResponse(fileInfo)
+      const downloadPath = this.generateApiUrl('download/:id', { id: fileInfo.id })
+
       return {
         file: fileResponse,
-        downloadUrl: this.generateApiUrl('download/:id', { id: fileInfo.id }),
+        downloadUrl: this.getFullDownloadUrl(downloadPath),
+        downloadPath,
         deleteUrl: this.generateApiUrl('files/:id', { id: fileInfo.id }),
       }
     } catch (error: any) {
