@@ -31,6 +31,7 @@ export class StorageService {
   private readonly logger = new Logger(StorageService.name)
   private config!: StorageConfig
   private metadataPath!: string
+  private metadataLock: Promise<void> = Promise.resolve()
 
   constructor(private readonly configService: ConfigService) { }
 
@@ -489,7 +490,15 @@ export class StorageService {
   }
 
   private async updateMetadata(fileInfo: FileInfo, operation: 'add' | 'remove'): Promise<void> {
+    // Acquire lock to prevent race conditions during metadata updates
+    const currentLock = this.metadataLock
+    let resolveLock: () => void
+    this.metadataLock = new Promise((resolve) => {
+      resolveLock = resolve
+    })
+
     try {
+      await currentLock
       await this.initializeStorage()
       const config = this.getConfig()
       await fs.ensureDir(config.basePath)
@@ -525,6 +534,9 @@ export class StorageService {
     } catch (error: any) {
       this.logger.error('Failed to update metadata', error)
       throw new Error(`Failed to update metadata: ${error.message}`)
+    } finally {
+      // release lock
+      if (resolveLock!) resolveLock!()
     }
   }
 

@@ -321,7 +321,7 @@ uploadForm.addEventListener('submit', async (e) => {
                 if (!response.ok) throw new Error(data.message || `File ${files[i].name} failed`);
                 results.push(data);
             }
-            showSuccess(results[results.length - 1], `${files.length} file(s) uploaded successfully`);
+            showMultipleSuccess(results, `${files.length} file(s) uploaded successfully`);
         } else if (url) {
             // Upload from URL
             const payload = { url };
@@ -432,12 +432,38 @@ function showSuccess(data, customMessage) {
     const normUrl = normalizeApiActionUrl(downloadUrl);
     resultDiv.innerHTML = `
         <div class="result-title">✓ ${customMessage || 'Uploaded successfully'}</div>
-        <div style="font-size: 0.8rem">
-            <div><strong>ID:</strong> ${file.id}</div>
+        <div class="result-item">
+            <div class="result-file-name"><strong>File:</strong> ${file.originalName}</div>
+            <div class="result-file-id"><strong>ID:</strong> ${file.id}</div>
             <div class="result-links">
-                <a href="${normUrl}" target="_blank">Download</a>
-                <a href="javascript:void(0)" onclick="copyToClipboard('${normUrl}')">Copy Link</a>
+                <a href="${normUrl}" target="_blank" class="result-link">Download</a>
+                <button class="btn-text-link" onclick="copyToClipboard('${normUrl}')">Copy Link</button>
             </div>
+        </div>
+    `;
+    resultDiv.className = 'result success';
+    resultDiv.classList.remove('hidden');
+}
+
+function showMultipleSuccess(results, customMessage) {
+    let itemsHtml = results.map(data => {
+        const { file, downloadUrl } = data;
+        const normUrl = normalizeApiActionUrl(downloadUrl);
+        return `
+            <div class="result-item multi">
+                <div class="result-file-name"><strong>File:</strong> ${file.originalName}</div>
+                <div class="result-links">
+                    <a href="${normUrl}" target="_blank" class="result-link">Download</a>
+                    <button class="btn-text-link" onclick="copyToClipboard('${normUrl}')">Copy Link</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    resultDiv.innerHTML = `
+        <div class="result-title">✓ ${customMessage}</div>
+        <div class="results-container">
+            ${itemsHtml}
         </div>
     `;
     resultDiv.className = 'result success';
