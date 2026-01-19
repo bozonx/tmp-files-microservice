@@ -64,6 +64,40 @@
       </form>
 
       <div id="result" class="result hidden"></div>
+
+      <section class="files-section">
+        <div class="section-header">
+          <h2>Recent Files</h2>
+          <button id="refreshBtn" class="btn-secondary">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
+        <div class="table-container">
+          <table id="filesTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Expires</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="filesList">
+              <!-- Files will be loaded here -->
+            </tbody>
+          </table>
+          <div id="filesLoader" class="loader-container hidden">
+            <span class="loader"></span>
+          </div>
+          <div id="noFiles" class="no-files hidden">
+            No files found
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer>

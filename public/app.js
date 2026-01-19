@@ -88,7 +88,128 @@ function updateFileName(name) {
     fileName.textContent = `Selected: ${name}`;
 }
 
-// Form submission
+// Refresh button and list elements
+const refreshBtn = document.getElementById('refreshBtn');
+const filesList = document.getElementById('filesList');
+const filesLoader = document.getElementById('filesLoader');
+const noFiles = document.getElementById('noFiles');
+const filesTable = document.getElementById('filesTable');
+
+// Refresh handler
+refreshBtn.addEventListener('click', fetchFiles);
+
+// Fetch files from API
+async function fetchFiles() {
+    setFilesLoading(true);
+    try {
+        const response = await fetch(`${API_BASE_URL}/files?limit=10`);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch files');
+        }
+
+        renderFiles(data.files);
+    } catch (error) {
+        console.error('Error fetching files:', error);
+        filesList.innerHTML = '';
+        showNoFiles(true);
+    } finally {
+        setFilesLoading(false);
+    }
+}
+
+function setFilesLoading(loading) {
+    if (loading) {
+        filesLoader.classList.remove('hidden');
+    } else {
+        filesLoader.classList.add('hidden');
+    }
+}
+
+function renderFiles(files) {
+    if (!files || files.length === 0) {
+        showNoFiles(true);
+        return;
+    }
+
+    showNoFiles(false);
+    filesList.innerHTML = files.map(file => {
+        const expiresAt = new Date(file.expiresAt);
+        const isNearExpiry = (expiresAt - new Date()) < 1000 * 60 * 60; // Less than 1 hour
+
+        const downloadUrl = normalizeApiActionUrl(`${API_BASE_URL}/files/${file.id}/download`);
+
+        return `
+      <tr>
+        <td>
+          <div class="file-info">
+            <a href="${downloadUrl}" target="_blank" class="file-name-cell" title="${file.originalName}">
+               ${truncateString(file.originalName, 30)}
+            </a>
+            <span class="file-id-sub">${file.id}</span>
+          </div>
+        </td>
+        <td><span class="mime-type">${file.mimeType}</span></td>
+        <td><span class="size">${formatBytes(file.size)}</span></td>
+        <td>
+          <span class="expiry ${isNearExpiry ? 'near' : ''}" title="${expiresAt.toLocaleString()}">
+            ${formatRelativeTime(expiresAt)}
+          </span>
+        </td>
+        <td>
+          <div class="actions-cell">
+            <a href="${downloadUrl}" class="action-btn download" title="Download" target="_blank">
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            </a>
+            <button class="action-btn delete" title="Delete" onclick="handleDelete(event, '${file.id}')">
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+    }).join('');
+}
+
+function showNoFiles(show) {
+    if (show) {
+        noFiles.classList.remove('hidden');
+        filesTable.classList.add('hidden');
+    } else {
+        noFiles.classList.add('hidden');
+        filesTable.classList.remove('hidden');
+    }
+}
+
+function truncateString(str, num) {
+    if (str.length <= num) return str;
+    return str.slice(0, num) + '...';
+}
+
+function formatRelativeTime(date) {
+    const now = new Date();
+    const diffMs = date - now;
+    const diffMins = Math.round(diffMs / (1000 * 60));
+
+    if (diffMins < 0) return 'Expired';
+    if (diffMins < 60) return `in ${diffMins}m`;
+
+    const diffHours = Math.round(diffMins / 60);
+    if (diffHours < 24) return `in ${diffHours}h`;
+
+    const diffDays = Math.round(diffHours / 24);
+    return `in ${diffDays}d`;
+}
+
+// Initial fetch
+fetchFiles();
+
+// Form submission Update: fetch files after success
 uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -171,6 +292,7 @@ uploadForm.addEventListener('submit', async (e) => {
         showSuccess(data);
         uploadForm.reset();
         fileName.textContent = '';
+        fetchFiles(); // Refresh list after upload
     } catch (error) {
         showError(error.message);
     } finally {
@@ -201,6 +323,8 @@ function showSuccess(data) {
     const normalizedInfoUrl = normalizeApiActionUrl(infoUrl);
     const normalizedDeleteUrl = normalizeApiActionUrl(deleteUrl);
 
+    if (!file.id) return; // For deletions handled differently
+
     const expiresAt = new Date(file.expiresAt).toLocaleString();
     const uploadedAt = new Date(file.uploadedAt).toLocaleString();
 
@@ -216,7 +340,7 @@ function showSuccess(data) {
     <div class="result-links">
       <a href="${normalizedDownloadUrl}" target="_blank">Download</a>
       <a href="${normalizedInfoUrl}" target="_blank">Info</a>
-      <a href="${normalizedDeleteUrl}" data-method="DELETE" onclick="handleDelete(event, '${file.id}')">Delete</a>
+      <a href="#" onclick="handleDelete(event, '${file.id}')">Delete</a>
     </div>
   `;
 
@@ -236,7 +360,7 @@ function showError(message) {
     resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-// Delete handler
+// Delete handler Update: fetch files after success
 async function handleDelete(event, fileId) {
     event.preventDefault();
 
@@ -255,14 +379,6 @@ async function handleDelete(event, fileId) {
             throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
         }
 
-        showSuccess({
-            file: { id: fileId, originalName: '', size: 0, mimeType: '', uploadedAt: '', expiresAt: '', ttlMins: 0 },
-            message: data.message || 'File deleted successfully',
-            downloadUrl: '',
-            infoUrl: '',
-            deleteUrl: '',
-        });
-
         // Show simplified success message for deletion
         resultDiv.innerHTML = `
       <div class="result-title">✓ ${data.message || 'File deleted successfully'}</div>
@@ -271,6 +387,7 @@ async function handleDelete(event, fileId) {
     `;
         resultDiv.classList.remove('hidden', 'error');
         resultDiv.classList.add('success');
+        fetchFiles(); // Refresh list after deletion
     } catch (error) {
         showError(error.message);
     }
