@@ -33,7 +33,6 @@ export class FilesController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async uploadFile(@Req() request: FastifyRequest): Promise<UploadFileResponse> {
-    let fileBuffer: Buffer | undefined
     let cleanupAbortListener: (() => void) | undefined
 
     try {
@@ -41,139 +40,57 @@ export class FilesController {
       RequestUtil.throwIfAborted(request, 'File upload aborted by client')
 
       // Setup abort listener to cleanup resources
-      let aborted = false
       cleanupAbortListener = RequestUtil.onRequestAborted(request, () => {
-        aborted = true
         this.logger.warn('File upload aborted by client during processing')
       })
 
+      const parts = (request as any).parts?.()
+      if (!parts) throw new BadRequestException('Multipart request expected')
+
       let ttlMins: number | undefined
       let metadata: Record<string, any> = {}
-      let gotMetadata = false
-      let filename: string | undefined
-      let mimetype: string | undefined
 
-      const parts = (request as any).parts?.()
-      if (!parts || typeof parts[Symbol.asyncIterator] !== 'function') {
-        const data: any = await (request as any).file()
-        if (!data) throw new BadRequestException('No file provided')
-
-        // Check abort before processing fields
-        if (aborted) throw new BadRequestException('File upload aborted by client')
-
-        const rawTtlField: any = data.fields?.ttlMins
-        if (rawTtlField !== undefined && rawTtlField !== null) {
-          let ttlStr: string | undefined
-          if (typeof rawTtlField === 'string') ttlStr = rawTtlField
-          else if (typeof rawTtlField?.value === 'string') ttlStr = rawTtlField.value as string
-          else if (Array.isArray(rawTtlField)) {
-            const first = rawTtlField[0]
-            ttlStr =
-              typeof first === 'string'
-                ? first
-                : typeof first?.value === 'string'
-                  ? first.value
-                  : undefined
+      for await (const part of parts) {
+        if (part.type === 'file') {
+          if (part.fieldname !== 'file') {
+            part.file.resume() // Consume and discard unused files
+            continue
           }
-          if (ttlStr !== undefined) ttlMins = parseInt(ttlStr, 10)
-        }
-        if (data.fields?.metadata !== undefined) {
-          let metaStr: string | undefined
-          const rawMeta: any = data.fields.metadata
-          if (typeof rawMeta === 'string') metaStr = rawMeta
-          else if (typeof rawMeta?.value === 'string') metaStr = rawMeta.value as string
-          else if (Array.isArray(rawMeta)) {
-            const first = rawMeta[0]
-            metaStr =
-              typeof first === 'string'
-                ? first
-                : typeof first?.value === 'string'
-                  ? first.value
-                  : undefined
+
+          const ttl = Math.max(60, Math.floor((ttlMins ?? 1440) * 60))
+          const file = {
+            originalname: part.filename || 'unknown',
+            mimetype: part.mimetype || 'application/octet-stream',
+            size: 0, // Streaming upload, size unknown initially
+            stream: part.file,
           }
-          if (metaStr && metaStr.trim() !== '') {
-            try {
-              metadata = JSON.parse(metaStr)
-              gotMetadata = true
-            } catch {
-              throw new BadRequestException('Invalid metadata JSON format')
-            }
-          }
-        }
 
-        // Check abort before reading buffer
-        if (aborted) throw new BadRequestException('File upload aborted by client')
-
-        const buf = await data.toBuffer()
-        fileBuffer = buf
-        filename = data.filename || 'unknown'
-        mimetype = data.mimetype || 'application/octet-stream'
-      } else {
-        for await (const part of parts) {
-          // Check abort on each iteration
-          if (aborted) throw new BadRequestException('File upload aborted by client')
-
-          if (part.type === 'file') {
-            if (part.fieldname !== 'file') continue
-            filename = part.filename || 'unknown'
-            mimetype = part.mimetype || 'application/octet-stream'
-            const chunks: Buffer[] = []
-            for await (const chunk of part.file) {
-              // Check abort while reading chunks
-              if (aborted) {
-                // Clear chunks to free memory
-                chunks.length = 0
-                throw new BadRequestException('File upload aborted by client')
-              }
-              chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
-            }
-            fileBuffer = Buffer.concat(chunks)
-          } else if (part.type === 'field') {
-            if (part.fieldname === 'ttlMins') {
-              const v = String(part.value ?? '').trim()
-              if (v !== '') ttlMins = parseInt(v, 10)
-            } else if (part.fieldname === 'metadata') {
-              const v = String(part.value ?? '').trim()
-              if (v !== '') {
-                try {
-                  metadata = JSON.parse(v)
-                  gotMetadata = true
-                } catch {
-                  throw new BadRequestException('Invalid metadata JSON format')
-                }
+          // We return immediately after processing the file. 
+          // Note: Fields sent after the file will be ignored.
+          return await this.filesService.uploadFile({ file, ttl, metadata })
+        } else if (part.type === 'field') {
+          if (part.fieldname === 'ttlMins') {
+            const v = String(part.value ?? '').trim()
+            if (v !== '') ttlMins = parseInt(v, 10)
+          } else if (part.fieldname === 'metadata') {
+            const v = String(part.value ?? '').trim()
+            if (v !== '') {
+              try {
+                metadata = JSON.parse(v)
+              } catch {
+                throw new BadRequestException('Invalid metadata JSON format')
               }
             }
           }
         }
       }
 
-      if (!fileBuffer) throw new BadRequestException('No file provided')
-
-      // Final abort check before saving
-      if (aborted) {
-        fileBuffer = undefined
-        throw new BadRequestException('File upload aborted by client')
-      }
-
-      const ttl = Math.max(60, Math.floor((ttlMins ?? 1440) * 60))
-      const file = {
-        originalname: filename || 'unknown',
-        mimetype: mimetype || 'application/octet-stream',
-        size: fileBuffer.length,
-        buffer: fileBuffer,
-        path: '',
-      }
-
-      return await this.filesService.uploadFile({ file, ttl, metadata })
+      throw new BadRequestException('No file provided')
     } catch (error: any) {
-      // Clear buffer on error to free memory
-      fileBuffer = undefined
-
       if (error instanceof BadRequestException || error instanceof InternalServerErrorException)
         throw error
       throw new InternalServerErrorException(`File upload failed: ${error.message}`)
     } finally {
-      // Always cleanup abort listener
       if (cleanupAbortListener) {
         cleanupAbortListener()
       }

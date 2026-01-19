@@ -4,7 +4,7 @@ import fs from 'fs-extra'
 import { createReadStream, type ReadStream } from 'fs'
 import * as path from 'path'
 // Use dynamic import for ESM-only module 'file-type' inside methods to avoid CJS interop issues
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import type { StorageAppConfig } from '../../config/storage.config.js'
 
 import {
@@ -107,97 +107,160 @@ export class StorageService {
   }
 
   async saveFile(params: CreateFileParams): Promise<FileOperationResult> {
-    try {
-      const { file, ttl, metadata = {} } = params
-      const config = this.getConfig()
+    const { file, ttl, metadata = {} } = params
+    const config = this.getConfig()
 
-      await this.initializeStorage()
-      await fs.ensureDir(config.basePath)
+    await this.initializeStorage()
+    await fs.ensureDir(config.basePath)
 
-      const fileBuffer = file.buffer || (await fs.readFile(file.path!))
-      const actualFileSize = fileBuffer.length
+    // Ensure temp directory exists
+    const tempDir = path.join(config.basePath, 'temp')
+    await fs.ensureDir(tempDir)
 
-      if (actualFileSize > config.maxFileSize) {
-        return {
+    const fileId = randomUUID()
+    const tempPath = path.join(tempDir, `${fileId}.tmp`)
+
+
+    const hash = createHash('sha256')
+    
+    let size = 0
+    let mimeType = file.mimetype
+    let firstChunk: Buffer | null = null
+
+    return new Promise<FileOperationResult>((resolve, reject) => {
+      const writeStream = fs.createWriteStream(tempPath)
+      
+      const cleanup = async () => {
+        try {
+           if (await fs.pathExists(tempPath)) {
+            await fs.remove(tempPath)
+           }
+        } catch (e) {
+          this.logger.error('Failed to cleanup temp file', e)
+        }
+      }
+
+      const handleError = async (error: Error) => {
+        writeStream.destroy()
+        if ('destroy' in file.stream && typeof file.stream.destroy === 'function') {
+            (file.stream as any).destroy()
+        }
+        await cleanup()
+        
+        if (error.message.includes('exceeds maximum allowed size')) {
+           return resolve({
+            success: false,
+            error: error.message
+          })
+        }
+        
+        this.logger.error('Stream processing failed', error)
+        resolve({
           success: false,
-          error: `File size ${actualFileSize} exceeds maximum allowed size ${config.maxFileSize}`,
+          error: `Failed to save file: ${error.message}`
+        })
+      }
+
+      file.stream.on('data', (chunk: Buffer) => {
+        size += chunk.length
+        
+        if (size > config.maxFileSize) {
+          handleError(new Error(`File size ${size} exceeds maximum allowed size ${config.maxFileSize}`))
+          return
         }
-      }
 
-      let mimeType = file.mimetype
-      try {
-        const { fileTypeFromBuffer } = await import('file-type')
-        const detectedType = await fileTypeFromBuffer(fileBuffer)
-        mimeType = detectedType?.mime || mimeType
-      } catch (err: any) {
-        // Fallback for test/runtime environments where ESM dynamic import via VM is not available
-        this.logger.warn(
-          `MIME detection skipped, fallback to provided mimetype. Reason: ${err?.message || err}`
-        )
-      }
-
-      if (config.allowedMimeTypes.length > 0 && !config.allowedMimeTypes.includes(mimeType)) {
-        return {
-          success: false,
-          error: `MIME type ${mimeType} is not allowed`,
+        if (!firstChunk) {
+            firstChunk = chunk
         }
-      }
 
-      const hash = HashUtil.hashBuffer(fileBuffer)
-
-      if (config.enableDeduplication) {
-        const existingFile = await this.findFileByHash(hash)
-        if (existingFile) {
-          return {
-            success: true,
-            data: existingFile,
-          }
+        hash.update(chunk)
+        
+        const canWrite = writeStream.write(chunk)
+        if (!canWrite) {
+          file.stream.pause()
+          writeStream.once('drain', () => file.stream.resume())
         }
-      }
+      })
 
-      const fileId = randomUUID()
-      const safeFilename = FilenameUtil.generateSafeFilename(file.originalname, hash)
-      const storedFilename = `${fileId}_${safeFilename}`
+      file.stream.on('error', (err) => handleError(err))
+      writeStream.on('error', (err) => handleError(err))
 
-      const dateDir = DateUtil.format(DateUtil.now().toDate(), STORAGE_CONSTANTS.DATE_FORMAT)
-      const fileDir = path.join(config.basePath, dateDir)
-      await fs.ensureDir(fileDir)
+      file.stream.on('end', async () => {
+        writeStream.end()
+        
+        try {
+            await new Promise<void>((res) => writeStream.on('finish', () => res()))
+            
+            const fileHash = hash.digest('hex')
 
-      const filePath = path.join(fileDir, storedFilename)
-      await fs.writeFile(filePath, fileBuffer)
+            // Deduplication check
+            if (config.enableDeduplication) {
+                const existingFile = await this.findFileByHash(fileHash)
+                if (existingFile) {
+                    await cleanup()
+                    return resolve({
+                        success: true,
+                        data: existingFile
+                    })
+                }
+            }
 
-      const fileInfo: FileInfo = {
-        id: fileId,
-        originalName: file.originalname,
-        storedName: storedFilename,
-        mimeType,
-        size: actualFileSize,
-        hash,
-        uploadedAt: DateUtil.now().toDate(),
-        ttl,
-        expiresAt: DateUtil.createExpirationDate(ttl),
-        filePath,
-        metadata,
-      }
+            // Mime detection
+            try {
+                if (firstChunk) {
+                     const { fileTypeFromBuffer } = await import('file-type')
+                     const detectedType = await fileTypeFromBuffer(firstChunk)
+                     mimeType = detectedType?.mime || mimeType
+                }
+            } catch (err: any) {
+                 this.logger.warn(`MIME detection skipped/failed: ${err.message}`)
+            }
 
-      await this.updateMetadata(fileInfo, 'add')
+            if (config.allowedMimeTypes.length > 0 && !config.allowedMimeTypes.includes(mimeType)) {
+                 await cleanup()
+                 return resolve({
+                     success: false,
+                     error: `MIME type ${mimeType} is not allowed`
+                 })
+            }
 
-      if (file.path && !file.buffer) {
-        await fs.remove(file.path)
-      }
+            // Move to final location
+            const safeFilename = FilenameUtil.generateSafeFilename(file.originalname, fileHash)
+            const storedFilename = `${fileId}_${safeFilename}`
+            const dateDir = DateUtil.format(DateUtil.now().toDate(), STORAGE_CONSTANTS.DATE_FORMAT)
+            const fileDir = path.join(config.basePath, dateDir)
+            await fs.ensureDir(fileDir)
+            
+            const finalPath = path.join(fileDir, storedFilename)
+            await fs.move(tempPath, finalPath)
 
-      this.logger.log(`File saved successfully: ${fileId}`)
-      return {
-        success: true,
-        data: fileInfo,
-      }
-    } catch (error: any) {
-      this.logger.error('Failed to save file', error)
-      return {
-        success: false,
-        error: `Failed to save file: ${error.message}`,
-      }
-    }
+            const fileInfo: FileInfo = {
+                id: fileId,
+                originalName: file.originalname,
+                storedName: storedFilename,
+                mimeType,
+                size,
+                hash: fileHash,
+                uploadedAt: DateUtil.now().toDate(),
+                ttl,
+                expiresAt: DateUtil.createExpirationDate(ttl),
+                filePath: finalPath,
+                metadata
+            }
+
+            await this.updateMetadata(fileInfo, 'add')
+            
+            this.logger.log(`File saved successfully: ${fileId}`)
+            resolve({
+                success: true,
+                data: fileInfo
+            })
+
+        } catch (err: any) {
+             await handleError(err)
+        }
+      })
+    })
   }
 
   async getFileInfo(fileId: string): Promise<FileOperationResult> {

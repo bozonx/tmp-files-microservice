@@ -25,7 +25,7 @@ export class ValidationUtil {
       errors.push('Original filename is required')
     }
 
-    if (typeof file.size !== 'number' || file.size <= 0) {
+    if (typeof file.size !== 'number' || (file.size <= 0 && !file.stream)) {
       errors.push('File size must be a positive number')
     } else if (file.size > maxFileSize) {
       errors.push(`File size exceeds maximum allowed size of ${maxFileSize} bytes`)
@@ -37,8 +37,8 @@ export class ValidationUtil {
       errors.push(`MIME type '${file.mimetype}' is not allowed`)
     }
 
-    if (!file.path && !file.buffer) {
-      errors.push('File must have either path or buffer')
+    if (!file.stream) {
+      errors.push('File stream is required')
     }
 
     return { isValid: errors.length === 0, errors }

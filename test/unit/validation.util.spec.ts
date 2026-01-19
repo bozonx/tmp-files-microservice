@@ -1,9 +1,10 @@
 import { ValidationUtil } from '@/common/utils/validation.util'
+import { Readable } from 'stream'
 
 describe('ValidationUtil', () => {
   it('validateUploadedFile returns valid for proper file', () => {
     const res = ValidationUtil.validateUploadedFile(
-      { originalname: 'a.txt', mimetype: 'text/plain', size: 3, buffer: Buffer.from('abc') } as any,
+      { originalname: 'a.txt', mimetype: 'text/plain', size: 3, stream: Readable.from(Buffer.from('abc')) } as any,
       ['text/plain'],
       10
     )

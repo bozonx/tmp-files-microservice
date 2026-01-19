@@ -1,4 +1,5 @@
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
+import { Readable } from 'stream'
 import { jest } from '@jest/globals'
 import { createTestApp } from './test-app.factory'
 import { CleanupService } from '@/modules/cleanup/cleanup.service'
@@ -45,7 +46,7 @@ describe('Graceful Shutdown (e2e)', () => {
       // Create some expired files
       await storageService.saveFile({
         file: {
-          buffer: Buffer.from('test'),
+          stream: Readable.from(Buffer.from('test')),
           originalname: 'test.txt',
           mimetype: 'text/plain',
           size: 4,
@@ -66,7 +67,7 @@ describe('Graceful Shutdown (e2e)', () => {
       // Create some expired files
       const file1Result = await storageService.saveFile({
         file: {
-          buffer: Buffer.from('test1'),
+          stream: Readable.from(Buffer.from('test1')),
           originalname: 'test1.txt',
           mimetype: 'text/plain',
           size: 5,
@@ -76,7 +77,7 @@ describe('Graceful Shutdown (e2e)', () => {
 
       const file2Result = await storageService.saveFile({
         file: {
-          buffer: Buffer.from('test2'),
+          stream: Readable.from(Buffer.from('test2')),
           originalname: 'test2.txt',
           mimetype: 'text/plain',
           size: 5,
@@ -148,7 +149,7 @@ describe('Graceful Shutdown (e2e)', () => {
         Array.from({ length: 10 }, async (_, i) => {
           return storageService.saveFile({
             file: {
-              buffer: Buffer.from(`test${i}`),
+              stream: Readable.from(Buffer.from(`test${i}`)),
               originalname: `test${i}.txt`,
               mimetype: 'text/plain',
               size: 5,
@@ -243,7 +244,7 @@ describe('Graceful Shutdown (e2e)', () => {
       // Create expired files
       const file1Result = await storageService.saveFile({
         file: {
-          buffer: Buffer.from('test1'),
+          stream: Readable.from(Buffer.from('test1')),
           originalname: 'test1.txt',
           mimetype: 'text/plain',
           size: 5,
@@ -253,7 +254,7 @@ describe('Graceful Shutdown (e2e)', () => {
 
       const file2Result = await storageService.saveFile({
         file: {
-          buffer: Buffer.from('test2'),
+          stream: Readable.from(Buffer.from('test2')),
           originalname: 'test2.txt',
           mimetype: 'text/plain',
           size: 5,

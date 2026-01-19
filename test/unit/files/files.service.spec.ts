@@ -4,6 +4,7 @@ import { PayloadTooLargeException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { FilesService } from '@/modules/files/files.service'
 import { StorageService } from '@/modules/storage/storage.service'
+import { Readable } from 'stream'
 
 describe('FilesService', () => {
   let service: FilesService
@@ -66,7 +67,7 @@ describe('FilesService', () => {
           originalname: 'big.bin',
           mimetype: 'application/octet-stream',
           size: 2048, // > 1024 configured above
-          buffer: Buffer.alloc(2048),
+          stream: Readable.from(Buffer.alloc(2048)),
         },
         ttl: 60,
       })

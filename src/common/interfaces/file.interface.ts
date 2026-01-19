@@ -2,8 +2,8 @@ export interface UploadedFile {
   originalname: string
   mimetype: string
   size: number
-  buffer?: Buffer
-  path?: string
+  stream: NodeJS.ReadableStream
+  encoding?: string
 }
 
 export interface FileInfo {

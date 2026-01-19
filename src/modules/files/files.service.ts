@@ -474,8 +474,9 @@ export class FilesService {
 
           const contentType = (res.headers['content-type'] as string) || 'application/octet-stream'
           const contentLengthHeader = res.headers['content-length']
-          const declaredLength = contentLengthHeader ? parseInt(String(contentLengthHeader), 10) : 0
-          if (declaredLength && declaredLength > this.maxFileSize) {
+          const size = contentLengthHeader ? parseInt(String(contentLengthHeader), 10) : 0
+          
+          if (size && size > this.maxFileSize) {
             res.destroy()
             if (abortCleanup) abortCleanup()
             return reject(
@@ -483,61 +484,30 @@ export class FilesService {
             )
           }
 
-          const chunks: Buffer[] = []
-          let total = 0
-          res.on('data', (chunk: Buffer) => {
-            // Check if client aborted during download
-            if (clientRequest && RequestUtil.isRequestAborted(clientRequest)) {
-              res.destroy()
-              chunks.length = 0 // Clear chunks to free memory
-              if (abortCleanup) abortCleanup()
-              return reject(new BadRequestException('File upload by URL aborted by client'))
-            }
+          // Derive filename
+          let filename = 'file'
+          const cd = res.headers['content-disposition']
+          if (typeof cd === 'string') {
+            const match =
+              cd.match(/filename\*=UTF-8''([^;\n]+)/) || cd.match(/filename="?([^";\n]+)"?/)
+            if (match && match[1]) filename = decodeURIComponent(match[1])
+          } else {
+            const pathname = urlObj.pathname
+            const last = pathname.split('/').filter(Boolean).pop()
+            if (last) filename = last
+          }
+          
+          if (abortCleanup) abortCleanup()
 
-            total += chunk.length
-            if (total > this.maxFileSize) {
-              res.destroy(
-                new PayloadTooLargeException('File size exceeds the maximum allowed limit')
-              )
-              chunks.length = 0
-              if (abortCleanup) abortCleanup()
-              return
-            }
-            chunks.push(chunk)
-          })
-          res.on('end', () => {
-            if (abortCleanup) abortCleanup()
-
-            const buffer = Buffer.concat(chunks)
-            const size = buffer.length
-
-            // Derive filename
-            let filename = 'file'
-            const cd = res.headers['content-disposition']
-            if (typeof cd === 'string') {
-              const match =
-                cd.match(/filename\*=UTF-8''([^;\n]+)/) || cd.match(/filename="?([^";\n]+)"?/)
-              if (match && match[1]) filename = decodeURIComponent(match[1])
-            } else {
-              const pathname = urlObj.pathname
-              const last = pathname.split('/').filter(Boolean).pop()
-              if (last) filename = last
-            }
-
-            const uploaded: UploadedFile = {
-              originalname: filename,
-              mimetype: contentType,
-              size,
-              buffer,
-              path: '',
-            }
-            resolve(uploaded)
-          })
-          res.on('error', (err) => {
-            if (abortCleanup) abortCleanup()
-            reject(err)
-          })
+          const uploaded: UploadedFile = {
+            originalname: filename,
+            mimetype: contentType,
+            size,
+            stream: res
+          }
+          resolve(uploaded)
         })
+        
         httpRequest.on('error', (err) => {
           if (abortCleanup) abortCleanup()
           reject(err)
@@ -547,4 +517,5 @@ export class FilesService {
       }
     })
   }
+
 }
