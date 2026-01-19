@@ -242,7 +242,7 @@ function renderFiles(files, append) {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 8.5V11m0 5.5v-1.5m-3-1h6" />
               </svg>
             </button>
-            <button class="action-btn delete" title="Delete" onclick="handleDelete(event, '${file.id}')">
+            <button class="action-btn delete" title="Delete" onclick="deleteFileAction(event, '${file.id}')">
               <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
@@ -276,7 +276,7 @@ window.toggleMetadata = function (id) {
     if (el) el.classList.toggle('hidden');
 };
 
-function copyToClipboard(text) {
+window.copyToClipboard = function (text) {
     navigator.clipboard.writeText(text).then(() => {
         showToast('Link copied to clipboard!');
     });
@@ -373,10 +373,14 @@ function updateFileName(files) {
     else fileName.textContent = `Selected: ${files.length} files`;
 }
 
+
 // Helpers
-async function handleDelete(event, fileId) {
+// Helpers
+window.deleteFileAction = async function (event, fileId) {
+    console.log('deleteFileAction called for:', fileId);
     event.stopPropagation();
-    if (!confirm('Are you sure you want to delete this file?')) return;
+    // No confirmation needed per user request
+
 
     try {
         const response = await fetch(`${API_BASE_URL}/files/${fileId}`, { method: 'DELETE' });
@@ -388,6 +392,7 @@ async function handleDelete(event, fileId) {
             throw new Error(data.message || 'Deletion failed');
         }
     } catch (err) {
+        console.error('Delete error:', err);
         showError(err.message);
     }
 }
