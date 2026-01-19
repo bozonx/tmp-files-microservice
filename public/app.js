@@ -102,7 +102,7 @@ refreshBtn.addEventListener('click', fetchFiles);
 async function fetchFiles() {
     setFilesLoading(true);
     try {
-        const response = await fetch(`${API_BASE_URL}/files?limit=10`);
+        const response = await fetch(`${API_BASE_URL}/files?limit=20`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -138,7 +138,7 @@ function renderFiles(files) {
         const expiresAt = new Date(file.expiresAt);
         const isNearExpiry = (expiresAt - new Date()) < 1000 * 60 * 60; // Less than 1 hour
 
-        const downloadUrl = normalizeApiActionUrl(`${API_BASE_URL}/files/${file.id}/download`);
+        const downloadUrl = normalizeApiActionUrl(`${API_BASE_URL}/download/${file.id}`);
 
         return `
       <tr>
@@ -148,6 +148,7 @@ function renderFiles(files) {
                ${truncateString(file.originalName, 30)}
             </a>
             <span class="file-id-sub">${file.id}</span>
+            ${file.metadata && Object.keys(file.metadata).length > 0 ? `<div class="file-meta-sub" title='${JSON.stringify(file.metadata)}'>Meta: ${JSON.stringify(file.metadata)}</div>` : ''}
           </div>
         </td>
         <td><span class="mime-type">${file.mimeType}</span></td>
@@ -246,8 +247,6 @@ uploadForm.addEventListener('submit', async (e) => {
         if (file) {
             // Upload local file using multipart/form-data
             const formData = new FormData();
-            formData.append('file', file);
-
             if (ttlValue) {
                 formData.append('ttlMins', ttlValue);
             }
@@ -255,6 +254,8 @@ uploadForm.addEventListener('submit', async (e) => {
             if (metadataValue) {
                 formData.append('metadata', metadataValue);
             }
+
+            formData.append('file', file);
 
             response = await fetch(`${API_BASE_URL}/files`, {
                 method: 'POST',
@@ -363,10 +364,6 @@ function showError(message) {
 // Delete handler Update: fetch files after success
 async function handleDelete(event, fileId) {
     event.preventDefault();
-
-    if (!confirm('Are you sure you want to delete this file?')) {
-        return;
-    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/files/${fileId}`, {

@@ -281,6 +281,13 @@ textarea {
   color: #111827;
 }
 
+.section-hint {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
 .btn-secondary {
   display: flex;
   align-items: center;
@@ -368,6 +375,17 @@ tr:last-child td {
   font-size: 0.75rem;
   color: #6b7280;
   margin-top: 0.125rem;
+}
+
+.file-meta-sub {
+  font-size: 0.7rem;
+  color: #059669;
+  margin-top: 0.125rem;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
 }
 
 .mime-type {
