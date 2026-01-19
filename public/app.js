@@ -1,4 +1,9 @@
-// Get DOM elements
+/**
+ * Temporary Files Microservice UI Logic
+ * Version: 1.2.0
+ */
+
+// DOM Elements - Upload
 const uploadForm = document.getElementById('uploadForm');
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
@@ -11,7 +16,41 @@ const resultDiv = document.getElementById('result');
 const ttlMinsInput = document.getElementById('ttlMins');
 const metadataInput = document.getElementById('metadata');
 
-// Get API base URL from current location and injected config
+// DOM Elements - Stats
+const statsContainer = document.getElementById('statsContainer');
+const statTotalFiles = document.getElementById('statTotalFiles');
+const statTotalSize = document.getElementById('statTotalSize');
+const statStorageUsed = document.getElementById('statStorageUsed');
+
+// DOM Elements - Management
+const refreshBtn = document.getElementById('refreshBtn');
+const cleanupBtn = document.getElementById('cleanupBtn');
+const filesList = document.getElementById('filesList');
+const filesLoader = document.getElementById('filesLoader');
+const noFiles = document.getElementById('noFiles');
+const filesTable = document.getElementById('filesTable');
+
+// DOM Elements - Filters & Pagination
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const toggleFiltersBtn = document.getElementById('toggleFilters');
+const filtersPanel = document.getElementById('filtersPanel');
+const applyFiltersBtn = document.getElementById('applyFilters');
+const resetFiltersBtn = document.getElementById('resetFilters');
+const filterMime = document.getElementById('filterMime');
+const filterExpired = document.getElementById('filterExpired');
+const filterAfter = document.getElementById('filterAfter');
+const loadMoreBtn = document.getElementById('loadMoreBtn');
+const loadMoreContainer = document.getElementById('loadMoreContainer');
+const loadMoreLoader = document.getElementById('loadMoreLoader');
+
+// State
+let currentOffset = 0;
+const LIMIT = 20;
+let isLastPage = false;
+let currentFilters = {};
+
+// API Config
 const pathname = window.location.pathname;
 const uiDirPath = pathname.endsWith('/')
     ? pathname
@@ -23,132 +62,165 @@ const apiBasePath = uiBasePath.replace(/\/ui$/, '');
 const API_BASE_URL = `${window.location.origin}${apiBasePath}/api/v1`;
 
 function normalizeApiActionUrl(value) {
-    if (!value || typeof value !== 'string') {
-        return '';
-    }
-
+    if (!value || typeof value !== 'string') return '';
     let url;
     try {
         url = new URL(value);
     } catch {
         url = new URL(value, window.location.origin);
     }
-
     let pathname = url.pathname || '';
     if (pathname.startsWith('/api/v1/')) {
         pathname = `${apiBasePath}${pathname}`;
     }
     pathname = pathname.replace(/\/{2,}/g, '/');
-
     return `${window.location.origin}${pathname}${url.search || ''}${url.hash || ''}`;
 }
 
-// Drag and drop handlers
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    uploadArea.addEventListener(eventName, preventDefaults, false);
+// Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    fetchStats();
+    fetchFiles();
 });
 
-function preventDefaults(e) {
-    e.preventDefault();
-    e.stopPropagation();
-}
-
-['dragenter', 'dragover'].forEach(eventName => {
-    uploadArea.addEventListener(eventName, () => {
-        uploadArea.classList.add('drag-over');
-    }, false);
-});
-
-['dragleave', 'drop'].forEach(eventName => {
-    uploadArea.addEventListener(eventName, () => {
-        uploadArea.classList.remove('drag-over');
-    }, false);
-});
-
-uploadArea.addEventListener('drop', handleDrop, false);
-
-function handleDrop(e) {
-    const dt = e.dataTransfer;
-    const files = dt.files;
-
-    if (files.length > 0) {
-        fileInput.files = files;
-        updateFileName(files[0].name);
-    }
-}
-
-// File input change handler
-fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        updateFileName(e.target.files[0].name);
-    }
-});
-
-function updateFileName(name) {
-    fileName.textContent = `Selected: ${name}`;
-}
-
-// Refresh button and list elements
-const refreshBtn = document.getElementById('refreshBtn');
-const filesList = document.getElementById('filesList');
-const filesLoader = document.getElementById('filesLoader');
-const noFiles = document.getElementById('noFiles');
-const filesTable = document.getElementById('filesTable');
-
-// Refresh handler
-refreshBtn.addEventListener('click', fetchFiles);
-
-// Fetch files from API
-async function fetchFiles() {
-    setFilesLoading(true);
+// Stats
+async function fetchStats() {
     try {
-        const response = await fetch(`${API_BASE_URL}/files?limit=20`);
+        const response = await fetch(`${API_BASE_URL}/files/stats`);
+        const data = await response.json();
+        if (response.ok && data.stats) {
+            statTotalFiles.textContent = data.stats.totalFiles || 0;
+            statTotalSize.textContent = formatBytes(data.stats.totalSize || 0);
+            statStorageUsed.textContent = formatBytes(data.stats.totalSize || 0);
+            statsContainer.classList.remove('hidden');
+        }
+    } catch (err) {
+        console.error('Failed to fetch stats', err);
+    }
+}
+
+// Cleanup
+cleanupBtn.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to run manual cleanup now? This will remove all expired files from storage.')) return;
+
+    cleanupBtn.disabled = true;
+    try {
+        const response = await fetch(`${API_BASE_URL}/cleanup/run`, { method: 'POST' });
+        const data = await response.json();
+        if (response.ok) {
+            showToast(data.message || 'Cleanup completed');
+            refreshAll();
+        } else {
+            throw new Error(data.message || 'Cleanup failed');
+        }
+    } catch (err) {
+        showError(err.message);
+    } finally {
+        cleanupBtn.disabled = false;
+    }
+});
+
+// Filters Toggle
+toggleFiltersBtn.addEventListener('click', () => {
+    filtersPanel.classList.toggle('hidden');
+});
+
+// Search & Filters Logic
+function getFilterParams() {
+    const params = new URLSearchParams();
+    params.append('limit', LIMIT);
+    params.append('offset', currentOffset);
+
+    const search = searchInput.value.trim();
+    if (search) {
+        // The API doesn't have a direct "search" param in the spec I saw, 
+        // but it has filters. We'll use filters if provided.
+    }
+
+    if (filterMime.value.trim()) params.append('mimeType', filterMime.value.trim());
+    if (filterExpired.value) params.append('expiredOnly', filterExpired.value);
+    if (filterAfter.value) params.append('uploadedAfter', new Date(filterAfter.value).toISOString());
+
+    return params.toString();
+}
+
+async function fetchFiles(append = false) {
+    if (!append) {
+        currentOffset = 0;
+        setFilesLoading(true);
+    } else {
+        setLoadMoreLoading(true);
+    }
+
+    try {
+        const query = getFilterParams();
+        const response = await fetch(`${API_BASE_URL}/files?${query}`);
         const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.message || 'Failed to fetch files');
-        }
+        if (!response.ok) throw new Error(data.message || 'Failed to fetch files');
 
-        renderFiles(data.files);
+        isLastPage = data.files.length < LIMIT;
+        renderFiles(data.files, append);
+
+        if (isLastPage) {
+            loadMoreContainer.classList.add('hidden');
+        } else {
+            loadMoreContainer.classList.remove('hidden');
+        }
     } catch (error) {
         console.error('Error fetching files:', error);
-        filesList.innerHTML = '';
-        showNoFiles(true);
+        if (!append) {
+            filesList.innerHTML = '';
+            showNoFiles(true);
+        }
     } finally {
         setFilesLoading(false);
+        setLoadMoreLoading(false);
     }
 }
 
-function setFilesLoading(loading) {
-    if (loading) {
-        filesLoader.classList.remove('hidden');
-    } else {
-        filesLoader.classList.add('hidden');
-    }
+searchBtn.addEventListener('click', () => refreshAll());
+searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') refreshAll(); });
+applyFiltersBtn.addEventListener('click', () => refreshAll());
+resetFiltersBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    filterMime.value = '';
+    filterExpired.value = '';
+    filterAfter.value = '';
+    refreshAll();
+});
+
+loadMoreBtn.addEventListener('click', () => {
+    currentOffset += LIMIT;
+    fetchFiles(true);
+});
+
+refreshBtn.addEventListener('click', () => refreshAll());
+
+function refreshAll() {
+    fetchStats();
+    fetchFiles(false);
 }
 
-function renderFiles(files) {
-    if (!files || files.length === 0) {
+// Rendering
+function renderFiles(files, append) {
+    if (!append && (!files || files.length === 0)) {
         showNoFiles(true);
         return;
     }
 
     showNoFiles(false);
-    filesList.innerHTML = files.map(file => {
+    const rows = files.map(file => {
         const expiresAt = new Date(file.expiresAt);
-        const isNearExpiry = (expiresAt - new Date()) < 1000 * 60 * 60; // Less than 1 hour
-
+        const isNearExpiry = (expiresAt - new Date()) < 1000 * 60 * 60;
         const downloadUrl = normalizeApiActionUrl(`${API_BASE_URL}/download/${file.id}`);
 
         return `
-      <tr>
+      <tr class="clickable-row" onclick="toggleMetadata('${file.id}')">
         <td>
           <div class="file-info">
-            <a href="${downloadUrl}" target="_blank" class="file-name-cell" title="${file.originalName}">
-               ${truncateString(file.originalName, 30)}
-            </a>
+            <span class="file-name-cell" title="${file.originalName}">${truncateString(file.originalName, 40)}</span>
             <span class="file-id-sub">${file.id}</span>
-            ${file.metadata && Object.keys(file.metadata).length > 0 ? `<div class="file-meta-sub" title='${JSON.stringify(file.metadata)}'>Meta: ${JSON.stringify(file.metadata)}</div>` : ''}
           </div>
         </td>
         <td><span class="mime-type">${file.mimeType}</span></td>
@@ -159,12 +231,17 @@ function renderFiles(files) {
           </span>
         </td>
         <td>
-          <div class="actions-cell">
+          <div class="actions-cell" onclick="event.stopPropagation()">
             <a href="${downloadUrl}" class="action-btn download" title="Download" target="_blank">
-              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
             </a>
+            <button class="action-btn" title="Copy Download Link" onclick="copyToClipboard('${downloadUrl}')">
+              <svg class="icon icon-copy" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 8.5V11m0 5.5v-1.5m-3-1h6" />
+              </svg>
+            </button>
             <button class="action-btn delete" title="Delete" onclick="handleDelete(event, '${file.id}')">
               <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -173,232 +250,226 @@ function renderFiles(files) {
           </div>
         </td>
       </tr>
+      <tr id="meta-${file.id}" class="metadata-row hidden" onclick="event.stopPropagation()">
+        <td colspan="5">
+            <div class="metadata-content">
+<strong>Full Info:</strong>
+ID:   ${file.id}
+Hash: ${file.hash}
+Meta: ${JSON.stringify(file.metadata, null, 2)}
+URL:  ${downloadUrl}
+            </div>
+        </td>
+      </tr>
     `;
     }).join('');
+
+    if (append) {
+        filesList.insertAdjacentHTML('beforeend', rows);
+    } else {
+        filesList.innerHTML = rows;
+    }
+}
+
+window.toggleMetadata = function (id) {
+    const el = document.getElementById(`meta-${id}`);
+    if (el) el.classList.toggle('hidden');
+};
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Link copied to clipboard!');
+    });
+}
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 3000);
+}
+
+// Upload Handling
+uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const files = fileInput.files;
+    const url = fileUrlInput.value.trim();
+
+    if (files.length === 0 && !url) {
+        showError('Select at least one file or provide a URL');
+        return;
+    }
+
+    setLoading(true);
+    hideResult();
+
+    try {
+        if (files.length > 0) {
+            // Upload Multiple Local Files
+            let results = [];
+            for (let i = 0; i < files.length; i++) {
+                const formData = new FormData();
+                if (ttlMinsInput.value) formData.append('ttlMins', ttlMinsInput.value);
+                if (metadataInput.value) formData.append('metadata', metadataInput.value);
+                formData.append('file', files[i]);
+
+                const response = await fetch(`${API_BASE_URL}/files`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || `File ${files[i].name} failed`);
+                results.push(data);
+            }
+            showSuccess(results[results.length - 1], `${files.length} file(s) uploaded successfully`);
+        } else if (url) {
+            // Upload from URL
+            const payload = { url };
+            if (ttlMinsInput.value) payload.ttlMins = parseInt(ttlMinsInput.value);
+            if (metadataInput.value) payload.metadata = metadataInput.value;
+
+            const response = await fetch(`${API_BASE_URL}/files/url`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'URL upload failed');
+            showSuccess(data);
+        }
+
+        uploadForm.reset();
+        fileName.textContent = '';
+        refreshAll();
+    } catch (err) {
+        showError(err.message);
+    } finally {
+        setLoading(false);
+    }
+});
+
+// Drag & Drop
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => uploadArea.addEventListener(evt, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+}));
+
+['dragenter', 'dragover'].forEach(evt => uploadArea.addEventListener(evt, () => uploadArea.classList.add('drag-over')));
+['dragleave', 'drop'].forEach(evt => uploadArea.addEventListener(evt, () => uploadArea.classList.remove('drag-over')));
+
+uploadArea.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        updateFileName(files);
+    }
+});
+
+fileInput.addEventListener('change', () => updateFileName(fileInput.files));
+
+function updateFileName(files) {
+    if (files.length === 0) fileName.textContent = '';
+    else if (files.length === 1) fileName.textContent = `Selected: ${files[0].name}`;
+    else fileName.textContent = `Selected: ${files.length} files`;
+}
+
+// Helpers
+async function handleDelete(event, fileId) {
+    event.stopPropagation();
+    if (!confirm('Are you sure you want to delete this file?')) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/files/${fileId}`, { method: 'DELETE' });
+        if (response.ok) {
+            showToast('File deleted');
+            refreshAll();
+        } else {
+            const data = await response.json();
+            throw new Error(data.message || 'Deletion failed');
+        }
+    } catch (err) {
+        showError(err.message);
+    }
+}
+
+function setFilesLoading(loading) {
+    loading ? filesLoader.classList.remove('hidden') : filesLoader.classList.add('hidden');
+}
+
+function setLoadMoreLoading(loading) {
+    if (loading) {
+        loadMoreBtn.classList.add('hidden');
+        loadMoreLoader.classList.remove('hidden');
+    } else {
+        loadMoreBtn.classList.remove('hidden');
+        loadMoreLoader.classList.add('hidden');
+    }
 }
 
 function showNoFiles(show) {
     if (show) {
         noFiles.classList.remove('hidden');
         filesTable.classList.add('hidden');
+        loadMoreContainer.classList.add('hidden');
     } else {
         noFiles.classList.add('hidden');
         filesTable.classList.remove('hidden');
     }
 }
 
-function truncateString(str, num) {
-    if (str.length <= num) return str;
-    return str.slice(0, num) + '...';
-}
-
-function formatRelativeTime(date) {
-    const now = new Date();
-    const diffMs = date - now;
-    const diffMins = Math.round(diffMs / (1000 * 60));
-
-    if (diffMins < 0) return 'Expired';
-    if (diffMins < 60) return `in ${diffMins}m`;
-
-    const diffHours = Math.round(diffMins / 60);
-    if (diffHours < 24) return `in ${diffHours}h`;
-
-    const diffDays = Math.round(diffHours / 24);
-    return `in ${diffDays}d`;
-}
-
-// Initial fetch
-fetchFiles();
-
-// Form submission Update: fetch files after success
-uploadForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const file = fileInput.files[0];
-    const fileUrl = fileUrlInput.value.trim();
-
-    // Validate: at least one source must be provided
-    if (!file && !fileUrl) {
-        showError('Please select a file or provide a URL');
-        return;
-    }
-
-    // Validate metadata if provided
-    const metadataValue = metadataInput.value.trim();
-    if (metadataValue) {
-        try {
-            JSON.parse(metadataValue);
-        } catch (err) {
-            showError('Invalid JSON in metadata field');
-            return;
-        }
-    }
-
-    const ttlValue = ttlMinsInput.value.trim();
-
-    // Show loading state
-    setLoading(true);
-    hideResult();
-
-    try {
-        let response;
-
-        // Priority: local file over URL
-        if (file) {
-            // Upload local file using multipart/form-data
-            const formData = new FormData();
-            if (ttlValue) {
-                formData.append('ttlMins', ttlValue);
-            }
-
-            if (metadataValue) {
-                formData.append('metadata', metadataValue);
-            }
-
-            formData.append('file', file);
-
-            response = await fetch(`${API_BASE_URL}/files`, {
-                method: 'POST',
-                body: formData,
-            });
-        } else {
-            // Upload from URL using JSON
-            const payload = {
-                url: fileUrl,
-            };
-
-            if (ttlValue) {
-                payload.ttlMins = parseInt(ttlValue, 10);
-            }
-
-            if (metadataValue) {
-                payload.metadata = metadataValue;
-            }
-
-            response = await fetch(`${API_BASE_URL}/files/url`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-        }
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        showSuccess(data);
-        uploadForm.reset();
-        fileName.textContent = '';
-        fetchFiles(); // Refresh list after upload
-    } catch (error) {
-        showError(error.message);
-    } finally {
-        setLoading(false);
-    }
-});
-
 function setLoading(loading) {
     submitBtn.disabled = loading;
-    if (loading) {
-        btnText.classList.add('hidden');
-        btnLoader.classList.remove('hidden');
-    } else {
-        btnText.classList.remove('hidden');
-        btnLoader.classList.add('hidden');
-    }
+    loading ? (btnText.classList.add('hidden'), btnLoader.classList.remove('hidden'))
+        : (btnText.classList.remove('hidden'), btnLoader.classList.add('hidden'));
 }
 
 function hideResult() {
     resultDiv.classList.add('hidden');
-    resultDiv.classList.remove('success', 'error');
 }
 
-function showSuccess(data) {
-    const { file, downloadUrl, infoUrl, deleteUrl, message } = data;
-
-    const normalizedDownloadUrl = normalizeApiActionUrl(downloadUrl);
-    const normalizedInfoUrl = normalizeApiActionUrl(infoUrl);
-    const normalizedDeleteUrl = normalizeApiActionUrl(deleteUrl);
-
-    if (!file.id) return; // For deletions handled differently
-
-    const expiresAt = new Date(file.expiresAt).toLocaleString();
-    const uploadedAt = new Date(file.uploadedAt).toLocaleString();
-
+function showSuccess(data, customMessage) {
+    const { file, downloadUrl } = data;
+    const normUrl = normalizeApiActionUrl(downloadUrl);
     resultDiv.innerHTML = `
-    <div class="result-title">✓ ${message || 'File uploaded successfully'}</div>
-    <div class="result-info"><strong>File ID:</strong> ${file.id}</div>
-    <div class="result-info"><strong>Name:</strong> ${file.originalName}</div>
-    <div class="result-info"><strong>Size:</strong> ${formatBytes(file.size)}</div>
-    <div class="result-info"><strong>Type:</strong> ${file.mimeType}</div>
-    <div class="result-info"><strong>Uploaded:</strong> ${uploadedAt}</div>
-    <div class="result-info"><strong>Expires:</strong> ${expiresAt}</div>
-    <div class="result-info"><strong>TTL:</strong> ${file.ttlMins} minutes</div>
-    <div class="result-links">
-      <a href="${normalizedDownloadUrl}" target="_blank">Download</a>
-      <a href="${normalizedInfoUrl}" target="_blank">Info</a>
-      <a href="#" onclick="handleDelete(event, '${file.id}')">Delete</a>
-    </div>
-  `;
-
-    resultDiv.classList.remove('hidden', 'error');
-    resultDiv.classList.add('success');
-    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function showError(message) {
-    resultDiv.innerHTML = `
-    <div class="result-title">✗ Error</div>
-    <div>${message}</div>
-  `;
-
-    resultDiv.classList.remove('hidden', 'success');
-    resultDiv.classList.add('error');
-    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-// Delete handler Update: fetch files after success
-async function handleDelete(event, fileId) {
-    event.preventDefault();
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/files/${fileId}`, {
-            method: 'DELETE',
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        // Show simplified success message for deletion
-        resultDiv.innerHTML = `
-      <div class="result-title">✓ ${data.message || 'File deleted successfully'}</div>
-      <div class="result-info"><strong>File ID:</strong> ${fileId}</div>
-      <div class="result-info"><strong>Deleted at:</strong> ${new Date(data.deletedAt).toLocaleString()}</div>
+        <div class="result-title">✓ ${customMessage || 'Uploaded successfully'}</div>
+        <div style="font-size: 0.8rem">
+            <div><strong>ID:</strong> ${file.id}</div>
+            <div class="result-links">
+                <a href="${normUrl}" target="_blank">Download</a>
+                <a href="javascript:void(0)" onclick="copyToClipboard('${normUrl}')">Copy Link</a>
+            </div>
+        </div>
     `;
-        resultDiv.classList.remove('hidden', 'error');
-        resultDiv.classList.add('success');
-        fetchFiles(); // Refresh list after deletion
-    } catch (error) {
-        showError(error.message);
-    }
+    resultDiv.className = 'result success';
+    resultDiv.classList.remove('hidden');
 }
 
-// Helper function to format bytes
+function showError(msg) {
+    resultDiv.innerHTML = `<div class="result-title">✗ Error</div><div>${msg}</div>`;
+    resultDiv.className = 'result error';
+    resultDiv.classList.remove('hidden');
+}
+
 function formatBytes(bytes, decimals = 2) {
     if (bytes === 0) return '0 Bytes';
-
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+function formatRelativeTime(date) {
+    const diff = date - new Date();
+    const mins = Math.round(diff / 60000);
+    if (mins < 0) return 'Expired';
+    if (mins < 60) return `in ${mins}m`;
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return `in ${hours}h`;
+    return `in ${Math.round(hours / 24)}d`;
+}
+
+function truncateString(str, num) {
+    if (str.length <= num) return str;
+    return str.slice(0, num) + '...';
 }

@@ -16,6 +16,21 @@
       <p>Upload files with automatic expiration</p>
     </header>
 
+    <div id="statsContainer" class="stats-grid hidden">
+      <div class="stat-card">
+        <div class="stat-label">Total Files</div>
+        <div id="statTotalFiles" class="stat-value">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Size</div>
+        <div id="statTotalSize" class="stat-value">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Storage Used</div>
+        <div id="statStorageUsed" class="stat-value">-</div>
+      </div>
+    </div>
+
     <main>
       <form id="uploadForm">
         <div class="upload-area" id="uploadArea">
@@ -26,39 +41,41 @@
           </svg>
           <p class="upload-text">
             <span class="upload-text-main">Click to upload</span>
-            <span class="upload-text-sub">or drag and drop</span>
+            <span class="upload-text-sub">or drag and drop (multiple files supported)</span>
           </p>
-          <input type="file" id="fileInput" name="file">
+          <input type="file" id="fileInput" name="file" multiple>
           <p class="file-name" id="fileName"></p>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="urlGroup">
           <label for="fileUrl">
             Or upload from URL
             <span class="label-hint">Optional</span>
           </label>
           <input type="url" id="fileUrl" name="fileUrl" placeholder="https://example.com/file.pdf">
-          <p class="field-hint">If both file and URL are provided, the local file takes priority</p>
+          <p class="field-hint">If local files are provided, URL upload will be ignored</p>
         </div>
 
-        <div class="form-group">
-          <label for="ttlMins">
-            Time to Live (minutes)
-            <span class="label-hint">Default: 1440 (1 day)</span>
-          </label>
-          <input type="number" id="ttlMins" name="ttlMins" min="1" placeholder="1440">
-        </div>
+        <div class="form-row">
+          <div class="form-group field-half">
+            <label for="ttlMins">
+              TTL (minutes)
+              <span class="label-hint">Default: 1440</span>
+            </label>
+            <input type="number" id="ttlMins" name="ttlMins" min="1" placeholder="1440">
+          </div>
 
-        <div class="form-group">
-          <label for="metadata">
-            Metadata (JSON)
-            <span class="label-hint">Optional</span>
-          </label>
-          <textarea id="metadata" name="metadata" rows="3" placeholder='{"key": "value"}'></textarea>
+          <div class="form-group field-half">
+            <label for="metadata">
+              Metadata (JSON)
+              <span class="label-hint">Optional</span>
+            </label>
+            <input type="text" id="metadata" name="metadata" placeholder='{"user": "admin"}'>
+          </div>
         </div>
 
         <button type="submit" id="submitBtn" class="btn-primary">
-          <span id="btnText">Upload File</span>
+          <span id="btnText">Upload Files</span>
           <span id="btnLoader" class="loader hidden"></span>
         </button>
       </form>
@@ -67,21 +84,71 @@
 
       <section class="files-section">
         <div class="section-header">
-          <h2>Recent Files</h2>
-          <button id="refreshBtn" class="btn-secondary">
-            <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
+          <h2>File Management</h2>
+          <div class="header-actions">
+            <button id="cleanupBtn" class="btn-secondary btn-danger-outline" title="Trigger manual cleanup">
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Cleanup
+            </button>
+            <button id="refreshBtn" class="btn-secondary">
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="filters-bar">
+          <div class="search-input">
+            <input type="text" id="searchInput" placeholder="Search by name or ID...">
+            <button id="searchBtn" class="btn-icon">
+              <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
+          <button id="toggleFilters" class="btn-secondary">
+            Filters
           </button>
         </div>
-        <p class="section-hint">Showing only the 20 most recent files</p>
+
+        <div id="filtersPanel" class="filters-panel hidden">
+          <div class="filter-group">
+            <label>MIME Type</label>
+            <input type="text" id="filterMime" placeholder="e.g. image/png">
+          </div>
+          <div class="filter-group">
+            <label>Expired Only</label>
+            <select id="filterExpired">
+              <option value="">All Files</option>
+              <option value="true">Expired Only</option>
+              <option value="false">Live Only</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Uploaded After</label>
+            <input type="date" id="filterAfter">
+          </div>
+          <div class="filter-group">
+            <button id="applyFilters" class="btn-primary btn-sm">Apply</button>
+            <button id="resetFilters" class="btn-secondary btn-sm">Reset</button>
+          </div>
+        </div>
+
         <div class="table-container">
           <table id="filesTable">
             <thead>
               <tr>
-                <th>Name</th>
+                <th>Name / ID</th>
                 <th>Type</th>
                 <th>Size</th>
                 <th>Expires</th>
@@ -92,20 +159,26 @@
               <!-- Files will be loaded here -->
             </tbody>
           </table>
+          <div id="loadMoreContainer" class="load-more hidden">
+            <button id="loadMoreBtn" class="btn-secondary">Load More</button>
+            <span id="loadMoreLoader" class="loader small hidden"></span>
+          </div>
           <div id="filesLoader" class="loader-container hidden">
             <span class="loader"></span>
           </div>
           <div id="noFiles" class="no-files hidden">
-            No files found
+            No files found matching criteria
           </div>
         </div>
       </section>
     </main>
 
     <footer>
-      <p>Temporary Files Microservice</p>
+      <p>Temporary Files Microservice &bull; v1.2.0</p>
     </footer>
   </div>
+
+  <div id="toast" class="toast hidden">Link copied to clipboard!</div>
 
   <script src="public/app.js"></script>
 </body>
