@@ -32,7 +32,9 @@ export class FilesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async uploadFile(@Req() request: FastifyRequest): Promise<UploadFileResponse> {
+  async uploadFile(
+    @Req() request: FastifyRequest
+  ): Promise<UploadFileResponse | UploadFileResponse[]> {
     let cleanupAbortListener: (() => void) | undefined
 
     try {
@@ -49,6 +51,7 @@ export class FilesController {
 
       let ttlMins: number | undefined
       let metadata: Record<string, any> = {}
+      const responses: UploadFileResponse[] = []
 
       for await (const part of parts) {
         if (part.type === 'file') {
@@ -65,9 +68,8 @@ export class FilesController {
             stream: part.file,
           }
 
-          // We return immediately after processing the file. 
-          // Note: Fields sent after the file will be ignored.
-          return await this.filesService.uploadFile({ file, ttl, metadata })
+          const response = await this.filesService.uploadFile({ file, ttl, metadata })
+          responses.push(response)
         } else if (part.type === 'field') {
           if (part.fieldname === 'ttlMins') {
             const v = String(part.value ?? '').trim()
@@ -85,9 +87,16 @@ export class FilesController {
         }
       }
 
-      throw new BadRequestException('No file provided')
+      if (responses.length === 0) {
+        throw new BadRequestException('No file provided')
+      }
+
+      return responses.length === 1 ? responses[0] : responses
     } catch (error: any) {
-      if (error instanceof BadRequestException || error instanceof InternalServerErrorException)
+      if (
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      )
         throw error
       throw new InternalServerErrorException(`File upload failed: ${error.message}`)
     } finally {

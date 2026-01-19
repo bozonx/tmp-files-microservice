@@ -10,6 +10,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 - Global error filter and validation
 - Fast and lightweight Fastify HTTP server
 - **Full Streaming Support**: Efficiently handles large files via streams for both uploads and downloads
+- **Multi-file Upload**: Support for uploading multiple files in a single request
 - Unit and E2E tests (Jest)
 - Docker/Docker Compose support
 - No built-in auth; expose behind your API Gateway
@@ -197,10 +198,12 @@ The service exposes a REST API with no built-in authentication. If protection is
 #### Upload file
 - POST `/{base}/files`
 - Body (multipart/form-data):
-  - `file` — binary content (required)
+  - `file` — binary content (required). Can be provided multiple times for multi-file upload.
   - `ttlMins` — integer (minutes, controller default is 1440)
   - `metadata` — string (JSON), optional. Arbitrary custom metadata
 - Success 201 response:
+  - If a single file is uploaded, returns a single file object (see below).
+  - If multiple files are uploaded, returns an array of file objects.
 ```json
 {
   "file": {
