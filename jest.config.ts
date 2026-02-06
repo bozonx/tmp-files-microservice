@@ -1,4 +1,4 @@
-import type { Config } from 'jest';
+import type { Config } from 'jest'
 
 // Common module name mapper for path aliases
 const transform = {
@@ -9,7 +9,7 @@ const transform = {
       tsconfig: 'tsconfig.spec.json',
     },
   ],
-};
+}
 
 // Map .js imports to .ts files and handle aliases
 const moduleNameMapper = {
@@ -17,13 +17,12 @@ const moduleNameMapper = {
   '^@/(.*)\\.js$': '<rootDir>/src/$1',
   '^@/(.*)$': '<rootDir>/src/$1',
   '^@common/(.*)$': '<rootDir>/src/common/$1',
-  '^@modules/(.*)$': '<rootDir>/src/modules/$1',
   '^@config/(.*)$': '<rootDir>/src/config/$1',
   '^@test/(.*)$': '<rootDir>/test/$1',
-};
+}
 
 // Common module file extensions
-const moduleFileExtensions = ['ts', 'js', 'json'];
+const moduleFileExtensions = ['ts', 'js', 'json']
 
 const config: Config = {
   extensionsToTreatAsEsm: ['.ts'],
@@ -75,6 +74,6 @@ const config: Config = {
       testTimeout: 30000,
     },
   ],
-};
+}
 
-export default config;
+export default config

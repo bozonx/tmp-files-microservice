@@ -1,32 +1,33 @@
-import appConfig from '@/config/app.config'
+import { loadAppEnv } from '@/config/env.js'
 
-describe('app.config', () => {
-  const OLD_ENV = process.env
-
-  beforeEach(() => {
-    process.env = { ...OLD_ENV }
-  })
-
-  afterEach(() => {
-    process.env = OLD_ENV
-  })
-
+describe('loadAppEnv', () => {
   it('returns normalized config from env', () => {
-    process.env.LISTEN_PORT = '8080'
-    process.env.LISTEN_HOST = '127.0.0.1'
-    process.env.BASE_PATH = '/subpath/'
-    process.env.NODE_ENV = 'test'
-    process.env.LOG_LEVEL = 'info'
-    const cfg = appConfig()
-    expect(cfg.port).toBe(8080)
-    expect(cfg.host).toBe('127.0.0.1')
-    expect(cfg.basePath).toBe('subpath')
-    expect(cfg.nodeEnv).toBe('test')
-    expect(cfg.logLevel).toBe('info')
+    const cfg = loadAppEnv({
+      LISTEN_PORT: '8080',
+      LISTEN_HOST: '127.0.0.1',
+      BASE_PATH: '/subpath/',
+      NODE_ENV: 'test',
+      LOG_LEVEL: 'info',
+      DOWNLOAD_BASE_URL: 'https://cdn.example.com/',
+    })
+
+    expect(cfg.LISTEN_PORT).toBe(8080)
+    expect(cfg.LISTEN_HOST).toBe('127.0.0.1')
+    expect(cfg.BASE_PATH).toBe('subpath')
+    expect(cfg.NODE_ENV).toBe('test')
+    expect(cfg.LOG_LEVEL).toBe('info')
+    expect(cfg.DOWNLOAD_BASE_URL).toBe('https://cdn.example.com')
   })
 
-  it('throws on invalid log level', () => {
-    process.env.LOG_LEVEL = 'verbose'
-    expect(() => appConfig()).toThrow()
+  it('uses fallbacks for invalid inputs', () => {
+    const cfg = loadAppEnv({
+      LISTEN_PORT: 'not-a-number',
+      ENABLE_DEDUPLICATION: 'nope',
+      NODE_ENV: 'invalid',
+    })
+
+    expect(cfg.LISTEN_PORT).toBe(8080)
+    expect(cfg.ENABLE_DEDUPLICATION).toBe(false)
+    expect(cfg.NODE_ENV).toBe('production')
   })
 })

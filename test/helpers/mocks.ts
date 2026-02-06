@@ -5,51 +5,51 @@
  * All mocks follow the DRY principle and provide type-safe implementations.
  */
 
-import type { PinoLogger } from 'nestjs-pino'
-import type { ConfigService } from '@nestjs/config'
+import { jest } from '@jest/globals'
+import type { LoggerAdapter } from '@/adapters/logger.adapter.js'
 
 /**
- * Creates a mock PinoLogger instance with all required methods
+ * Creates a mock LoggerAdapter instance with all required methods
  *
- * @returns Mock PinoLogger with jest.fn() for all methods
+ * @returns Mock LoggerAdapter with jest.fn() for all methods
  */
-export const createMockLogger = (): PinoLogger =>
-  ({
-    setContext: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    log: jest.fn(),
-    fatal: jest.fn(),
-    trace: jest.fn(),
-  }) as unknown as PinoLogger
+export const createMockLogger = (): LoggerAdapter => ({
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+})
 
 /**
  * Placeholder for future HTTP-related mocks if needed.
  */
 
 /**
- * Creates a mock ConfigService instance with customizable configuration
+ * Creates a mock env source object with customizable overrides
  *
  * @param overrides - Object with config key-value pairs to override defaults
  * @returns Mock ConfigService that returns overridden values or defaults
  *
  * @example
- * const mockConfig = createMockConfigService({
- *   'app.port': 3000,
- *   'app.logLevel': 'debug'
- * });
+ * const envSource = createMockEnvSource({
+ *   LISTEN_PORT: '8080',
+ *   LOG_LEVEL: 'debug'
+ * })
  */
-export const createMockConfigService = (overrides: Record<string, any> = {}) =>
-  ({
-    get: jest.fn((key: string, defaultValue?: any) => {
-      return overrides[key] ?? defaultValue
-    }),
-    getOrThrow: jest.fn((key: string) => {
-      if (!(key in overrides)) {
-        throw new Error(`Configuration key "${key}" not found`)
-      }
-      return overrides[key]
-    }),
-  }) as unknown as ConfigService
+export const createMockEnvSource = (
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> => ({
+  NODE_ENV: 'test',
+  LISTEN_HOST: '127.0.0.1',
+  LISTEN_PORT: '8080',
+  BASE_PATH: '',
+  LOG_LEVEL: 'silent',
+  DOWNLOAD_BASE_URL: '',
+  MAX_FILE_SIZE_MB: '10',
+  ALLOWED_MIME_TYPES: '',
+  ENABLE_DEDUPLICATION: 'true',
+  MAX_TTL_MIN: '44640',
+  CLEANUP_INTERVAL_MINS: '0',
+  REDIS_ENABLED: 'false',
+  ...overrides,
+})

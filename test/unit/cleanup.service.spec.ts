@@ -1,52 +1,31 @@
-import { Test, type TestingModule } from '@nestjs/testing'
-import { jest, describe, beforeEach, it, expect } from '@jest/globals'
-import { CleanupService } from '@/modules/cleanup/cleanup.service'
-import { StorageService } from '@/modules/storage/storage.service'
-import { ConfigService } from '@nestjs/config'
-import { SchedulerRegistry } from '@nestjs/schedule'
-import { CLEANUP_BATCH_SIZE } from '@/common/constants/app.constants'
+import { jest } from '@jest/globals'
+import { loadAppEnv } from '@/config/env.js'
+import { CleanupService } from '@/services/cleanup.service.js'
+import type { StorageService } from '@/services/storage.service.js'
+import { createMockEnvSource, createMockLogger } from '@/../test/helpers/mocks.js'
 
 describe('CleanupService', () => {
-  let service: CleanupService
-  let storage: jest.Mocked<StorageService>
-
-  beforeEach(async () => {
-    storage = {
-      searchFiles: jest.fn(),
-      deleteFile: jest.fn(),
+  it('runCleanup deletes expired files and then deletes orphaned files', async () => {
+    const storage = {
+      searchFiles: jest.fn().mockResolvedValue({
+        files: [{ id: '1' }, { id: '2' }],
+        total: 2,
+        params: {},
+      }),
+      deleteFile: jest.fn().mockResolvedValue({ success: true }),
+      deleteOrphanedFiles: jest.fn().mockResolvedValue({ deleted: 0, freed: 0 }),
     } as any
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CleanupService,
-        { provide: StorageService, useValue: storage },
-        // Disable interval during unit tests
-        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('0') } },
-        {
-          provide: SchedulerRegistry,
-          useValue: { addInterval: jest.fn(), getInterval: jest.fn(), deleteInterval: jest.fn() },
-        },
-      ],
-    }).compile()
-
-    service = module.get(CleanupService)
-  })
-
-  it('handleScheduledCleanup deletes expired files returned by storage', async () => {
-    storage.searchFiles.mockResolvedValue({
-      files: [
-        { id: '1', size: 10 },
-        { id: '2', size: 20 },
-      ],
-      total: 2,
-      params: {},
-    } as any)
-    storage.deleteFile.mockResolvedValue({ success: true, data: { id: '1', size: 10 } } as any)
-    await service.handleScheduledCleanup()
-    expect(storage.searchFiles).toHaveBeenCalledWith({
-      expiredOnly: true,
-      limit: CLEANUP_BATCH_SIZE,
+    const service = new CleanupService({
+      env: {} as any,
+      storage,
+      logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
     })
+
+    await service.runCleanup()
+
+    expect(storage.searchFiles).toHaveBeenCalledWith({ expiredOnly: true, limit: 1000 })
     expect(storage.deleteFile).toHaveBeenCalledTimes(2)
+    expect(storage.deleteOrphanedFiles).toHaveBeenCalledTimes(1)
   })
 })

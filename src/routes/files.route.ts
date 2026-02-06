@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono'
 import type { IncomingHttpHeaders } from 'node:http'
 import type { HonoEnv } from '../types/hono.types.js'
 import type { UploadFileResponse } from '../services/files.service.js'
+import { ValidationUtil } from '../common/utils/validation.util.js'
 
 class HttpError extends Error {
   public readonly status: number
@@ -27,7 +28,7 @@ export function createFilesRoutes(): Hono<HonoEnv> {
     }
 
     // Node.js streaming path (Docker): parse multipart without buffering whole request.
-    const nodeIncoming = c.env.incoming
+    const nodeIncoming = c.env?.incoming
     if (nodeIncoming && typeof nodeIncoming.pipe === 'function') {
       const services = c.get('services')
 
@@ -256,6 +257,11 @@ export function createFilesRoutes(): Hono<HonoEnv> {
   app.get('/files/:id/exists', async (c: Context<HonoEnv>) => {
     const fileId = c.req.param('id')
     const services = c.get('services')
+
+    const idValidation = ValidationUtil.validateFileId(fileId)
+    if (!idValidation.isValid) {
+      throw new HttpError(`File ID validation failed: ${idValidation.errors.join(', ')}`, 400)
+    }
 
     const exists = await services.files.fileExists(fileId)
     if (!exists) return c.json({ exists, fileId, isExpired: false })

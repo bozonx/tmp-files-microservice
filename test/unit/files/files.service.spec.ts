@@ -1,16 +1,14 @@
-import { Test, type TestingModule } from '@nestjs/testing'
-import { jest, describe, beforeEach, it, expect } from '@jest/globals'
-import { PayloadTooLargeException } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import { FilesService } from '@/modules/files/files.service'
-import { StorageService } from '@/modules/storage/storage.service'
-import { Readable } from 'stream'
+import { jest } from '@jest/globals'
+import { loadAppEnv } from '@/config/env.js'
+import { FilesService } from '@/services/files.service.js'
+import type { StorageService } from '@/services/storage.service.js'
+import { createMockEnvSource, createMockLogger } from '@/../test/helpers/mocks.js'
 
 describe('FilesService', () => {
   let service: FilesService
   let storage: jest.Mocked<StorageService>
 
-  beforeEach(async () => {
+  beforeEach(() => {
     storage = {
       saveFile: jest.fn(),
       getFileInfo: jest.fn(),
@@ -19,29 +17,22 @@ describe('FilesService', () => {
       searchFiles: jest.fn(),
       getFileStats: jest.fn(),
       getStorageHealth: jest.fn(),
-      getConfigForTesting: jest.fn(),
     } as any
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        FilesService,
-        { provide: StorageService, useValue: storage },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string, def?: any) => {
-              const cfg: Record<string, any> = {
-                app: { basePath: '' },
-                storage: { maxTtl: 3600, maxFileSize: 1024, allowedMimeTypes: [] },
-              }
-              return key in cfg ? cfg[key] : def
-            },
-          },
-        },
-      ],
-    }).compile()
+    const env = loadAppEnv(
+      createMockEnvSource({
+        MAX_FILE_SIZE_MB: '1',
+        ALLOWED_MIME_TYPES: '',
+        BASE_PATH: '',
+        DOWNLOAD_BASE_URL: '',
+      })
+    )
 
-    service = module.get(FilesService)
+    service = new FilesService({
+      env,
+      storage,
+      logger: createMockLogger(),
+    })
   })
 
   it('should be defined', () => {
@@ -56,7 +47,7 @@ describe('FilesService', () => {
       filesByDate: {},
     })
     const res = await service.getFileStats()
-    expect(res.stats.totalFiles).toBe(0)
+    expect((res.stats as any).totalFiles).toBe(0)
     expect(typeof res.generatedAt).toBe('string')
   })
 
@@ -66,12 +57,17 @@ describe('FilesService', () => {
         file: {
           originalname: 'big.bin',
           mimetype: 'application/octet-stream',
-          size: 2048, // > 1024 configured above
-          stream: Readable.from(Buffer.alloc(2048)),
+          size: 2 * 1024 * 1024, // 2MB > 1MB configured above
+          stream: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new Uint8Array([1, 2, 3]))
+              controller.close()
+            },
+          }),
         },
         ttl: 60,
       })
-    ).rejects.toBeInstanceOf(PayloadTooLargeException)
+    ).rejects.toMatchObject({ status: 413 })
   })
 
   it('uploadFile returns downloadPath and full downloadUrl', async () => {
@@ -95,7 +91,12 @@ describe('FilesService', () => {
         originalname: 'test.txt',
         mimetype: 'text/plain',
         size: 10,
-        stream: Readable.from(Buffer.from('hello')),
+        stream: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array([104, 101, 108, 108, 111]))
+            controller.close()
+          },
+        }),
       },
       ttl: 3600,
     })
@@ -105,24 +106,17 @@ describe('FilesService', () => {
   })
 
   it('getFileInfo returns downloadPath and full downloadUrl with base URL', async () => {
-    // Override ConfigService for this test
-    const module = await Test.createTestingModule({
-      providers: [
-        FilesService,
-        { provide: StorageService, useValue: storage },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string) => {
-              if (key === 'app') return { basePath: '', downloadBaseUrl: 'https://cdn.example.com' }
-              if (key === 'storage')
-                return { maxTtl: 3600, maxFileSize: 1024, allowedMimeTypes: [] }
-            },
-          },
-        },
-      ],
-    }).compile()
-    const testService = module.get(FilesService)
+    const env = loadAppEnv(
+      createMockEnvSource({
+        BASE_PATH: '',
+        DOWNLOAD_BASE_URL: 'https://cdn.example.com',
+      })
+    )
+    const testService = new FilesService({
+      env,
+      storage,
+      logger: createMockLogger(),
+    })
 
     storage.getFileInfo.mockResolvedValue({
       success: true,

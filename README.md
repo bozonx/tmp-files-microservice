@@ -1,18 +1,18 @@
-# Temporary Files Microservice (NestJS + Fastify)
+# Temporary Files Microservice (Hono)
 
-Production-ready microservice for temporary file storage with TTL, content deduplication, search, and scheduled cleanup. Built with NestJS + Fastify.
+Production-ready microservice for temporary file storage with TTL, content deduplication, search, and scheduled cleanup. Built with Hono and designed to run both on Node.js (Docker) and Cloudflare Workers.
 
 ## What’s included
 
 - **Web UI** for file uploads at `/{BASE_PATH}/ui`
 - Health-check endpoint `/{BASE_PATH}/api/v1/health`
-- JSON logging via Pino (minimal in production)
-- Global error filter and validation
-- Fast and lightweight Fastify HTTP server
-- **Full Streaming Support**: Efficiently handles large files via streams for both uploads and downloads
+- JSON logging (via internal logger adapter)
+- Unified error handling with consistent JSON error responses
+- **Full Streaming Support**: Efficiently handles large files via streams for both uploads and downloads (Node.js runtime)
 - **Multi-file Upload**: Support for uploading multiple files in a single request
 - Unit and E2E tests (Jest)
 - Docker/Docker Compose support
+- Cloudflare Workers + R2 + KV support (Wrangler)
 - No built-in auth; expose behind your API Gateway
 
 ## Overview
@@ -21,12 +21,17 @@ The service accepts files via REST (`multipart/form-data`), stores them for a ti
 
 ### Architecture at a glance
 
-- **NestJS + Fastify** for a high-performance HTTP layer.
-- **StorageService** persists files on the filesystem and maintains metadata.
-- **Metadata Storage**: Metadata can be stored in a JSON file (standard) or in **Redis** for better performance and scalability.
+- **Hono** for HTTP routing, compatible with both Node.js and Cloudflare Workers.
+- **Node.js runtime (Docker)**:
+  - File storage: **S3-compatible** (AWS S3 / Minio / Garage / etc.)
+  - Metadata storage: **Redis**
+  - Multipart upload parsing: streaming via Busboy (does not buffer entire upload)
+- **Cloudflare Workers runtime**:
+  - File storage: **R2**
+  - Metadata storage: **KV**
+  - UI assets served via Workers Assets binding
 - **FilesService** validates inputs, enforces limits, and exposes application use-cases.
-- **CleanupService** periodically removes expired files (interval controlled by `CLEANUP_INTERVAL_MINS`).
-- **Pino logger** with JSON logs in production and pretty logs in development.
+- **CleanupService** removes expired files (interval controlled by `CLEANUP_INTERVAL_MINS`; Workers cleanup is triggered by a cron schedule).
 
 ## Quick start
 
@@ -92,42 +97,52 @@ Source of truth: `.env.production.example`
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
-  - `STORAGE_DIR` — base directory for files and metadata. MANDATORY.
   - `MAX_FILE_SIZE_MB` — maximum upload size (MB). Single source of truth for upload limits; enforced by both Fastify multipart and service-level validation.
-    - Fastify `bodyLimit` is computed internally as `MAX_FILE_SIZE_MB` (bytes) + overhead for multipart boundaries/headers/fields.
-    - Overhead size is controlled by `HTTP_CONSTANTS.MULTIPART_OVERHEAD_MB` in code and defaults to 2 MiB.
+    - In Node.js runtime, streaming multipart parsing is used.
+    - In Workers runtime, multipart parsing uses `Request.formData()`.
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
   - `CLEANUP_INTERVAL_MINS` — cleanup interval in minutes (default 10, set 0 to disable)
   - `DOWNLOAD_BASE_URL` — Base URL for `downloadUrl` in responses (e.g. `https://files.example.com`). If not set, `downloadUrl` will be relative.
-- Redis-related (optional):
-  - `REDIS_ENABLED` — set `true` to use Redis for metadata (`true|false`, default `false`)
-  - `REDIS_HOST` — Redis host (default `localhost`)
-  - `REDIS_PORT` — Redis port (default `6379`)
+- Node.js runtime (Docker) — Redis (metadata storage):
+  - `REDIS_ENABLED` — must be `true`
+  - `REDIS_HOST` — Redis host
+  - `REDIS_PORT` — Redis port
   - `REDIS_PASSWORD` — Redis password
   - `REDIS_DB` — Redis database index (default `0`)
   - `REDIS_KEY_PREFIX` — prefix for Redis keys (default `tmp_files:`)
+- Node.js runtime (Docker) — S3 storage:
+  - `S3_ENDPOINT`
+  - `S3_REGION`
+  - `S3_BUCKET`
+  - `S3_ACCESS_KEY_ID`
+  - `S3_SECRET_ACCESS_KEY`
+  - `S3_FORCE_PATH_STYLE`
 
 ## How uploads, limits and TTL work
 
 - `ttlMins` is provided in minutes by clients (default 1440). Internally it is converted to seconds and clamped against `MAX_TTL_MIN`.
 - The upload size limit is the smaller of:
-  - `MAX_FILE_SIZE_MB` enforced by Fastify multipart (streaming), and
+  - `MAX_FILE_SIZE_MB` enforced at request parsing time (streaming in Node.js runtime), and
   - service-level validation in `FilesService`.
 - Exceeding the limit returns HTTP 413.
 
-## Storage layout and metadata
+## Storage and metadata
 
-- Files are stored under `STORAGE_DIR` grouped by month (e.g. `YYYY-MM`).
-- Metadata is kept in `data.json` in the storage root (default) or in Redis (if enabled). Updates are handled by the chosen `MetadataProvider`.
+- Files are stored in an object storage backend:
+  - Node.js: S3-compatible bucket
+  - Cloudflare Workers: R2 bucket
+- Metadata is stored in:
+  - Node.js: Redis
+  - Cloudflare Workers: KV
 - Deduplication: if the same file content (by SHA-256) is uploaded again, existing metadata is reused to avoid duplicate storage.
 
 ## Cleanup behavior
 
 - Controlled by `CLEANUP_INTERVAL_MINS`. Set `0` or less to disable scheduling.
-- Expired files are removed from disk and metadata; logs include delete count and freed bytes.
-- Orphaned files (files on disk but missing from metadata) are automatically identified and removed to reclaim space.
+- Expired files are removed from storage and metadata; logs include delete count and freed bytes.
+- Orphaned objects (objects in storage but missing from metadata) are automatically identified and removed to reclaim space.
 - Processing is done in batches of 1000 files (`CLEANUP_BATCH_SIZE`) to manage memory usage.
 
 ## Graceful Shutdown
@@ -154,8 +169,9 @@ The service includes a simple web interface for uploading files, accessible at `
 The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScript with no external dependencies.
 
 **Technical details**:
-- Static files (CSS, JS) are served via `@fastify/static` plugin with `/{BASE_PATH}/ui/public/` prefix
-- UI root is registered directly with Fastify to serve `index.html` at `/{BASE_PATH}/ui/`
+- Static files (CSS, JS) are served via runtime-specific adapters:
+  - Node.js: `@hono/node-server/serve-static`
+  - Cloudflare Workers: Assets binding (`[assets]` in `wrangler.toml`)
 - The UI makes requests to the REST API relative to its own URL path (computed from `window.location.pathname`), but strips the `/ui` segment first. For example:
   - If UI is served at `/ui/`, API calls go to `/api/v1/files`
   - If UI is served at `/tmp-files/ui/`, API calls go to `/tmp-files/api/v1/files`
@@ -376,8 +392,7 @@ Unified error structure:
 - 413 Payload Too Large: increase `MAX_FILE_SIZE_MB` (and restart) or upload smaller files.
 - 400 Validation errors: check `ttlMins`, JSON `metadata`, or file ID format.
 - 404 Not Found: the file does not exist or has expired.
-- Startup fails with storage error: set `STORAGE_DIR` and ensure the path is writable.
-- Permission denied on writes: fix host directory ownership/permissions or run the container with appropriate user.
+- Startup fails with storage error: verify connectivity/credentials for your storage backends (S3/R2 and Redis/KV).
 
 ## Errors
 
@@ -494,7 +509,6 @@ If you are currently using the filesystem for metadata and want to switch to Red
 
 - Node.js 22+
 - pnpm 10+
-- STORAGE_DIR
 
 ### Quick start (dev)
 
@@ -504,14 +518,12 @@ pnpm install
 
 # 2) Configure environment (dev)
 cp env.development.example .env.development
-# IMPORTANT: set STORAGE_DIR in .env.development before starting
 
 # 3) Run in development (watch mode)
 pnpm start:dev
 ```
 
 - Default base URL (dev): `http://localhost:8080/api/v1`
-- IMPORTANT: `STORAGE_DIR` is required; the app will not start if it is missing.
 
 ### Tests
 
@@ -551,7 +563,7 @@ pnpm format
 ### Debugging the app
 
 ```bash
-# Start Nest in debug with watch
+# Start Node entry in debug with watch
 pnpm start:debug
 ```
 
@@ -559,11 +571,8 @@ Attach your debugger to the Node.js inspector port output by the command.
 
 ### Useful notes
 
-- Global `ValidationPipe` is enabled (whitelist, forbidNonWhitelisted, transform).
-- Dev uses `pino-pretty` with more verbose logs; prod uses JSON logs.
-- Health route auto-logging is minimized in prod.
 - Sensitive headers are redacted in logs (`authorization`, `x-api-key`).
-- Path aliases for TypeScript/Jest: `@/*`, `@common/*`, `@modules/*`, `@config/*`, `@test/*`.
+- Path aliases for TypeScript/Jest: `@/*`, `@test/*`.
 
 ## License
 

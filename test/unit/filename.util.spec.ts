@@ -1,12 +1,14 @@
-import { FilenameUtil } from '@/common/utils/filename.util'
-import { HashUtil } from '@/common/utils/hash.util'
+import { FilenameUtil } from '@/common/utils/filename.util.js'
+import { HashUtil } from '@/common/utils/hash.util.js'
 
 describe('FilenameUtil', () => {
   it('generateSafeFilename preserves extension and adds suffix', () => {
-    const hash = HashUtil.hashString('x')
-    const name = FilenameUtil.generateSafeFilename('report.pdf', hash)
-    expect(name.endsWith('.pdf')).toBe(true)
-    expect(name.includes('_')).toBe(true)
+    // HashUtil.hashString is async in current implementation
+    return HashUtil.hashString('x').then((hash) => {
+      const name = FilenameUtil.generateSafeFilename('report.pdf', hash)
+      expect(name.endsWith('.pdf')).toBe(true)
+      expect(name.includes('_')).toBe(true)
+    })
   })
 
   it('sanitize and parse helpers work', () => {

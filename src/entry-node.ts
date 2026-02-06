@@ -1,5 +1,7 @@
 import { serve } from '@hono/node-server'
 import type { HttpBindings } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
+import { Hono } from 'hono'
 import { S3Client } from '@aws-sdk/client-s3'
 import { Redis } from 'ioredis'
 import { createApp, createDefaultLogger } from './app.js'
@@ -43,7 +45,39 @@ const redis = new Redis({
 
 const metadata = new RedisMetadataAdapter({ client: redis, keyPrefix: env.REDIS_KEY_PREFIX })
 
-const app = createApp({ env, storage, metadata, logger })
+const apiApp = createApp({ env, storage, metadata, logger })
+
+const app = new Hono()
+
+app.route('/', apiApp)
+
+const basePath = env.BASE_PATH
+const uiPrefix = basePath ? `/${basePath}/ui` : '/ui'
+const rootPath = basePath ? `/${basePath}` : '/'
+
+app.get(rootPath, (c) => c.redirect(`${uiPrefix}/`, 302))
+app.get(uiPrefix, (c) => c.redirect(`${uiPrefix}/`, 302))
+
+app.get(`${uiPrefix}/`, async () => {
+  const { readFile } = await import('node:fs/promises')
+  const { resolve } = await import('node:path')
+  const html = await readFile(resolve(process.cwd(), 'public', 'index.html'), 'utf-8')
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-cache',
+    },
+  })
+})
+
+app.use(
+  `${uiPrefix}/public/*`,
+  serveStatic({
+    root: './public',
+    rewriteRequestPath: (path) => path.replace(new RegExp(`^${uiPrefix}/public`), ''),
+  })
+)
 
 // Create services once for background cleanup loop.
 // Route-level services are created per request in app.ts.

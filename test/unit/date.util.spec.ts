@@ -1,4 +1,4 @@
-import { DateUtil } from '@/common/utils/date.util'
+import { DateUtil } from '@/common/utils/date.util.js'
 
 describe('DateUtil', () => {
   it('createExpirationDate returns a future date by given seconds', () => {

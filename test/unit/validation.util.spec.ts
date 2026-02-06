@@ -1,4 +1,4 @@
-import { ValidationUtil } from '@/common/utils/validation.util'
+import { ValidationUtil } from '@/common/utils/validation.util.js'
 import { Readable } from 'stream'
 
 describe('ValidationUtil', () => {
