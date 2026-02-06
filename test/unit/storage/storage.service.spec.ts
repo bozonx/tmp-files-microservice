@@ -1,10 +1,13 @@
 import { Test, type TestingModule } from '@nestjs/testing'
+import { jest, describe, beforeAll, afterAll, it, expect } from '@jest/globals'
 import { ConfigService } from '@nestjs/config'
 import { StorageService } from '@/modules/storage/storage.service'
+import { METADATA_PROVIDER } from '@/modules/storage/metadata.provider'
 import fs from 'fs-extra'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
+import { FileInfo } from '@/common/interfaces/file.interface'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -20,6 +23,25 @@ describe('StorageService (basic)', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StorageService,
+        {
+          provide: METADATA_PROVIDER,
+          useValue: {
+            initialize: jest.fn().mockResolvedValue(undefined),
+            getStats: jest.fn().mockResolvedValue({
+              totalFiles: 0,
+              totalSize: 0,
+              filesByMimeType: {},
+              filesByDate: {},
+            }),
+            getFileInfo: jest.fn(),
+            saveFileInfo: jest.fn(),
+            deleteFileInfo: jest.fn(),
+            searchFiles: jest.fn(),
+            findFileByHash: jest.fn(),
+            getAllFileIds: jest.fn().mockResolvedValue([]),
+            isHealthy: jest.fn().mockResolvedValue(true),
+          },
+        },
         {
           provide: ConfigService,
           useValue: {

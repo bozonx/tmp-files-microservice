@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import fs from 'fs-extra'
 import * as path from 'path'
-import { MetadataProvider } from './metadata.provider.js'
+import type { MetadataProvider } from './metadata.provider.js'
 import { FileInfo, FileStats } from '../../common/interfaces/file.interface.js'
 import {
   FileSearchParams,

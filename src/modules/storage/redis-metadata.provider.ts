@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { MetadataProvider } from './metadata.provider.js'
+import type { MetadataProvider } from './metadata.provider.js'
 import { FileInfo, FileStats } from '../../common/interfaces/file.interface.js'
 import { FileSearchParams, FileSearchResult } from '../../common/interfaces/storage.interface.js'
 import { RedisService } from './redis.service.js'
@@ -20,6 +20,7 @@ export class RedisMetadataProvider implements MetadataProvider {
 
   async saveFileInfo(fileInfo: FileInfo): Promise<void> {
     const client = this.redisService.getClient()
+    const dateKey = DateUtil.format(fileInfo.uploadedAt, 'YYYY-MM-DD')
     
     await client
       .multi()
@@ -27,6 +28,8 @@ export class RedisMetadataProvider implements MetadataProvider {
       .hset(this.HASHES_KEY, fileInfo.hash, fileInfo.id)
       .hincrby(this.STATS_KEY, 'totalFiles', 1)
       .hincrby(this.STATS_KEY, 'totalSize', fileInfo.size)
+      .hincrby(`${this.STATS_KEY}:mime_types`, fileInfo.mimeType, 1)
+      .hincrby(`${this.STATS_KEY}:dates`, dateKey, 1)
       .exec()
   }
 
@@ -48,13 +51,27 @@ export class RedisMetadataProvider implements MetadataProvider {
     if (!fileInfo) return
 
     const client = this.redisService.getClient()
-    await client
-      .multi()
+    const dateKey = DateUtil.format(fileInfo.uploadedAt, 'YYYY-MM-DD')
+    
+    // Only delete hash mapping if it points to this specific file
+    const currentHashId = await client.hget(this.HASHES_KEY, fileInfo.hash)
+    const shouldDeleteHash = currentHashId === fileId
+
+    const multi = client.multi()
       .hdel(this.FILES_KEY, fileId)
-      .hdel(this.HASHES_KEY, fileInfo.hash)
       .hincrby(this.STATS_KEY, 'totalFiles', -1)
       .hincrby(this.STATS_KEY, 'totalSize', -fileInfo.size)
-      .exec()
+      .hincrby(`${this.STATS_KEY}:mime_types`, fileInfo.mimeType, -1)
+      .hincrby(`${this.STATS_KEY}:dates`, dateKey, -1)
+    
+    if (shouldDeleteHash) {
+      multi.hdel(this.HASHES_KEY, fileInfo.hash)
+    }
+    
+    await multi.exec()
+    
+    // Cleanup zero-valued stats (optional but keeps Redis clean)
+    // We don't do it in the multi because hincrby might reach zero
   }
 
   async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
@@ -104,21 +121,24 @@ export class RedisMetadataProvider implements MetadataProvider {
 
   async getStats(): Promise<FileStats> {
     const client = this.redisService.getClient()
-    const stats = await client.hgetall(this.STATS_KEY)
     
-    // We also need to compute mime type and date stats which are not currently in STATS_KEY
-    // For now, let's compute them from all files (similar to searchFiles)
-    // In a high-load scenario, these should be updated incrementally in Redis.
-    const allFilesData = await client.hgetall(this.FILES_KEY)
-    const files = Object.values(allFilesData).map(data => JSON.parse(data) as FileInfo)
-
+    const [stats, mimeTypes, dates] = await Promise.all([
+      client.hgetall(this.STATS_KEY),
+      client.hgetall(`${this.STATS_KEY}:mime_types`),
+      client.hgetall(`${this.STATS_KEY}:dates`)
+    ])
+    
     const filesByMimeType: Record<string, number> = {}
     const filesByDate: Record<string, number> = {}
 
-    files.forEach((file) => {
-      filesByMimeType[file.mimeType] = (filesByMimeType[file.mimeType] || 0) + 1
-      const dateKey = DateUtil.format(new Date(file.uploadedAt), 'YYYY-MM-DD')
-      filesByDate[dateKey] = (filesByDate[dateKey] || 0) + 1
+    Object.entries(mimeTypes).forEach(([type, count]) => {
+      const c = parseInt(count, 10)
+      if (c > 0) filesByMimeType[type] = c
+    })
+
+    Object.entries(dates).forEach(([date, count]) => {
+      const c = parseInt(count, 10)
+      if (c > 0) filesByDate[date] = c
     })
 
     return {

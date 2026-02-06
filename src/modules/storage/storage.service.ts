@@ -23,7 +23,8 @@ import {
 import { FilenameUtil } from '../../common/utils/filename.util.js'
 import { DateUtil } from '../../common/utils/date.util.js'
 import { STORAGE_CONSTANTS } from '../../common/constants/storage.constants.js'
-import { MetadataProvider, METADATA_PROVIDER } from './metadata.provider.js'
+import { METADATA_PROVIDER } from './metadata.provider.js'
+import type { MetadataProvider } from './metadata.provider.js'
 
 @Injectable()
 export class StorageService {
