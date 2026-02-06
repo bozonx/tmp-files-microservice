@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import fs from 'fs-extra'
 import { createReadStream, type ReadStream } from 'fs'
@@ -15,25 +15,26 @@ import {
 } from '../../common/interfaces/file.interface.js'
 import {
   StorageConfig,
-  StorageMetadata,
   StorageOperationResult,
   StorageHealth,
   FileSearchParams,
   FileSearchResult,
 } from '../../common/interfaces/storage.interface.js'
-import { HashUtil } from '../../common/utils/hash.util.js'
 import { FilenameUtil } from '../../common/utils/filename.util.js'
 import { DateUtil } from '../../common/utils/date.util.js'
 import { STORAGE_CONSTANTS } from '../../common/constants/storage.constants.js'
+import { MetadataProvider, METADATA_PROVIDER } from './metadata.provider.js'
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name)
   private config!: StorageConfig
-  private metadataPath!: string
-  private metadataLock: Promise<void> = Promise.resolve()
+  private initialized = false
 
-  constructor(private readonly configService: ConfigService) { }
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(METADATA_PROVIDER) private readonly metadataProvider: MetadataProvider
+  ) { }
 
   private getConfig(): StorageConfig {
     if (!this.config) {
@@ -52,8 +53,6 @@ export class StorageService {
         allowedMimeTypes: storageCfg?.allowedMimeTypes ?? [],
         enableDeduplication: storageCfg?.enableDeduplication ?? true,
       } as StorageConfig
-
-      this.metadataPath = path.join(this.config.basePath, 'data.json')
     }
     return this.config
   }
@@ -62,44 +61,14 @@ export class StorageService {
     return this.getConfig()
   }
 
-  private async initializeStorage(): Promise<void> {
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) return
+
     try {
       const config = this.getConfig()
-
-      const baseDir = path.resolve(config.basePath)
-      await fs.ensureDir(baseDir)
-
-      if (!this.metadataPath) {
-        this.metadataPath = path.join(config.basePath, 'data.json')
-      }
-
-      if (!(await fs.pathExists(this.metadataPath))) {
-        const initialMetadata: StorageMetadata = {
-          version: '1.0.0',
-          lastUpdated: new Date(),
-          totalFiles: 0,
-          totalSize: 0,
-          files: {},
-        }
-        await fs.writeJson(this.metadataPath, initialMetadata, { spaces: 2 })
-        this.logger.log('Storage initialized with empty metadata')
-      } else {
-        try {
-          await fs.readJson(this.metadataPath)
-        } catch (error: any) {
-          this.logger.warn('Existing metadata file is corrupted, recreating...')
-          await fs.remove(this.metadataPath)
-          const initialMetadata: StorageMetadata = {
-            version: '1.0.0',
-            lastUpdated: new Date(),
-            totalFiles: 0,
-            totalSize: 0,
-            files: {},
-          }
-          await fs.writeJson(this.metadataPath, initialMetadata, { spaces: 2 })
-        }
-      }
-
+      await fs.ensureDir(config.basePath)
+      await this.metadataProvider.initialize()
+      this.initialized = true
       this.logger.log(`Storage initialized at: ${config.basePath}`)
     } catch (error: any) {
       this.logger.error('Failed to initialize storage', error)
@@ -111,7 +80,7 @@ export class StorageService {
     const { file, ttl, metadata = {} } = params
     const config = this.getConfig()
 
-    await this.initializeStorage()
+    await this.ensureInitialized()
     await fs.ensureDir(config.basePath)
 
     // Ensure temp directory exists
@@ -196,7 +165,7 @@ export class StorageService {
 
             // Deduplication check
             if (config.enableDeduplication) {
-                const existingFile = await this.findFileByHash(fileHash)
+                const existingFile = await this.metadataProvider.findFileByHash(fileHash)
                 if (existingFile) {
                     await cleanup()
                     return resolve({
@@ -249,7 +218,7 @@ export class StorageService {
                 metadata
             }
 
-            await this.updateMetadata(fileInfo, 'add')
+            await this.metadataProvider.saveFileInfo(fileInfo)
             
             this.logger.log(`File saved successfully: ${fileId}`)
             resolve({
@@ -266,8 +235,8 @@ export class StorageService {
 
   async getFileInfo(fileId: string): Promise<FileOperationResult> {
     try {
-      const metadata = await this.loadMetadata()
-      const fileInfo = metadata.files[fileId]
+      await this.ensureInitialized()
+      const fileInfo = await this.metadataProvider.getFileInfo(fileId)
 
       if (!fileInfo) {
         return { success: false, error: `File with ID ${fileId} not found` }
@@ -326,8 +295,8 @@ export class StorageService {
 
   async deleteFile(fileId: string): Promise<FileOperationResult> {
     try {
-      const metadata = await this.loadMetadata()
-      const fileInfo = metadata.files[fileId]
+      await this.ensureInitialized()
+      const fileInfo = await this.metadataProvider.getFileInfo(fileId)
 
       if (!fileInfo) {
         return { success: false, error: `File with ID ${fileId} not found` }
@@ -337,7 +306,7 @@ export class StorageService {
         await fs.remove(fileInfo.filePath)
       }
 
-      await this.updateMetadata(fileInfo, 'remove')
+      await this.metadataProvider.deleteFileInfo(fileId)
 
       this.logger.log(`File deleted successfully: ${fileId}`)
       return { success: true, data: fileInfo }
@@ -349,39 +318,8 @@ export class StorageService {
 
   async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
     try {
-      const metadata = await this.loadMetadata()
-      let files = Object.values(metadata.files)
-
-      if (!params.expiredOnly) {
-        files = files.filter((file) => !DateUtil.isExpired(file.expiresAt))
-      }
-
-      if (params.mimeType) {
-        files = files.filter((file) => file.mimeType === params.mimeType)
-      }
-      if (params.minSize !== undefined) {
-        files = files.filter((file) => file.size >= params.minSize!)
-      }
-      if (params.maxSize !== undefined) {
-        files = files.filter((file) => file.size <= params.maxSize!)
-      }
-      if (params.uploadedAfter) {
-        files = files.filter((file) => DateUtil.isAfter(file.uploadedAt, params.uploadedAfter!))
-      }
-      if (params.uploadedBefore) {
-        files = files.filter((file) => DateUtil.isBefore(file.uploadedAt, params.uploadedBefore!))
-      }
-      if (params.expiredOnly) {
-        files = files.filter((file) => DateUtil.isExpired(file.expiresAt))
-      }
-
-      files.sort((a, b) => DateUtil.toTimestamp(b.uploadedAt) - DateUtil.toTimestamp(a.uploadedAt))
-
-      const total = files.length
-      if (params.offset) files = files.slice(params.offset)
-      if (params.limit) files = files.slice(0, params.limit)
-
-      return { files, total, params }
+      await this.ensureInitialized()
+      return await this.metadataProvider.searchFiles(params)
     } catch (error: any) {
       this.logger.error('Failed to search files', error)
       return { files: [], total: 0, params } as FileSearchResult
@@ -390,24 +328,8 @@ export class StorageService {
 
   async getFileStats(): Promise<FileStats> {
     try {
-      const metadata = await this.loadMetadata()
-      const files = Object.values(metadata.files)
-
-      const filesByMimeType: Record<string, number> = {}
-      const filesByDate: Record<string, number> = {}
-
-      files.forEach((file) => {
-        filesByMimeType[file.mimeType] = (filesByMimeType[file.mimeType] || 0) + 1
-        const dateKey = DateUtil.format(file.uploadedAt, 'YYYY-MM-DD')
-        filesByDate[dateKey] = (filesByDate[dateKey] || 0) + 1
-      })
-
-      return {
-        totalFiles: files.length,
-        totalSize: files.reduce((sum, f) => sum + f.size, 0),
-        filesByMimeType,
-        filesByDate,
-      }
+      await this.ensureInitialized()
+      return await this.metadataProvider.getStats()
     } catch (error: any) {
       this.logger.error('Failed to get file stats', error)
       return { totalFiles: 0, totalSize: 0, filesByMimeType: {}, filesByDate: {} }
@@ -416,22 +338,26 @@ export class StorageService {
 
   async getStorageHealth(): Promise<StorageHealth> {
     try {
-      const metadata = await this.loadMetadata()
+      await this.ensureInitialized()
+      const stats = await this.metadataProvider.getStats()
       const config = this.getConfig()
       await fs.stat(config.basePath)
 
+      const isRedisHealthy = await this.metadataProvider.isHealthy()
+
+      // Basic mock for space, as generic cross-platform space check is complex
       const freeSpace = 1024 * 1024 * 1024
       const totalSpace = 10 * 1024 * 1024 * 1024
       const usedSpace = totalSpace - freeSpace
       const usagePercentage = (usedSpace / totalSpace) * 100
 
       return {
-        isAvailable: true,
+        isAvailable: isRedisHealthy,
         freeSpace,
         totalSpace,
         usedSpace,
         usagePercentage,
-        fileCount: metadata.totalFiles,
+        fileCount: stats.totalFiles,
         lastChecked: new Date(),
       }
     } catch (error: any) {
@@ -448,122 +374,23 @@ export class StorageService {
     }
   }
 
-  private async loadMetadata(): Promise<StorageMetadata> {
-    try {
-      const config = this.getConfig()
-      const metadataPath = path.join(config.basePath, 'data.json')
-      await fs.ensureDir(config.basePath)
-
-      if (!(await fs.pathExists(metadataPath))) {
-        await this.initializeStorage()
-      }
-
-      const metadata = await fs.readJson(metadataPath)
-      return metadata as StorageMetadata
-    } catch (error: any) {
-      this.logger.error('Failed to load metadata', error)
-
-      if (
-        error.message?.includes('JSON') ||
-        error.message?.includes('Unexpected') ||
-        error.code === 'ENOENT'
-      ) {
-        this.logger.warn('Metadata file is corrupted or missing, recreating...')
-        try {
-          const config = this.getConfig()
-          const metadataPath = path.join(config.basePath, 'data.json')
-          await fs.ensureDir(config.basePath)
-          if (await fs.pathExists(metadataPath)) {
-            await fs.remove(metadataPath)
-          }
-          await this.initializeStorage()
-          const metadata = await fs.readJson(metadataPath)
-          return metadata as StorageMetadata
-        } catch (recreateError: any) {
-          this.logger.error('Failed to recreate metadata file', recreateError)
-          throw new Error(`Failed to recreate metadata: ${recreateError.message}`)
-        }
-      }
-
-      throw new Error(`Failed to load metadata: ${error.message}`)
-    }
-  }
-
-  private async updateMetadata(fileInfo: FileInfo, operation: 'add' | 'remove'): Promise<void> {
-    // Acquire lock to prevent race conditions during metadata updates
-    const currentLock = this.metadataLock
-    let resolveLock: () => void
-    this.metadataLock = new Promise((resolve) => {
-      resolveLock = resolve
-    })
-
-    try {
-      await currentLock
-      await this.initializeStorage()
-      const config = this.getConfig()
-      await fs.ensureDir(config.basePath)
-
-      const metadata = await this.loadMetadata()
-
-      if (operation === 'add') {
-        metadata.files[fileInfo.id] = fileInfo
-        metadata.totalFiles += 1
-        metadata.totalSize += fileInfo.size
-      } else if (operation === 'remove') {
-        delete metadata.files[fileInfo.id]
-        metadata.totalFiles -= 1
-        metadata.totalSize -= fileInfo.size
-      }
-
-      metadata.lastUpdated = new Date()
-
-      const metadataPath = path.join(config.basePath, 'data.json')
-      const metadataDir = path.dirname(metadataPath)
-      await fs.ensureDir(metadataDir)
-
-      const tempPath = path.join(
-        metadataDir,
-        `data.json.tmp.${Date.now()}.${Math.random().toString(36).substr(2, 9)}`
-      )
-      const jsonContent = JSON.stringify(metadata, null, 2)
-      await fs.writeFile(tempPath, jsonContent, 'utf8')
-      if (!(await fs.pathExists(tempPath))) {
-        throw new Error(`Failed to create temporary metadata file: ${tempPath}`)
-      }
-      await fs.move(tempPath, metadataPath, { overwrite: true })
-    } catch (error: any) {
-      this.logger.error('Failed to update metadata', error)
-      throw new Error(`Failed to update metadata: ${error.message}`)
-    } finally {
-      // release lock
-      if (resolveLock!) resolveLock!()
-    }
-  }
-
-  private async findFileByHash(hash: string): Promise<FileInfo | null> {
-    try {
-      const metadata = await this.loadMetadata()
-      const files = Object.values(metadata.files)
-      return files.find((file) => file.hash === hash) || null
-    } catch (error: any) {
-      this.logger.error('Failed to find file by hash', error)
-      return null
-    }
-  }
-
   async deleteOrphanedFiles(): Promise<{ deleted: number; freed: number }> {
     const startTime = Date.now()
     let deleted = 0
     let freed = 0
 
     try {
+      await this.ensureInitialized()
       const config = this.getConfig()
-      const metadata = await this.loadMetadata()
-
-      // Create a Set of all valid file paths (normalized)
-      const validFilePaths = new Set(
-        Object.values(metadata.files).map((f) => path.resolve(f.filePath))
-      )
+      const allFileIds = await this.metadataProvider.getAllFileIds()
+      
+      const validFilePaths = new Set<string>()
+      for (const id of allFileIds) {
+          const info = await this.metadataProvider.getFileInfo(id)
+          if (info) {
+              validFilePaths.add(path.resolve(info.filePath))
+          }
+      }
 
       // Helper to process directories recursively
       const processDirectory = async (dirParams: string) => {
@@ -590,12 +417,7 @@ export class StorageService {
             if (!validFilePaths.has(path.resolve(fullPath))) {
               try {
                 const stat = await fs.stat(fullPath)
-                // Double check if file is really old enough (e.g. > 1 min) to avoid race conditions with ongoing uploads
-                // where the file is created but metadata not yet updated?
-                // Our saveFile updates metadata closely after writing file.
-                // But let's add a small safety buffer: files modified < 1 minute ago are skipped.
-                // This handles the "Scenario 1: Interruption between file write and metadata update" partially,
-                // waiting for the next cleanup cycle to delete it if it was indeed abandoned.
+                // Small safety buffer: files modified < 1 minute ago are skipped.
                 const ageMs = Date.now() - stat.mtimeMs
                 if (ageMs < 60000) {
                   continue

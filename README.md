@@ -22,7 +22,8 @@ The service accepts files via REST (`multipart/form-data`), stores them for a ti
 ### Architecture at a glance
 
 - **NestJS + Fastify** for a high-performance HTTP layer.
-- **StorageService** persists files on the filesystem and maintains metadata in a JSON file.
+- **StorageService** persists files on the filesystem and maintains metadata.
+- **Metadata Storage**: Metadata can be stored in a JSON file (standard) or in **Redis** for better performance and scalability.
 - **FilesService** validates inputs, enforces limits, and exposes application use-cases.
 - **CleanupService** periodically removes expired files (interval controlled by `CLEANUP_INTERVAL_MINS`).
 - **Pino logger** with JSON logs in production and pretty logs in development.
@@ -100,6 +101,13 @@ Source of truth: `.env.production.example`
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
   - `CLEANUP_INTERVAL_MINS` — cleanup interval in minutes (default 10, set 0 to disable)
   - `DOWNLOAD_BASE_URL` — Base URL for `downloadUrl` in responses (e.g. `https://files.example.com`). If not set, `downloadUrl` will be relative.
+- Redis-related (optional):
+  - `REDIS_ENABLED` — set `true` to use Redis for metadata (`true|false`, default `false`)
+  - `REDIS_HOST` — Redis host (default `localhost`)
+  - `REDIS_PORT` — Redis port (default `6379`)
+  - `REDIS_PASSWORD` — Redis password
+  - `REDIS_DB` — Redis database index (default `0`)
+  - `REDIS_KEY_PREFIX` — prefix for Redis keys (default `tmp_files:`)
 
 ## How uploads, limits and TTL work
 
@@ -112,7 +120,7 @@ Source of truth: `.env.production.example`
 ## Storage layout and metadata
 
 - Files are stored under `STORAGE_DIR` grouped by month (e.g. `YYYY-MM`).
-- Metadata is kept in `data.json` in the storage root and updated atomically.
+- Metadata is kept in `data.json` in the storage root (default) or in Redis (if enabled). Updates are handled by the chosen `MetadataProvider`.
 - Deduplication: if the same file content (by SHA-256) is uploaded again, existing metadata is reused to avoid duplicate storage.
 
 ## Cleanup behavior
@@ -452,6 +460,18 @@ curl -s "$BASE_URL/files/stats" | jq
 ```bash
 curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 ```
+
+### Migration to Redis
+
+If you are currently using the filesystem for metadata and want to switch to Redis:
+
+1. Ensure Redis is running and accessible.
+2. Set `REDIS_ENABLED=true` and other `REDIS_*` variables in your environment.
+3. Run the migration script:
+   ```bash
+   pnpm ts-node src/scripts/migrate-to-redis.ts
+   ```
+4. Restart the service.
 
 ## More documentation
 
