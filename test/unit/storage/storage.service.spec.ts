@@ -1,13 +1,13 @@
 import { Test, type TestingModule } from '@nestjs/testing'
 import { jest, describe, beforeAll, afterAll, it, expect } from '@jest/globals'
 import { ConfigService } from '@nestjs/config'
-import { StorageService } from '@/modules/storage/storage.service'
-import { METADATA_PROVIDER } from '@/modules/storage/metadata.provider'
+import { StorageService } from '@/modules/storage/storage.service.js'
+import { METADATA_PROVIDER } from '@/modules/storage/metadata.provider.js'
+import { FILE_STORAGE_PROVIDER, type FileStorageProvider } from '@/modules/storage/storage-provider.interface.js'
 import fs from 'fs-extra'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
-import { FileInfo } from '@/common/interfaces/file.interface'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -43,6 +43,17 @@ describe('StorageService (basic)', () => {
           },
         },
         {
+          provide: FILE_STORAGE_PROVIDER,
+          useValue: {
+            saveFile: jest.fn(),
+            readFile: jest.fn(),
+            createReadStream: jest.fn(),
+            deleteFile: jest.fn(),
+            isHealthy: jest.fn().mockResolvedValue(true),
+            listAllKeys: jest.fn().mockResolvedValue([]),
+          },
+        },
+        {
           provide: ConfigService,
           useValue: {
             get: (key: string, def?: any) => {
@@ -55,13 +66,7 @@ describe('StorageService (basic)', () => {
                   maxTtl: 3600,
                 }
               }
-              const legacyEnvLike: Record<string, any> = {
-                STORAGE_DIR: testStoragePath,
-                MAX_FILE_SIZE_MB: 1,
-                ALLOWED_MIME_TYPES: [],
-                ENABLE_DEDUPLICATION: true,
-              }
-              return key in legacyEnvLike ? legacyEnvLike[key] : def
+              return def
             },
           },
         },

@@ -14,6 +14,14 @@ export interface StorageAppConfig {
     keyPrefix: string
     enabled: boolean
   }
+  s3: {
+    endpoint?: string
+    region: string
+    bucket: string
+    accessKeyId: string
+    secretAccessKey: string
+    forcePathStyle: boolean
+  }
 }
 
 function parseAllowedMimeTypes(input?: string): string[] {
@@ -55,6 +63,14 @@ export default registerAs('storage', (): StorageAppConfig => {
       db: parseInt(process.env.REDIS_DB || '0', 10),
       keyPrefix: process.env.REDIS_KEY_PREFIX || 'tmp_files:',
       enabled: process.env.REDIS_ENABLED === 'true',
+    },
+    s3: {
+      endpoint: process.env.S3_ENDPOINT,
+      region: process.env.S3_REGION || 'us-east-1',
+      bucket: process.env.S3_BUCKET || 'tmp-files',
+      accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
     },
   }
 })

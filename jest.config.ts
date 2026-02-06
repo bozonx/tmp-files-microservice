@@ -14,6 +14,7 @@ const transform = {
 // Map .js imports to .ts files and handle aliases
 const moduleNameMapper = {
   '^(\\.{1,2}/.*)\\.js$': '$1',
+  '^@/(.*)\\.js$': '<rootDir>/src/$1',
   '^@/(.*)$': '<rootDir>/src/$1',
   '^@common/(.*)$': '<rootDir>/src/common/$1',
   '^@modules/(.*)$': '<rootDir>/src/modules/$1',
