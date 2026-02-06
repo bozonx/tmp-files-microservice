@@ -1,4 +1,4 @@
-import { Redis } from 'ioredis'
+import type { Redis } from 'ioredis'
 import type { MetadataAdapter } from '../metadata.adapter.js'
 import type { FileInfo, FileStats } from '../../common/interfaces/file.interface.js'
 import type {
@@ -29,11 +29,11 @@ export class RedisMetadataAdapter implements MetadataAdapter {
     this.STATS_KEY = `${p}stats`
   }
 
-  async initialize(): Promise<void> {
+  public async initialize(): Promise<void> {
     // No-op
   }
 
-  async saveFileInfo(fileInfo: FileInfo): Promise<void> {
+  public async saveFileInfo(fileInfo: FileInfo): Promise<void> {
     const dateKey = DateUtil.format(fileInfo.uploadedAt, 'YYYY-MM-DD')
     const normalized: FileInfo = {
       ...fileInfo,
@@ -58,7 +58,7 @@ export class RedisMetadataAdapter implements MetadataAdapter {
       .exec()
   }
 
-  async getFileInfo(fileId: string): Promise<FileInfo | null> {
+  public async getFileInfo(fileId: string): Promise<FileInfo | null> {
     const raw = await this.deps.client.hget(this.FILES_KEY, fileId)
     if (!raw) return null
 
@@ -68,7 +68,7 @@ export class RedisMetadataAdapter implements MetadataAdapter {
     return parsed
   }
 
-  async deleteFileInfo(fileId: string): Promise<void> {
+  public async deleteFileInfo(fileId: string): Promise<void> {
     const fileInfo = await this.getFileInfo(fileId)
     if (!fileInfo) return
 
@@ -92,14 +92,14 @@ export class RedisMetadataAdapter implements MetadataAdapter {
     await multi.exec()
   }
 
-  async findFileByHash(hash: string): Promise<FileInfo | null> {
+  public async findFileByHash(hash: string): Promise<FileInfo | null> {
     const id = await this.deps.client.hget(this.HASHES_KEY, hash)
     if (!id) return null
     return this.getFileInfo(id)
   }
 
-  async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
-    const all = (await this.deps.client.hgetall(this.FILES_KEY)) as Record<string, string>
+  public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
+    const all = await this.deps.client.hgetall(this.FILES_KEY)
     let files = Object.values(all).map((v) => {
       const f = JSON.parse(v) as FileInfo
       f.uploadedAt = toDateSafe(f.uploadedAt)
@@ -112,12 +112,22 @@ export class RedisMetadataAdapter implements MetadataAdapter {
     }
 
     if (params.mimeType) files = files.filter((f) => f.mimeType === params.mimeType)
-    if (params.minSize !== undefined) files = files.filter((f) => f.size >= params.minSize!)
-    if (params.maxSize !== undefined) files = files.filter((f) => f.size <= params.maxSize!)
-    if (params.uploadedAfter)
-      files = files.filter((f) => DateUtil.isAfter(f.uploadedAt, params.uploadedAfter!))
-    if (params.uploadedBefore)
-      files = files.filter((f) => DateUtil.isBefore(f.uploadedAt, params.uploadedBefore!))
+    if (params.minSize !== undefined) {
+      const min = params.minSize
+      files = files.filter((f) => f.size >= min)
+    }
+    if (params.maxSize !== undefined) {
+      const max = params.maxSize
+      files = files.filter((f) => f.size <= max)
+    }
+    if (params.uploadedAfter !== undefined) {
+      const after = params.uploadedAfter
+      files = files.filter((f) => DateUtil.isAfter(f.uploadedAt, after))
+    }
+    if (params.uploadedBefore !== undefined) {
+      const before = params.uploadedBefore
+      files = files.filter((f) => DateUtil.isBefore(f.uploadedAt, before))
+    }
     if (params.expiredOnly) files = files.filter((f) => DateUtil.isExpired(f.expiresAt))
 
     files.sort((a, b) => DateUtil.toTimestamp(b.uploadedAt) - DateUtil.toTimestamp(a.uploadedAt))
@@ -129,7 +139,7 @@ export class RedisMetadataAdapter implements MetadataAdapter {
     return { files, total, params }
   }
 
-  async getStats(): Promise<FileStats> {
+  public async getStats(): Promise<FileStats> {
     const [stats, mimeTypes, dates] = await Promise.all([
       this.deps.client.hgetall(this.STATS_KEY) as unknown as Promise<Record<string, string>>,
       this.deps.client.hgetall(`${this.STATS_KEY}:mime_types`) as unknown as Promise<
@@ -161,11 +171,11 @@ export class RedisMetadataAdapter implements MetadataAdapter {
     }
   }
 
-  async getAllFileIds(): Promise<string[]> {
+  public async getAllFileIds(): Promise<string[]> {
     return this.deps.client.hkeys(this.FILES_KEY)
   }
 
-  async isHealthy(): Promise<boolean> {
+  public async isHealthy(): Promise<boolean> {
     try {
       await this.deps.client.ping()
       return true

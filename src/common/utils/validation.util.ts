@@ -5,7 +5,7 @@ export class ValidationUtil {
   private static readonly MIN_TTL_MIN = 1 * 60
   private static readonly DEFAULT_MAX_TTL = 31 * 24 * 60 * 60
 
-  static validateUploadedFile(
+  public static validateUploadedFile(
     file: UploadedFile,
     allowedMimeTypes: string[] = [],
     maxFileSize: number = this.DEFAULT_MAX_FILE_SIZE
@@ -44,7 +44,7 @@ export class ValidationUtil {
     return { isValid: errors.length === 0, errors }
   }
 
-  static validateTTL(
+  public static validateTTL(
     ttl: number,
     minTtl: number = this.MIN_TTL_MIN,
     maxTtl: number = this.DEFAULT_MAX_TTL
@@ -66,7 +66,7 @@ export class ValidationUtil {
     return { isValid: errors.length === 0, errors }
   }
 
-  static validateFileId(id: string): { isValid: boolean; errors: string[] } {
+  public static validateFileId(id: string): { isValid: boolean; errors: string[] } {
     const errors: string[] = []
 
     if (!id || typeof id !== 'string') {
@@ -82,7 +82,10 @@ export class ValidationUtil {
     return { isValid: errors.length === 0, errors }
   }
 
-  static validateMetadata(metadata: Record<string, any>): { isValid: boolean; errors: string[] } {
+  public static validateMetadata(metadata: Record<string, unknown>): {
+    isValid: boolean
+    errors: string[]
+  } {
     const errors: string[] = []
 
     if (metadata === null || metadata === undefined) {
@@ -135,7 +138,7 @@ export class ValidationUtil {
     return { isValid: errors.length === 0, errors }
   }
 
-  static validateFileInfo(fileInfo: FileInfo): { isValid: boolean; errors: string[] } {
+  public static validateFileInfo(fileInfo: FileInfo): { isValid: boolean; errors: string[] } {
     const errors: string[] = []
 
     if (!fileInfo || typeof fileInfo !== 'object') {
@@ -194,19 +197,19 @@ export class ValidationUtil {
     return { isValid: errors.length === 0, errors }
   }
 
-  static isValidUUID(uuid: string): boolean {
+  public static isValidUUID(uuid: string): boolean {
     if (!uuid || typeof uuid !== 'string') return false
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     return uuidRegex.test(uuid)
   }
 
-  static isValidEmail(email: string): boolean {
+  public static isValidEmail(email: string): boolean {
     if (!email || typeof email !== 'string') return false
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     return emailRegex.test(email)
   }
 
-  static isValidURL(url: string): boolean {
+  public static isValidURL(url: string): boolean {
     if (!url || typeof url !== 'string') return false
     try {
       new URL(url)

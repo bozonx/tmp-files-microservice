@@ -16,7 +16,7 @@ export interface StorageMetadata {
   files: Record<string, FileInfo>
 }
 
-export interface StorageOperationResult<T = any> {
+export interface StorageOperationResult<T = unknown> {
   success: boolean
   error?: string
   data?: T

@@ -22,7 +22,7 @@ export interface CloudflareBindings {
 
 export default {
   async fetch(request: Request, env: CloudflareBindings, ctx: ExecutionContext): Promise<Response> {
-    const appEnv = loadAppEnv(env as any)
+    const appEnv = loadAppEnv(env as unknown as Record<string, unknown>)
     const logger = createDefaultLogger(appEnv)
 
     const storage = new R2StorageAdapter({ bucket: env.R2_BUCKET })
@@ -42,15 +42,11 @@ export default {
       return env.ASSETS.fetch(request)
     }
 
-    return app.fetch(request, env as any, ctx as any)
+    return app.fetch(request, env, ctx)
   },
 
-  async scheduled(
-    _event: ScheduledEvent,
-    env: CloudflareBindings,
-    ctx: ExecutionContext
-  ): Promise<void> {
-    const appEnv = loadAppEnv(env as any)
+  scheduled(_event: ScheduledEvent, env: CloudflareBindings, ctx: ExecutionContext): void {
+    const appEnv = loadAppEnv(env as unknown as Record<string, unknown>)
     const logger = createDefaultLogger(appEnv)
 
     const storage = new R2StorageAdapter({ bucket: env.R2_BUCKET })
@@ -62,7 +58,11 @@ export default {
 
     ctx.waitUntil(
       Promise.resolve(
-        app.fetch(new Request(`http://internal${apiBase}/cleanup/run`, { method: 'POST' }))
+        app.fetch(
+          new Request(`http://internal${apiBase}/cleanup/run`, { method: 'POST' }),
+          env,
+          ctx
+        )
       )
     )
   },

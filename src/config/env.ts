@@ -32,8 +32,10 @@ export type RuntimeEnvSource = Record<string, unknown>
 function readString(env: RuntimeEnvSource, key: string, fallback = ''): string {
   const v = env[key]
   if (typeof v === 'string') return v
+  if (typeof v === 'number') return String(v)
+  if (typeof v === 'boolean') return v ? 'true' : 'false'
   if (v === undefined || v === null) return fallback
-  return String(v)
+  return fallback
 }
 
 function readInt(env: RuntimeEnvSource, key: string, fallback: number): number {
@@ -54,7 +56,7 @@ function parseAllowedMimeTypes(input: string): string[] {
   if (trimmed === '') return []
 
   try {
-    const parsed = JSON.parse(trimmed)
+    const parsed: unknown = JSON.parse(trimmed)
     if (Array.isArray(parsed)) {
       return parsed
         .filter((v) => typeof v === 'string')
@@ -73,9 +75,9 @@ function parseAllowedMimeTypes(input: string): string[] {
 
 export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
   const nodeEnvRaw = readString(envSource, 'NODE_ENV', 'production')
-  const NODE_ENV = (['development', 'production', 'test'].includes(nodeEnvRaw)
-    ? nodeEnvRaw
-    : 'production') as AppEnv['NODE_ENV']
+  const NODE_ENV = (
+    ['development', 'production', 'test'].includes(nodeEnvRaw) ? nodeEnvRaw : 'production'
+  ) as AppEnv['NODE_ENV']
 
   const BASE_PATH = readString(envSource, 'BASE_PATH', '').replace(/^\/+|\/+$/g, '')
 

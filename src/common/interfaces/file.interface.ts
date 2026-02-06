@@ -17,13 +17,13 @@ export interface FileInfo {
   ttl: number
   expiresAt: Date | string
   filePath: string
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
 }
 
 export interface CreateFileParams {
   file: UploadedFile
   ttl: number
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface FileOperationResult<T = FileInfo> {

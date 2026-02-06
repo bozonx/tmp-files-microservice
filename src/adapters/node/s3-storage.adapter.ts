@@ -1,5 +1,5 @@
 import {
-  S3Client,
+  type S3Client,
   GetObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
@@ -18,13 +18,24 @@ export interface S3StorageAdapterDeps {
 export class S3StorageAdapter implements FileStorageAdapter {
   constructor(private readonly deps: S3StorageAdapterDeps) {}
 
-  async saveFile(
+  public async saveFile(
     input: ReadableStream<Uint8Array>,
     key: string,
     mimeType: string
   ): Promise<StorageOperationResult<string>> {
     try {
-      const body = Readable.fromWeb(input as any)
+      const reader = input.getReader()
+      const iterable = {
+        async *[Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
+          while (true) {
+            const { value, done } = await reader.read()
+            if (done) break
+            if (value) yield value
+          }
+        },
+      }
+
+      const body = Readable.from(iterable)
       const upload = new Upload({
         client: this.deps.client,
         params: {
@@ -43,15 +54,15 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  async readFile(key: string): Promise<StorageOperationResult<Uint8Array>> {
+  public async readFile(key: string): Promise<StorageOperationResult<Uint8Array>> {
     try {
       const cmd = new GetObjectCommand({ Bucket: this.deps.bucket, Key: key })
       const res = await this.deps.client.send(cmd)
-      const body = res.Body as any
+      const body = res.Body
       if (!body) return { success: false, error: 'NotFound' }
 
       const chunks: Buffer[] = []
-      for await (const chunk of body as any) {
+      for await (const chunk of body as AsyncIterable<Uint8Array>) {
         chunks.push(Buffer.from(chunk))
       }
       return { success: true, data: new Uint8Array(Buffer.concat(chunks)) }
@@ -61,15 +72,17 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  async createReadStream(key: string): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
+  public async createReadStream(
+    key: string
+  ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
     try {
       const cmd = new GetObjectCommand({ Bucket: this.deps.bucket, Key: key })
       const res = await this.deps.client.send(cmd)
-      const body = res.Body as any
+      const body = res.Body
       if (!body) return { success: false, error: 'NotFound' }
 
-      const nodeReadable = body as Readable
-      const web = Readable.toWeb(nodeReadable) as any
+      const nodeReadable = body as unknown as Readable
+      const web = Readable.toWeb(nodeReadable) as unknown as ReadableStream<Uint8Array>
       return { success: true, data: web }
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e))
@@ -77,7 +90,7 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  async deleteFile(key: string): Promise<StorageOperationResult<void>> {
+  public async deleteFile(key: string): Promise<StorageOperationResult<void>> {
     try {
       const cmd = new DeleteObjectCommand({ Bucket: this.deps.bucket, Key: key })
       await this.deps.client.send(cmd)
@@ -88,7 +101,7 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  async listAllKeys(): Promise<string[]> {
+  public async listAllKeys(): Promise<string[]> {
     const keys: string[] = []
     let continuationToken: string | undefined
 
@@ -113,7 +126,7 @@ export class S3StorageAdapter implements FileStorageAdapter {
     return keys
   }
 
-  async isHealthy(): Promise<boolean> {
+  public async isHealthy(): Promise<boolean> {
     try {
       const cmd = new HeadBucketCommand({ Bucket: this.deps.bucket })
       await this.deps.client.send(cmd)

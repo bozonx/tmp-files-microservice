@@ -65,7 +65,7 @@ export class StorageService {
         throw new Error(`File size ${size} exceeds maximum allowed size ${this.maxFileSizeBytes}`)
       }
 
-      if (!firstChunk) firstChunk = value
+      firstChunk ??= value
       hasher.update(value)
     }
 
@@ -80,13 +80,13 @@ export class StorageService {
     if (!firstChunk || firstChunk.byteLength === 0) return fallbackMime
 
     try {
-      // file-type depends on Node Buffer; keep it best-effort and only if Buffer exists.
-      const BufferAny = (globalThis as any).Buffer as undefined | ((input: Uint8Array) => unknown)
-      if (!BufferAny) return fallbackMime
+      // file-type uses Node Buffer; for Workers we just skip detection.
+      const maybeBuffer = (globalThis as unknown as { Buffer?: typeof Buffer }).Buffer
+      if (!maybeBuffer) return fallbackMime
 
       const { fileTypeFromBuffer } = await import('file-type')
-      const detected = await fileTypeFromBuffer((globalThis as any).Buffer.from(firstChunk))
-      return detected?.mime || fallbackMime
+      const detected = await fileTypeFromBuffer(maybeBuffer.from(firstChunk))
+      return detected?.mime ?? fallbackMime
     } catch {
       return fallbackMime
     }
@@ -110,7 +110,7 @@ export class StorageService {
     this.initialized = true
   }
 
-  async saveFile(params: CreateFileParams): Promise<FileOperationResult> {
+  public async saveFile(params: CreateFileParams): Promise<FileOperationResult> {
     await this.ensureInitialized()
 
     const fileId = this.randomUUID()
@@ -122,7 +122,7 @@ export class StorageService {
     const uploadPromise = this.deps.fileStorage.saveFile(
       forUpload,
       key,
-      params.file.mimetype || 'application/octet-stream'
+      params.file.mimetype ?? 'application/octet-stream'
     )
 
     try {
@@ -144,7 +144,7 @@ export class StorageService {
       }
 
       const mimeType = await this.detectMimeTypeFromFirstChunk(
-        params.file.mimetype || 'application/octet-stream',
+        params.file.mimetype ?? 'application/octet-stream',
         processed.firstChunk
       )
       if (this.allowedMimeTypes.length > 0 && !this.allowedMimeTypes.includes(mimeType)) {
@@ -182,7 +182,7 @@ export class StorageService {
     }
   }
 
-  async getFileInfo(fileId: string): Promise<FileOperationResult> {
+  public async getFileInfo(fileId: string): Promise<FileOperationResult> {
     await this.ensureInitialized()
 
     const fileInfo = await this.deps.metadata.getFileInfo(fileId)
@@ -195,7 +195,7 @@ export class StorageService {
     return { success: true, data: fileInfo }
   }
 
-  async readFile(fileId: string): Promise<StorageOperationResult<Uint8Array>> {
+  public async readFile(fileId: string): Promise<StorageOperationResult<Uint8Array>> {
     const infoRes = await this.getFileInfo(fileId)
     if (!infoRes.success) return { success: false, error: infoRes.error }
 
@@ -203,7 +203,7 @@ export class StorageService {
     return this.deps.fileStorage.readFile(info.filePath)
   }
 
-  async createFileReadStream(
+  public async createFileReadStream(
     fileId: string
   ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
     const infoRes = await this.getFileInfo(fileId)
@@ -213,7 +213,7 @@ export class StorageService {
     return this.deps.fileStorage.createReadStream(info.filePath)
   }
 
-  async deleteFile(fileId: string): Promise<FileOperationResult> {
+  public async deleteFile(fileId: string): Promise<FileOperationResult> {
     await this.ensureInitialized()
 
     const fileInfo = await this.deps.metadata.getFileInfo(fileId)
@@ -225,17 +225,17 @@ export class StorageService {
     return { success: true, data: fileInfo }
   }
 
-  async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
+  public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
     await this.ensureInitialized()
     return this.deps.metadata.searchFiles(params)
   }
 
-  async getFileStats(): Promise<FileStats> {
+  public async getFileStats(): Promise<FileStats> {
     await this.ensureInitialized()
     return this.deps.metadata.getStats()
   }
 
-  async getStorageHealth(): Promise<StorageHealth> {
+  public async getStorageHealth(): Promise<StorageHealth> {
     await this.ensureInitialized()
 
     const [isMetadataHealthy, isStorageHealthy, stats] = await Promise.all([
@@ -255,7 +255,7 @@ export class StorageService {
     }
   }
 
-  async deleteOrphanedFiles(): Promise<{ deleted: number; freed: number }> {
+  public async deleteOrphanedFiles(): Promise<{ deleted: number; freed: number }> {
     await this.ensureInitialized()
 
     const ids = await this.deps.metadata.getAllFileIds()

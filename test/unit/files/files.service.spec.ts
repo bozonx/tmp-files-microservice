@@ -115,7 +115,8 @@ describe('FilesService', () => {
           useValue: {
             get: (key: string) => {
               if (key === 'app') return { basePath: '', downloadBaseUrl: 'https://cdn.example.com' }
-              if (key === 'storage') return { maxTtl: 3600, maxFileSize: 1024, allowedMimeTypes: [] }
+              if (key === 'storage')
+                return { maxTtl: 3600, maxFileSize: 1024, allowedMimeTypes: [] }
             },
           },
         },

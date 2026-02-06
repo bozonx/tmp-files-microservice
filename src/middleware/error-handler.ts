@@ -1,10 +1,21 @@
 import type { ErrorHandler } from 'hono'
+import type { HonoEnv } from '../types/hono.types.js'
 
-export function createErrorHandler(): ErrorHandler {
+interface HttpErrorLike {
+  status: number
+}
+
+function isHttpErrorLike(err: unknown): err is HttpErrorLike {
+  if (typeof err !== 'object' || err === null) return false
+  if (!('status' in err)) return false
+  return typeof (err as { status?: unknown }).status === 'number'
+}
+
+export function createErrorHandler(): ErrorHandler<HonoEnv> {
   return (err, c) => {
     const url = new URL(c.req.url)
 
-    const statusCode = (err as any)?.status ?? (err as any)?.statusCode ?? 500
+    const statusCode = isHttpErrorLike(err) ? err.status : 500
     const message = err instanceof Error ? err.message : 'Internal server error'
 
     const body = {
@@ -16,11 +27,14 @@ export function createErrorHandler(): ErrorHandler {
       error: err instanceof Error ? err.name : 'UnknownError',
     }
 
-    const logger = (c.env as any)?.logger
-    if (logger?.error) {
-      logger.error(`${c.req.method} ${url.pathname} - ${statusCode} - ${message}`)
-    }
+    const logger = c.get('logger')
+    logger.error(`${c.req.method} ${url.pathname} - ${statusCode} - ${message}`)
 
-    return c.json(body, statusCode)
+    return new Response(JSON.stringify(body), {
+      status: statusCode,
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+      },
+    })
   }
 }

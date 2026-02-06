@@ -11,7 +11,7 @@ export interface CleanupServiceDeps {
 export class CleanupService {
   constructor(private readonly deps: CleanupServiceDeps) {}
 
-  async runCleanup(): Promise<void> {
+  public async runCleanup(): Promise<void> {
     const expired = await this.deps.storage.searchFiles({
       expiredOnly: true,
       limit: 1000,

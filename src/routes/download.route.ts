@@ -1,10 +1,11 @@
 import { Hono, type Context } from 'hono'
+import type { HonoEnv } from '../types/hono.types.js'
 
-export function createDownloadRoutes(): Hono {
-  const app = new Hono()
+export function createDownloadRoutes(): Hono<HonoEnv> {
+  const app = new Hono<HonoEnv>()
 
-  app.get('/download/:id', async (c: Context) => {
-    const services = (c.env as any).services
+  app.get('/download/:id', async (c: Context<HonoEnv>) => {
+    const services = c.get('services')
     const { stream, fileInfo } = await services.files.downloadFileStream({
       fileId: c.req.param('id'),
     })
@@ -15,7 +16,7 @@ export function createDownloadRoutes(): Hono {
     c.header('Pragma', 'no-cache')
     c.header('Expires', '0')
 
-    return new Response(stream as any, { status: 200, headers: c.res.headers })
+    return new Response(stream, { status: 200, headers: c.res.headers })
   })
 
   return app

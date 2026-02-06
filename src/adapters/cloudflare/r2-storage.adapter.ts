@@ -10,7 +10,7 @@ export interface R2StorageAdapterDeps {
 export class R2StorageAdapter implements FileStorageAdapter {
   constructor(private readonly deps: R2StorageAdapterDeps) {}
 
-  async saveFile(
+  public async saveFile(
     input: ReadableStream<Uint8Array>,
     key: string,
     mimeType: string
@@ -28,7 +28,7 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  async readFile(key: string): Promise<StorageOperationResult<Uint8Array>> {
+  public async readFile(key: string): Promise<StorageOperationResult<Uint8Array>> {
     try {
       const obj = await this.deps.bucket.get(key)
       if (!obj) return { success: false, error: 'NotFound' }
@@ -40,10 +40,12 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  async createReadStream(key: string): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
+  public async createReadStream(
+    key: string
+  ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
     try {
       const obj = await this.deps.bucket.get(key)
-      if (!obj || !obj.body) return { success: false, error: 'NotFound' }
+      if (!obj?.body) return { success: false, error: 'NotFound' }
       return { success: true, data: obj.body }
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e))
@@ -51,7 +53,7 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  async deleteFile(key: string): Promise<StorageOperationResult<void>> {
+  public async deleteFile(key: string): Promise<StorageOperationResult<void>> {
     try {
       await this.deps.bucket.delete(key)
       return { success: true }
@@ -61,7 +63,7 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  async listAllKeys(): Promise<string[]> {
+  public async listAllKeys(): Promise<string[]> {
     const keys: string[] = []
     let cursor: string | undefined
 
@@ -76,7 +78,7 @@ export class R2StorageAdapter implements FileStorageAdapter {
     return keys
   }
 
-  async isHealthy(): Promise<boolean> {
+  public async isHealthy(): Promise<boolean> {
     try {
       await this.deps.bucket.list({ limit: 1 })
       return true

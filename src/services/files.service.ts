@@ -19,10 +19,18 @@ export interface FileResponse {
   uploadedAt: string
   ttlMins: number
   expiresAt: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   hash: string
   isExpired: boolean
   timeRemainingMins: number
+}
+
+export interface PaginationInfo {
+  page: number
+  limit: number
+  totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
 }
 
 export interface UploadFileResponse {
@@ -47,6 +55,16 @@ export interface DeleteFileResponse {
   deletedAt: string
 }
 
+class HttpError extends Error {
+  public readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+    this.name = 'HttpError'
+  }
+}
+
 export class FilesService {
   constructor(private readonly deps: FilesServiceDeps) {}
 
@@ -55,49 +73,41 @@ export class FilesService {
     return base ? `/${base}/api/v1` : '/api/v1'
   }
 
-  async uploadFileFromUrl(params: {
+  public async uploadFileFromUrl(params: {
     url: string
     ttl: number
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   }): Promise<UploadFileResponse> {
     if (!params.url || typeof params.url !== 'string') {
-      const err: any = new Error('Invalid URL')
-      err.status = 400
-      throw err
+      throw new HttpError('Invalid URL', 400)
     }
 
-    const res = await fetch(params.url, { redirect: 'follow' as any })
+    const res = await fetch(params.url, { redirect: 'follow' })
     if (!res.ok) {
-      const err: any = new Error(`Failed to fetch URL. Status: ${res.status}`)
-      err.status = 400
-      throw err
+      throw new HttpError(`Failed to fetch URL. Status: ${res.status}`, 400)
     }
 
-    const contentType = res.headers.get('content-type') || 'application/octet-stream'
+    const contentType = res.headers.get('content-type') ?? 'application/octet-stream'
     const contentLength = res.headers.get('content-length')
     const size = contentLength ? Number.parseInt(contentLength, 10) : 0
 
     const max = this.deps.env.MAX_FILE_SIZE_MB * 1024 * 1024
     if (size && size > max) {
-      const err: any = new Error('File size exceeds the maximum allowed limit')
-      err.status = 413
-      throw err
+      throw new HttpError('File size exceeds the maximum allowed limit', 413)
     }
 
     const urlObj = new URL(params.url)
-    const nameFromUrl = urlObj.pathname.split('/').filter(Boolean).pop() || 'file'
+    const nameFromUrl = urlObj.pathname.split('/').filter(Boolean).pop() ?? 'file'
 
     if (!res.body) {
-      const err: any = new Error('Remote response body is empty')
-      err.status = 500
-      throw err
+      throw new HttpError('Remote response body is empty', 500)
     }
 
     const file: UploadedFile = {
       originalname: nameFromUrl,
       mimetype: contentType,
       size,
-      stream: res.body as any,
+      stream: res.body,
     }
 
     return this.uploadFile({ file, ttl: params.ttl, metadata: params.metadata })
@@ -140,10 +150,10 @@ export class FilesService {
     }
   }
 
-  async uploadFile(params: {
+  public async uploadFile(params: {
     file: UploadedFile
     ttl: number
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   }): Promise<UploadFileResponse> {
     const maxFileSize = this.deps.env.MAX_FILE_SIZE_MB * 1024 * 1024
 
@@ -154,24 +164,18 @@ export class FilesService {
     )
     if (!v.isValid) {
       const tooLarge = v.errors.some((e) => e.includes('exceeds maximum allowed size'))
-      const error: any = new Error(`File validation failed: ${v.errors.join(', ')}`)
-      error.status = tooLarge ? 413 : 400
-      throw error
+      throw new HttpError(`File validation failed: ${v.errors.join(', ')}`, tooLarge ? 413 : 400)
     }
 
     const ttlValidation = ValidationUtil.validateTTL(params.ttl, 60, this.deps.env.MAX_TTL_MIN * 60)
     if (!ttlValidation.isValid) {
-      const error: any = new Error(`TTL validation failed: ${ttlValidation.errors.join(', ')}`)
-      error.status = 400
-      throw error
+      throw new HttpError(`TTL validation failed: ${ttlValidation.errors.join(', ')}`, 400)
     }
 
     if (params.metadata) {
       const mv = ValidationUtil.validateMetadata(params.metadata)
       if (!mv.isValid) {
-        const error: any = new Error(`Metadata validation failed: ${mv.errors.join(', ')}`)
-        error.status = 400
-        throw error
+        throw new HttpError(`Metadata validation failed: ${mv.errors.join(', ')}`, 400)
       }
     }
 
@@ -182,9 +186,7 @@ export class FilesService {
     })
 
     if (!saveRes.success) {
-      const error: any = new Error(`Failed to save file: ${saveRes.error}`)
-      error.status = 500
-      throw error
+      throw new HttpError(`Failed to save file: ${saveRes.error ?? 'Unknown error'}`, 500)
     }
 
     const fileInfo = saveRes.data as FileInfo
@@ -201,20 +203,17 @@ export class FilesService {
     }
   }
 
-  async getFileInfo(params: { fileId: string }): Promise<GetFileInfoResponse> {
+  public async getFileInfo(params: { fileId: string }): Promise<GetFileInfoResponse> {
     const idValidation = ValidationUtil.validateFileId(params.fileId)
     if (!idValidation.isValid) {
-      const error: any = new Error(`File ID validation failed: ${idValidation.errors.join(', ')}`)
-      error.status = 400
-      throw error
+      throw new HttpError(`File ID validation failed: ${idValidation.errors.join(', ')}`, 400)
     }
 
     const res = await this.deps.storage.getFileInfo(params.fileId)
     if (!res.success) {
-      const notFound = res.error?.includes('not found') || res.error?.includes('expired')
-      const error: any = new Error(res.error ?? 'Not found')
-      error.status = notFound ? 404 : 500
-      throw error
+      const notFound =
+        (res.error?.includes('not found') ?? false) || (res.error?.includes('expired') ?? false)
+      throw new HttpError(res.error ?? 'Not found', notFound ? 404 : 500)
     }
 
     const fileInfo = res.data as FileInfo
@@ -228,49 +227,41 @@ export class FilesService {
     }
   }
 
-  async downloadFileStream(params: {
+  public async downloadFileStream(params: {
     fileId: string
   }): Promise<{ stream: ReadableStream<Uint8Array>; fileInfo: FileInfo }> {
     const idValidation = ValidationUtil.validateFileId(params.fileId)
     if (!idValidation.isValid) {
-      const error: any = new Error(`File ID validation failed: ${idValidation.errors.join(', ')}`)
-      error.status = 400
-      throw error
+      throw new HttpError(`File ID validation failed: ${idValidation.errors.join(', ')}`, 400)
     }
 
     const fileRes = await this.deps.storage.getFileInfo(params.fileId)
     if (!fileRes.success) {
-      const notFound = fileRes.error?.includes('not found') || fileRes.error?.includes('expired')
-      const error: any = new Error(fileRes.error ?? 'Not found')
-      error.status = notFound ? 404 : 500
-      throw error
+      const notFound =
+        (fileRes.error?.includes('not found') ?? false) ||
+        (fileRes.error?.includes('expired') ?? false)
+      throw new HttpError(fileRes.error ?? 'Not found', notFound ? 404 : 500)
     }
 
     const info = fileRes.data as FileInfo
     const streamRes = await this.deps.storage.createFileReadStream(params.fileId)
     if (!streamRes.success) {
-      const error: any = new Error(`Failed to create read stream: ${streamRes.error}`)
-      error.status = 500
-      throw error
+      throw new HttpError(`Failed to create read stream: ${streamRes.error}`, 500)
     }
 
     return { stream: streamRes.data as ReadableStream<Uint8Array>, fileInfo: info }
   }
 
-  async deleteFile(params: { fileId: string }): Promise<DeleteFileResponse> {
+  public async deleteFile(params: { fileId: string }): Promise<DeleteFileResponse> {
     const idValidation = ValidationUtil.validateFileId(params.fileId)
     if (!idValidation.isValid) {
-      const error: any = new Error(`File ID validation failed: ${idValidation.errors.join(', ')}`)
-      error.status = 400
-      throw error
+      throw new HttpError(`File ID validation failed: ${idValidation.errors.join(', ')}`, 400)
     }
 
     const res = await this.deps.storage.deleteFile(params.fileId)
     if (!res.success) {
       const notFound = res.error?.includes('not found')
-      const error: any = new Error(res.error ?? 'Failed to delete')
-      error.status = notFound ? 404 : 500
-      throw error
+      throw new HttpError(res.error ?? 'Failed to delete', notFound ? 404 : 500)
     }
 
     return {
@@ -280,7 +271,7 @@ export class FilesService {
     }
   }
 
-  async listFiles(params: {
+  public async listFiles(params: {
     mimeType?: string
     minSize?: number
     maxSize?: number
@@ -289,12 +280,12 @@ export class FilesService {
     expiredOnly?: boolean
     limit?: number
     offset?: number
-  }): Promise<{ files: FileResponse[]; total: number; pagination: any }> {
+  }): Promise<{ files: FileResponse[]; total: number; pagination: PaginationInfo }> {
     const res = await this.deps.storage.searchFiles(params)
     const files = res.files.map((f) => this.toFileResponse(f))
 
-    const limit = params.limit || 10
-    const offset = params.offset || 0
+    const limit = params.limit ?? 10
+    const offset = params.offset ?? 0
 
     const pagination = {
       page: Math.floor(offset / limit) + 1,
@@ -307,12 +298,12 @@ export class FilesService {
     return { files, total: res.total, pagination }
   }
 
-  async getFileStats(): Promise<{ stats: any; generatedAt: string }> {
+  public async getFileStats(): Promise<{ stats: unknown; generatedAt: string }> {
     const stats = await this.deps.storage.getFileStats()
     return { stats, generatedAt: new Date().toISOString() }
   }
 
-  async fileExists(fileId: string): Promise<boolean> {
+  public async fileExists(fileId: string): Promise<boolean> {
     const res = await this.deps.storage.getFileInfo(fileId)
     return !!res.success
   }

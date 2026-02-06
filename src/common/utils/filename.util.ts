@@ -17,7 +17,7 @@ export class FilenameUtil {
     return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`
   }
 
-  static generateSafeFilename(originalName: string, hash: string): string {
+  public static generateSafeFilename(originalName: string, hash: string): string {
     if (!originalName || typeof originalName !== 'string' || originalName.trim() === '') {
       throw new Error('Original filename must be a non-empty string')
     }
@@ -33,7 +33,7 @@ export class FilenameUtil {
     return `${shortName}_${uuid}${extension}`
   }
 
-  static getFileExtension(filename: string): string {
+  public static getFileExtension(filename: string): string {
     if (!filename || typeof filename !== 'string') return ''
     const lastDot = filename.lastIndexOf('.')
     if (lastDot <= 0) return ''
@@ -43,7 +43,7 @@ export class FilenameUtil {
     return ext.toLowerCase()
   }
 
-  static removeExtension(filename: string): string {
+  public static removeExtension(filename: string): string {
     if (!filename || typeof filename !== 'string') return ''
     const ext = this.getFileExtension(filename)
     const base = this.basename(filename)
@@ -51,13 +51,13 @@ export class FilenameUtil {
     return base.slice(0, Math.max(0, base.length - ext.length))
   }
 
-  static basename(input: string): string {
+  public static basename(input: string): string {
     const normalized = input.replace(/\\/g, '/')
     const parts = normalized.split('/').filter(Boolean)
     return parts.length > 0 ? parts[parts.length - 1] : ''
   }
 
-  static sanitizeFilename(filename: string): string {
+  public static sanitizeFilename(filename: string): string {
     if (!filename || typeof filename !== 'string') return ''
 
     let sanitized = filename.replace(/[^\p{L}\p{N}._-]/gu, '_')
@@ -67,7 +67,7 @@ export class FilenameUtil {
     return sanitized
   }
 
-  static isSafeFilename(filename: string): boolean {
+  public static isSafeFilename(filename: string): boolean {
     if (!filename || typeof filename !== 'string') return false
     if (filename.length > this.MAX_FILENAME_LENGTH) return false
     if (this.FORBIDDEN_CHARS_TEST.test(filename)) return false
@@ -75,7 +75,7 @@ export class FilenameUtil {
     return true
   }
 
-  static generateDatePath(date: Date = new Date()): string {
+  public static generateDatePath(date: Date = new Date()): string {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
       throw new Error('Invalid date provided')
     }
@@ -84,7 +84,7 @@ export class FilenameUtil {
     return `${year}-${month}`
   }
 
-  static createFilePath(basePath: string, datePath: string, filename: string): string {
+  public static createFilePath(basePath: string, datePath: string, filename: string): string {
     if (!basePath || !datePath || !filename) {
       throw new Error('All path components must be provided')
     }
@@ -94,7 +94,7 @@ export class FilenameUtil {
     return `${normalizedBase}/${normalizedDate}/${normalizedFilename}`
   }
 
-  static parseFilePath(filePath: string): {
+  public static parseFilePath(filePath: string): {
     directory: string
     filename: string
     basename: string
@@ -114,7 +114,7 @@ export class FilenameUtil {
     return { directory, filename, basename: basenameWithoutExt, extension }
   }
 
-  static isAllowedExtension(filename: string, allowedExtensions: string[]): boolean {
+  public static isAllowedExtension(filename: string, allowedExtensions: string[]): boolean {
     if (!filename || !Array.isArray(allowedExtensions)) return false
     const extension = this.getFileExtension(filename).toLowerCase()
     const normalizedAllowed = allowedExtensions.map((ext) =>

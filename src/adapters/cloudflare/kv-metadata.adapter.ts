@@ -1,6 +1,9 @@
 import type { MetadataAdapter } from '../metadata.adapter.js'
 import type { FileInfo, FileStats } from '../../common/interfaces/file.interface.js'
-import type { FileSearchParams, FileSearchResult } from '../../common/interfaces/storage.interface.js'
+import type {
+  FileSearchParams,
+  FileSearchResult,
+} from '../../common/interfaces/storage.interface.js'
 import { DateUtil } from '../../common/utils/date.util.js'
 
 export interface KvMetadataAdapterDeps {
@@ -26,18 +29,22 @@ function toDateSafe(v: unknown): Date {
 export class KvMetadataAdapter implements MetadataAdapter {
   constructor(private readonly deps: KvMetadataAdapterDeps) {}
 
-  async initialize(): Promise<void> {
+  public async initialize(): Promise<void> {
     // No-op
   }
 
-  async saveFileInfo(fileInfo: FileInfo): Promise<void> {
+  public async saveFileInfo(fileInfo: FileInfo): Promise<void> {
     const expiresAt = toDateSafe(fileInfo.expiresAt)
     const ttlSeconds = Math.max(60, Math.floor((expiresAt.getTime() - Date.now()) / 1000))
 
     const normalized: FileInfo = {
       ...fileInfo,
-      uploadedAt: typeof fileInfo.uploadedAt === 'string' ? fileInfo.uploadedAt : fileInfo.uploadedAt.toISOString(),
-      expiresAt: typeof fileInfo.expiresAt === 'string' ? fileInfo.expiresAt : expiresAt.toISOString(),
+      uploadedAt:
+        typeof fileInfo.uploadedAt === 'string'
+          ? fileInfo.uploadedAt
+          : fileInfo.uploadedAt.toISOString(),
+      expiresAt:
+        typeof fileInfo.expiresAt === 'string' ? fileInfo.expiresAt : expiresAt.toISOString(),
     }
 
     await this.deps.kv.put(fileKey(fileInfo.id), JSON.stringify(normalized), {
@@ -49,7 +56,7 @@ export class KvMetadataAdapter implements MetadataAdapter {
     })
   }
 
-  async getFileInfo(fileId: string): Promise<FileInfo | null> {
+  public async getFileInfo(fileId: string): Promise<FileInfo | null> {
     const raw = await this.deps.kv.get(fileKey(fileId))
     if (!raw) return null
 
@@ -59,7 +66,7 @@ export class KvMetadataAdapter implements MetadataAdapter {
     return parsed
   }
 
-  async deleteFileInfo(fileId: string): Promise<void> {
+  public async deleteFileInfo(fileId: string): Promise<void> {
     const info = await this.getFileInfo(fileId)
     if (!info) return
 
@@ -71,13 +78,13 @@ export class KvMetadataAdapter implements MetadataAdapter {
     }
   }
 
-  async findFileByHash(hash: string): Promise<FileInfo | null> {
+  public async findFileByHash(hash: string): Promise<FileInfo | null> {
     const id = await this.deps.kv.get(hashKey(hash))
     if (!id) return null
     return this.getFileInfo(id)
   }
 
-  async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
+  public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
     // KV doesn't support rich queries; we list and filter in-memory.
     // This is acceptable for a tmp-files service with limited volume.
 
@@ -101,10 +108,22 @@ export class KvMetadataAdapter implements MetadataAdapter {
     }
 
     if (params.mimeType) out = out.filter((f) => f.mimeType === params.mimeType)
-    if (params.minSize !== undefined) out = out.filter((f) => f.size >= params.minSize!)
-    if (params.maxSize !== undefined) out = out.filter((f) => f.size <= params.maxSize!)
-    if (params.uploadedAfter) out = out.filter((f) => DateUtil.isAfter(f.uploadedAt, params.uploadedAfter!))
-    if (params.uploadedBefore) out = out.filter((f) => DateUtil.isBefore(f.uploadedAt, params.uploadedBefore!))
+    if (params.minSize !== undefined) {
+      const min = params.minSize
+      out = out.filter((f) => f.size >= min)
+    }
+    if (params.maxSize !== undefined) {
+      const max = params.maxSize
+      out = out.filter((f) => f.size <= max)
+    }
+    if (params.uploadedAfter !== undefined) {
+      const after = params.uploadedAfter
+      out = out.filter((f) => DateUtil.isAfter(f.uploadedAt, after))
+    }
+    if (params.uploadedBefore !== undefined) {
+      const before = params.uploadedBefore
+      out = out.filter((f) => DateUtil.isBefore(f.uploadedAt, before))
+    }
     if (params.expiredOnly) out = out.filter((f) => DateUtil.isExpired(f.expiresAt))
 
     out.sort((a, b) => DateUtil.toTimestamp(b.uploadedAt) - DateUtil.toTimestamp(a.uploadedAt))
@@ -116,7 +135,7 @@ export class KvMetadataAdapter implements MetadataAdapter {
     return { files: out, total, params }
   }
 
-  async getStats(): Promise<FileStats> {
+  public async getStats(): Promise<FileStats> {
     const res = await this.searchFiles({ expiredOnly: true })
     const all = res.files
 
@@ -137,7 +156,7 @@ export class KvMetadataAdapter implements MetadataAdapter {
     }
   }
 
-  async getAllFileIds(): Promise<string[]> {
+  public async getAllFileIds(): Promise<string[]> {
     const ids: string[] = []
     let cursor: string | undefined
 
@@ -152,7 +171,7 @@ export class KvMetadataAdapter implements MetadataAdapter {
     return ids
   }
 
-  async isHealthy(): Promise<boolean> {
+  public async isHealthy(): Promise<boolean> {
     try {
       await this.deps.kv.list({ limit: 1 })
       return true
