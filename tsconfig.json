@@ -10,6 +10,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",

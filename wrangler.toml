@@ -1,0 +1,25 @@
+name = "tmp-files-microservice"
+main = "src/entry-cloudflare.ts"
+compatibility_date = "2025-02-01"
+
+[vars]
+BASE_PATH = ""
+LOG_LEVEL = "warn"
+ENABLE_DEDUPLICATION = "true"
+MAX_TTL_MIN = "44640"
+MAX_FILE_SIZE_MB = "100"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "tmp-files"
+
+[[kv_namespaces]]
+binding = "METADATA_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"

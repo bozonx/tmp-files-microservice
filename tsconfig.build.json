@@ -4,6 +4,14 @@
     "node_modules",
     "test",
     "dist",
+    "src/main.ts",
+    "src/app.module.ts",
+    "src/modules/**/*",
+    "src/common/filters/**/*",
+    "src/config/app.config.ts",
+    "src/config/storage.config.ts",
+    "src/scripts/**/*",
+    "src/common/utils/request.util.ts",
     "**/*spec.ts",
     "**/*e2e-spec.ts"
   ]

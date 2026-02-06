@@ -2,7 +2,7 @@ export interface UploadedFile {
   originalname: string
   mimetype: string
   size: number
-  stream: NodeJS.ReadableStream
+  stream: ReadableStream<Uint8Array>
   encoding?: string
 }
 

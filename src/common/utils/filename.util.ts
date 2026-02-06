@@ -1,11 +1,21 @@
-import { extname, basename, dirname } from 'path'
-import { randomUUID } from 'node:crypto'
 import { HashUtil } from './hash.util.js'
 
 export class FilenameUtil {
   private static readonly MAX_FILENAME_LENGTH = 255
   private static readonly FORBIDDEN_CHARS_REPLACE = /[<>:"/\\|?*\x00-\x1f]/g
   private static readonly FORBIDDEN_CHARS_TEST = /[<>:"/\\|?*\x00-\x1f]/
+
+  private static randomUUID(): string {
+    const cryptoAny = globalThis.crypto as unknown as { randomUUID?: () => string } | undefined
+    if (cryptoAny?.randomUUID) return cryptoAny.randomUUID()
+
+    const hex = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256))
+    hex[6] = (hex[6] & 0x0f) | 0x40
+    hex[8] = (hex[8] & 0x3f) | 0x80
+    const toHex = (b: number) => b.toString(16).padStart(2, '0')
+    const s = hex.map(toHex).join('')
+    return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`
+  }
 
   static generateSafeFilename(originalName: string, hash: string): string {
     if (!originalName || typeof originalName !== 'string' || originalName.trim() === '') {
@@ -19,20 +29,32 @@ export class FilenameUtil {
     const cleanName = this.sanitizeFilename(originalName)
     const baseName = this.removeExtension(cleanName)
     const shortName = baseName.length > 20 ? baseName.substring(0, 20) : baseName
-    const uuid = randomUUID().replace(/-/g, '').substring(0, 8)
+    const uuid = this.randomUUID().replace(/-/g, '').substring(0, 8)
     return `${shortName}_${uuid}${extension}`
   }
 
   static getFileExtension(filename: string): string {
     if (!filename || typeof filename !== 'string') return ''
-    const extension = extname(filename)
-    return extension.toLowerCase()
+    const lastDot = filename.lastIndexOf('.')
+    if (lastDot <= 0) return ''
+    const ext = filename.slice(lastDot)
+    // guard against path-ish cases
+    if (ext.includes('/') || ext.includes('\\')) return ''
+    return ext.toLowerCase()
   }
 
   static removeExtension(filename: string): string {
     if (!filename || typeof filename !== 'string') return ''
-    const baseName = basename(filename, extname(filename))
-    return baseName
+    const ext = this.getFileExtension(filename)
+    const base = this.basename(filename)
+    if (!ext) return base
+    return base.slice(0, Math.max(0, base.length - ext.length))
+  }
+
+  static basename(input: string): string {
+    const normalized = input.replace(/\\/g, '/')
+    const parts = normalized.split('/').filter(Boolean)
+    return parts.length > 0 ? parts[parts.length - 1] : ''
   }
 
   static sanitizeFilename(filename: string): string {
@@ -82,8 +104,10 @@ export class FilenameUtil {
       throw new Error('File path must be a non-empty string')
     }
 
-    const directory = dirname(filePath)
-    const filename = basename(filePath)
+    const normalized = filePath.replace(/\\/g, '/')
+    const lastSlash = normalized.lastIndexOf('/')
+    const directory = lastSlash >= 0 ? normalized.slice(0, lastSlash) : ''
+    const filename = this.basename(normalized)
     const extension = this.getFileExtension(filename)
     const basenameWithoutExt = this.removeExtension(filename)
 
