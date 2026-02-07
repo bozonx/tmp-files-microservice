@@ -68,6 +68,110 @@ class HttpError extends Error {
 export class FilesService {
   constructor(private readonly deps: FilesServiceDeps) {}
 
+  private isProbablyNodeRuntime(): boolean {
+    return (
+      typeof process !== 'undefined' &&
+      typeof process.versions === 'object' &&
+      process.versions !== null &&
+      typeof (process.versions as Record<string, unknown>).node === 'string'
+    )
+  }
+
+  private isPrivateIpv4(ip: string): boolean {
+    const parts = ip.split('.')
+    if (parts.length !== 4) return false
+    const nums = parts.map((p) => Number.parseInt(p, 10))
+    if (nums.some((n) => !Number.isFinite(n) || n < 0 || n > 255)) return false
+
+    const [a, b] = nums
+    if (a === 10) return true
+    if (a === 127) return true
+    if (a === 0) return true
+    if (a === 169 && b === 254) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+    if (a === 192 && b === 168) return true
+    return false
+  }
+
+  private isBlockedHostname(hostname: string): boolean {
+    const h = hostname.toLowerCase()
+    if (h === 'localhost' || h.endsWith('.localhost')) return true
+    if (h === '0.0.0.0') return true
+    if (h === '::1') return true
+    if (h.endsWith('.local')) return true
+    if (this.isPrivateIpv4(h)) return true
+    return false
+  }
+
+  private async assertRemoteAddressAllowed(url: URL): Promise<void> {
+    if (this.deps.env.NODE_ENV === 'test') return
+
+    if (this.isBlockedHostname(url.hostname)) {
+      throw new HttpError('URL hostname is not allowed', 400)
+    }
+
+    if (!this.isProbablyNodeRuntime()) return
+
+    try {
+      const { lookup } = await import('node:dns/promises')
+      const res = await lookup(url.hostname, { all: true, verbatim: true })
+      const addresses = Array.isArray(res) ? res : [res]
+      for (const a of addresses) {
+        const addr = String((a as { address?: unknown }).address ?? '')
+        if (this.isPrivateIpv4(addr) || addr === '::1') {
+          throw new HttpError('URL resolves to a private network address', 400)
+        }
+      }
+    } catch (e: unknown) {
+      if (e instanceof HttpError) throw e
+      throw new HttpError('Failed to resolve URL hostname', 400)
+    }
+  }
+
+  private parseAndValidateRemoteUrl(input: string): URL {
+    let url: URL
+    try {
+      url = new URL(input)
+    } catch {
+      throw new HttpError('Invalid URL', 400)
+    }
+
+    const protocol = url.protocol.toLowerCase()
+    if (protocol !== 'http:' && protocol !== 'https:') {
+      throw new HttpError('Only http/https URLs are allowed', 400)
+    }
+    return url
+  }
+
+  private async fetchWithRedirects(
+    initialUrl: URL,
+    maxRedirects: number
+  ): Promise<{ response: Response; finalUrl: URL }> {
+    let current = initialUrl
+
+    for (let i = 0; i <= maxRedirects; i++) {
+      await this.assertRemoteAddressAllowed(current)
+
+      const res = await fetch(current, {
+        redirect: 'manual',
+      })
+
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get('location')
+        if (!loc) {
+          throw new HttpError('Redirect response missing Location header', 400)
+        }
+        const next = new URL(loc, current)
+        current = this.parseAndValidateRemoteUrl(next.toString())
+        continue
+      }
+
+      return { response: res, finalUrl: current }
+    }
+
+    throw new HttpError('Too many redirects', 400)
+  }
+
   private apiBasePath(): string {
     const base = this.deps.env.BASE_PATH
     return base ? `/${base}/api/v1` : '/api/v1'
@@ -78,11 +182,10 @@ export class FilesService {
     ttl: number
     metadata?: Record<string, unknown>
   }): Promise<UploadFileResponse> {
-    if (!params.url || typeof params.url !== 'string') {
-      throw new HttpError('Invalid URL', 400)
-    }
+    if (!params.url || typeof params.url !== 'string') throw new HttpError('Invalid URL', 400)
 
-    const res = await fetch(params.url, { redirect: 'follow' })
+    const initialUrl = this.parseAndValidateRemoteUrl(params.url)
+    const { response: res, finalUrl } = await this.fetchWithRedirects(initialUrl, 3)
     if (!res.ok) {
       throw new HttpError(`Failed to fetch URL. Status: ${res.status}`, 400)
     }
@@ -96,8 +199,7 @@ export class FilesService {
       throw new HttpError('File size exceeds the maximum allowed limit', 413)
     }
 
-    const urlObj = new URL(params.url)
-    const nameFromUrl = urlObj.pathname.split('/').filter(Boolean).pop() ?? 'file'
+    const nameFromUrl = finalUrl.pathname.split('/').filter(Boolean).pop() ?? 'file'
 
     if (!res.body) {
       throw new HttpError('Remote response body is empty', 500)

@@ -12,15 +12,25 @@ export class CleanupService {
   constructor(private readonly deps: CleanupServiceDeps) {}
 
   public async runCleanup(): Promise<void> {
-    const expired = await this.deps.storage.searchFiles({
-      expiredOnly: true,
-      limit: 1000,
-    })
+    const expired = await this.deps.storage.searchFiles({ expiredOnly: true, limit: 1000 })
 
-    for (const file of expired.files) {
-      await this.deps.storage.deleteFile(file.id)
+    const concurrency = 10
+    let deleted = 0
+    for (let i = 0; i < expired.files.length; i += concurrency) {
+      const batch = expired.files.slice(i, i + concurrency)
+      const results = await Promise.all(
+        batch.map((file) => this.deps.storage.deleteFile(file.id).catch(() => null))
+      )
+      deleted += results.filter(Boolean).length
     }
 
-    await this.deps.storage.deleteOrphanedFiles()
+    const orphaned = await this.deps.storage.deleteOrphanedFiles()
+
+    this.deps.logger.info('Cleanup completed', {
+      expiredTotal: expired.total,
+      expiredProcessed: expired.files.length,
+      deleted,
+      orphanedDeleted: orphaned.deleted,
+    })
   }
 }

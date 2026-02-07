@@ -7,14 +7,10 @@ export class FilenameUtil {
 
   private static randomUUID(): string {
     const cryptoAny = globalThis.crypto as unknown as { randomUUID?: () => string } | undefined
-    if (cryptoAny?.randomUUID) return cryptoAny.randomUUID()
-
-    const hex = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256))
-    hex[6] = (hex[6] & 0x0f) | 0x40
-    hex[8] = (hex[8] & 0x3f) | 0x80
-    const toHex = (b: number) => b.toString(16).padStart(2, '0')
-    const s = hex.map(toHex).join('')
-    return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`
+    if (!cryptoAny?.randomUUID) {
+      throw new Error('crypto.randomUUID is required but not available in this runtime')
+    }
+    return cryptoAny.randomUUID()
   }
 
   public static generateSafeFilename(originalName: string, hash: string): string {

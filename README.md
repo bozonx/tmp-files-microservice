@@ -361,7 +361,7 @@ Unified error structure:
   "path": "/api/v1/files/invalid",
   "method": "GET",
   "message": "File ID validation failed: File ID must contain only alphanumeric characters, hyphens, and underscores",
-  "error": { }
+  "error": "HttpError"
 }
 ```
 

@@ -28,7 +28,14 @@ export function createErrorHandler(): ErrorHandler<HonoEnv> {
     }
 
     const logger = c.get('logger')
-    logger.error(`${c.req.method} ${url.pathname} - ${statusCode} - ${message}`)
+    logger.error('Request failed', {
+      method: c.req.method,
+      path: url.pathname,
+      statusCode,
+      message,
+      error: err instanceof Error ? err.name : 'UnknownError',
+      stack: err instanceof Error ? err.stack : undefined,
+    })
 
     return new Response(JSON.stringify(body), {
       status: statusCode,

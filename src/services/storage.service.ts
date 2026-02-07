@@ -32,45 +32,48 @@ export class StorageService {
   constructor(private readonly deps: StorageServiceDeps) {}
 
   private randomUUID(): string {
-    // Prefer native web crypto (Workers, modern Node)
     const cryptoAny = globalThis.crypto as unknown as { randomUUID?: () => string } | undefined
-    if (cryptoAny?.randomUUID) return cryptoAny.randomUUID()
-
-    // Fallback UUID v4 (RFC4122-ish) using Math.random
-    const hex = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256))
-    // Set version and variant
-    hex[6] = (hex[6] & 0x0f) | 0x40
-    hex[8] = (hex[8] & 0x3f) | 0x80
-    const toHex = (b: number) => b.toString(16).padStart(2, '0')
-    const s = hex.map(toHex).join('')
-    return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`
+    if (!cryptoAny?.randomUUID) {
+      throw new Error('crypto.randomUUID is required but not available in this runtime')
+    }
+    return cryptoAny.randomUUID()
   }
 
-  private async computeHashAndSize(
-    input: ReadableStream<Uint8Array>
-  ): Promise<{ hashHex: string; size: number; firstChunk?: Uint8Array }> {
-    const reader = input.getReader()
-
+  private createHashingLimitedStream(input: ReadableStream<Uint8Array>): {
+    stream: ReadableStream<Uint8Array>
+    getResult: () => { hashHex: string; size: number; firstChunk?: Uint8Array }
+  } {
     const hasher = sha256.create()
     let size = 0
     let firstChunk: Uint8Array | undefined
+    let finalized: { hashHex: string; size: number; firstChunk?: Uint8Array } | undefined
 
-    while (true) {
-      const { value, done } = await reader.read()
-      if (done) break
-      if (!value) continue
+    const transformer = new TransformStream<Uint8Array, Uint8Array>({
+      transform: (chunk, controller) => {
+        size += chunk.byteLength
+        if (size > this.maxFileSizeBytes) {
+          throw new Error(`File size ${size} exceeds maximum allowed size ${this.maxFileSizeBytes}`)
+        }
 
-      size += value.byteLength
-      if (size > this.maxFileSizeBytes) {
-        throw new Error(`File size ${size} exceeds maximum allowed size ${this.maxFileSizeBytes}`)
-      }
+        firstChunk ??= chunk
+        hasher.update(chunk)
+        controller.enqueue(chunk)
+      },
+      flush: () => {
+        const digest = hasher.digest()
+        finalized = { hashHex: bytesToHex(digest), size, firstChunk }
+      },
+    })
 
-      firstChunk ??= value
-      hasher.update(value)
+    return {
+      stream: input.pipeThrough(transformer),
+      getResult: () => {
+        if (!finalized) {
+          throw new Error('Stream processing result is not available')
+        }
+        return finalized
+      },
     }
-
-    const digest = hasher.digest()
-    return { hashHex: bytesToHex(digest), size, firstChunk }
   }
 
   private async detectMimeTypeFromFirstChunk(
@@ -116,20 +119,16 @@ export class StorageService {
     const fileId = this.randomUUID()
     const key = fileId
 
-    // We need to stream-upload and compute hash/size. Web Streams allow tee().
-    const [forUpload, forHash] = params.file.stream.tee()
-
-    const uploadPromise = this.deps.fileStorage.saveFile(
-      forUpload,
-      key,
-      params.file.mimetype ?? 'application/octet-stream'
-    )
-
     try {
-      const [uploadRes, processed] = await Promise.all([
-        uploadPromise,
-        this.computeHashAndSize(forHash),
-      ])
+      const processedStream = this.createHashingLimitedStream(params.file.stream)
+
+      const uploadRes = await this.deps.fileStorage.saveFile(
+        processedStream.stream,
+        key,
+        params.file.mimetype ?? 'application/octet-stream'
+      )
+
+      const processed = processedStream.getResult()
 
       if (!uploadRes.success) {
         return { success: false, error: uploadRes.error }
@@ -178,6 +177,8 @@ export class StorageService {
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e))
       this.deps.logger.error('Failed to save file', { error: err.message })
+
+      await this.deps.fileStorage.deleteFile(key).catch(() => undefined)
       return { success: false, error: `Failed to save file: ${err.message}` }
     }
   }

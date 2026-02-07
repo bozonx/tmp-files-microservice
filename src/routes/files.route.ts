@@ -21,6 +21,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function createFilesRoutes(): Hono<HonoEnv> {
   const app = new Hono<HonoEnv>()
 
+  const parseOptionalInt = (raw: string | undefined, name: string): number | undefined => {
+    if (raw === undefined) return undefined
+    if (raw.trim() === '') return undefined
+    const n = Number.parseInt(raw, 10)
+    if (!Number.isFinite(n)) {
+      throw new HttpError(`Query parameter "${name}" must be an integer`, 400)
+    }
+    return n
+  }
+
+  const parseOptionalDate = (raw: string | undefined, name: string): Date | undefined => {
+    if (raw === undefined) return undefined
+    if (raw.trim() === '') return undefined
+    const d = new Date(raw)
+    if (Number.isNaN(d.getTime())) {
+      throw new HttpError(`Query parameter "${name}" must be a valid ISO date`, 400)
+    }
+    return d
+  }
+
   app.post('/files', async (c: Context<HonoEnv>) => {
     const contentType = c.req.header('content-type') ?? ''
     if (!contentType.toLowerCase().includes('multipart/form-data')) {
@@ -242,13 +262,13 @@ export function createFilesRoutes(): Hono<HonoEnv> {
 
     const resp = await services.files.listFiles({
       mimeType: q.mimeType,
-      minSize: q.minSize ? Number.parseInt(q.minSize, 10) : undefined,
-      maxSize: q.maxSize ? Number.parseInt(q.maxSize, 10) : undefined,
-      uploadedAfter: q.uploadedAfter ? new Date(q.uploadedAfter) : undefined,
-      uploadedBefore: q.uploadedBefore ? new Date(q.uploadedBefore) : undefined,
+      minSize: parseOptionalInt(q.minSize, 'minSize'),
+      maxSize: parseOptionalInt(q.maxSize, 'maxSize'),
+      uploadedAfter: parseOptionalDate(q.uploadedAfter, 'uploadedAfter'),
+      uploadedBefore: parseOptionalDate(q.uploadedBefore, 'uploadedBefore'),
       expiredOnly: q.expiredOnly === 'true',
-      limit: q.limit ? Number.parseInt(q.limit, 10) : undefined,
-      offset: q.offset ? Number.parseInt(q.offset, 10) : undefined,
+      limit: parseOptionalInt(q.limit, 'limit'),
+      offset: parseOptionalInt(q.offset, 'offset'),
     })
 
     return c.json(resp)
