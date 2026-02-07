@@ -12,6 +12,8 @@ import { createApp, createDefaultLogger } from '@/app.js'
 import { loadAppEnv } from '@/config/env.js'
 import { createErrorHandler } from '@/middleware/error-handler.js'
 import type { HonoEnv } from '@/types/hono.types.js'
+import { createFilesRoutesWorkers } from '@/routes/files.route.workers.js'
+import { NullDnsResolver } from '@/common/interfaces/dns-resolver.interface.js'
 import { serveStatic } from '@hono/node-server/serve-static'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -185,8 +187,14 @@ export async function createTestApp(): Promise<TestApp> {
 
   const storage = new MemoryFileStorageAdapter()
   const metadata = new MemoryMetadataAdapter()
+  const dnsResolver = new NullDnsResolver()
 
-  const apiApp = createApp({ env, storage, metadata, logger })
+  const apiApp = createApp(
+    { env, storage, metadata, logger, dnsResolver },
+    {
+      createFilesRoutes: () => createFilesRoutesWorkers(),
+    }
+  )
 
   const app = new Hono<HonoEnv>()
   app.onError(createErrorHandler())

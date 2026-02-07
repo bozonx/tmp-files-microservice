@@ -1,10 +1,4 @@
 export class HashUtil {
-  public static async hashFile(filePath: string): Promise<string> {
-    const { readFile } = await import('node:fs/promises')
-    const buf = await readFile(filePath)
-    return this.hashBytes(new Uint8Array(buf))
-  }
-
   public static async hashString(data: string): Promise<string> {
     if (typeof data !== 'string') throw new Error('Input must be a string')
     const enc = new TextEncoder()

@@ -4,6 +4,7 @@ import { createApp, createDefaultLogger } from './app.js'
 import { loadAppEnv } from './config/env.js'
 import { R2StorageAdapter } from './adapters/cloudflare/r2-storage.adapter.js'
 import { KvMetadataAdapter } from './adapters/cloudflare/kv-metadata.adapter.js'
+import { createFilesRoutesWorkers } from './routes/files.route.workers.js'
 
 export interface CloudflareBindings {
   R2_BUCKET: R2Bucket
@@ -28,7 +29,12 @@ export default {
     const storage = new R2StorageAdapter({ bucket: env.R2_BUCKET })
     const metadata = new KvMetadataAdapter({ kv: env.METADATA_KV })
 
-    const app = createApp({ env: appEnv, storage, metadata, logger })
+    const app = createApp(
+      { env: appEnv, storage, metadata, logger },
+      {
+        createFilesRoutes: () => createFilesRoutesWorkers(),
+      }
+    )
 
     const url = new URL(request.url)
     const basePath = appEnv.BASE_PATH
@@ -51,7 +57,12 @@ export default {
 
     const storage = new R2StorageAdapter({ bucket: env.R2_BUCKET })
     const metadata = new KvMetadataAdapter({ kv: env.METADATA_KV })
-    const app = createApp({ env: appEnv, storage, metadata, logger })
+    const app = createApp(
+      { env: appEnv, storage, metadata, logger },
+      {
+        createFilesRoutes: () => createFilesRoutesWorkers(),
+      }
+    )
 
     const basePath = appEnv.BASE_PATH
     const apiBase = basePath ? `/${basePath}/api/v1` : '/api/v1'

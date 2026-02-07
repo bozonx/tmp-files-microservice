@@ -2,6 +2,7 @@ import type { AppEnv } from '../config/env.js'
 import type { LoggerAdapter } from '../adapters/logger.adapter.js'
 import type { FileStorageAdapter } from '../adapters/file-storage.adapter.js'
 import type { MetadataAdapter } from '../adapters/metadata.adapter.js'
+import type { DnsResolver } from '../common/interfaces/dns-resolver.interface.js'
 import { StorageService } from './storage.service.js'
 import { FilesService } from './files.service.js'
 import { CleanupService } from './cleanup.service.js'
@@ -11,6 +12,7 @@ export interface ServiceFactoryDeps {
   storage: FileStorageAdapter
   metadata: MetadataAdapter
   logger: LoggerAdapter
+  dnsResolver?: DnsResolver
 }
 
 export interface AppServices {
@@ -31,6 +33,7 @@ export function createServices(deps: ServiceFactoryDeps): AppServices {
     env: deps.env,
     storage,
     logger: deps.logger,
+    dnsResolver: deps.dnsResolver,
   })
 
   const cleanup = new CleanupService({

@@ -3,14 +3,17 @@ import type { Context } from 'hono'
 import type { AppEnv } from './config/env.js'
 import { ConsoleLoggerAdapter, type LoggerAdapter } from './adapters/logger.adapter.js'
 import { createHealthRoutes } from './routes/health.route.js'
-import { createFilesRoutes } from './routes/files.route.js'
 import { createDownloadRoutes } from './routes/download.route.js'
 import { createCleanupRoutes } from './routes/cleanup.route.js'
 import { createErrorHandler } from './middleware/error-handler.js'
 import { createServices } from './services/services.factory.js'
 import type { AppBindings, HonoEnv } from './types/hono.types.js'
 
-export function createApp(bindings: AppBindings): Hono<HonoEnv> {
+export interface AppRouteFactories {
+  createFilesRoutes: () => Hono<HonoEnv>
+}
+
+export function createApp(bindings: AppBindings, routes: AppRouteFactories): Hono<HonoEnv> {
   const app = new Hono<HonoEnv>()
 
   app.use('*', async (c, next) => {
@@ -36,6 +39,7 @@ export function createApp(bindings: AppBindings): Hono<HonoEnv> {
         storage: bindings.storage,
         metadata: bindings.metadata,
         logger: bindings.logger,
+        dnsResolver: bindings.dnsResolver,
       })
     )
 
@@ -72,7 +76,7 @@ export function createApp(bindings: AppBindings): Hono<HonoEnv> {
   const apiBase = basePath ? `/${basePath}/api/v1` : '/api/v1'
 
   app.route(apiBase, createHealthRoutes())
-  app.route(apiBase, createFilesRoutes())
+  app.route(apiBase, routes.createFilesRoutes())
   app.route(apiBase, createDownloadRoutes())
   app.route(apiBase, createCleanupRoutes())
 

@@ -11,6 +11,8 @@ import { RedisMetadataAdapter } from './adapters/node/redis-metadata.adapter.js'
 import { createServices } from './services/services.factory.js'
 import { createErrorHandler } from './middleware/error-handler.js'
 import type { HonoEnv } from './types/hono.types.js'
+import { createFilesRoutesNode } from './routes/files.route.node.js'
+import { NodeDnsResolver } from './adapters/node/dns-resolver.node.js'
 
 const env = loadAppEnv(process.env)
 const logger = createDefaultLogger(env)
@@ -47,7 +49,14 @@ const redis = new Redis({
 
 const metadata = new RedisMetadataAdapter({ client: redis, keyPrefix: env.REDIS_KEY_PREFIX })
 
-const apiApp = createApp({ env, storage, metadata, logger })
+const dnsResolver = new NodeDnsResolver()
+
+const apiApp = createApp(
+  { env, storage, metadata, logger, dnsResolver },
+  {
+    createFilesRoutes: () => createFilesRoutesNode(),
+  }
+)
 
 const app = new Hono<HonoEnv>()
 
@@ -85,7 +94,7 @@ app.use(
 
 // Create services once for background cleanup loop.
 // Route-level services are created per request in app.ts.
-const services = createServices({ env, storage, metadata, logger })
+const services = createServices({ env, storage, metadata, logger, dnsResolver })
 
 const server = serve(
   {

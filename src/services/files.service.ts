@@ -5,11 +5,13 @@ import type { UploadedFile, FileInfo } from '../common/interfaces/file.interface
 import { ValidationUtil } from '../common/utils/validation.util.js'
 import { DateUtil } from '../common/utils/date.util.js'
 import { HttpError } from '../common/errors/http.error.js'
+import { NullDnsResolver, type DnsResolver } from '../common/interfaces/dns-resolver.interface.js'
 
 export interface FilesServiceDeps {
   env: AppEnv
   storage: StorageService
   logger: LoggerAdapter
+  dnsResolver?: DnsResolver
 }
 
 export interface FileResponse {
@@ -57,7 +59,11 @@ export interface DeleteFileResponse {
 }
 
 export class FilesService {
-  constructor(private readonly deps: FilesServiceDeps) {}
+  private readonly dnsResolver: DnsResolver
+
+  constructor(private readonly deps: FilesServiceDeps) {
+    this.dnsResolver = deps.dnsResolver ?? new NullDnsResolver()
+  }
 
   private isProbablyNodeRuntime(): boolean {
     return (
@@ -104,11 +110,8 @@ export class FilesService {
     if (!this.isProbablyNodeRuntime()) return
 
     try {
-      const { lookup } = await import('node:dns/promises')
-      const res = await lookup(url.hostname, { all: true, verbatim: true })
-      const addresses = Array.isArray(res) ? res : [res]
-      for (const a of addresses) {
-        const addr = String((a as { address?: unknown }).address ?? '')
+      const addresses = await this.dnsResolver.lookupAll(url.hostname)
+      for (const addr of addresses) {
         if (this.isPrivateIpv4(addr) || addr === '::1') {
           throw new HttpError('URL resolves to a private network address', 400)
         }

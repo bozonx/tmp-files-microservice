@@ -3,6 +3,8 @@ import { jest } from '@jest/globals'
 import { loadAppEnv } from '@/config/env.js'
 import type { FileStorageAdapter } from '@/adapters/file-storage.adapter.js'
 import type { MetadataAdapter } from '@/adapters/metadata.adapter.js'
+import { createFilesRoutesWorkers } from '@/routes/files.route.workers.js'
+import { NullDnsResolver } from '@/common/interfaces/dns-resolver.interface.js'
 
 describe('Health route (unit)', () => {
   it('GET /api/v1/health returns ok', async () => {
@@ -35,7 +37,12 @@ describe('Health route (unit)', () => {
       isHealthy: jest.fn(async () => true),
     }
 
-    const app = createApp({ env, storage, metadata, logger })
+    const app = createApp(
+      { env, storage, metadata, logger, dnsResolver: new NullDnsResolver() },
+      {
+        createFilesRoutes: () => createFilesRoutesWorkers(),
+      }
+    )
     const res = await app.request('/api/v1/health')
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ status: 'ok' })

@@ -5,7 +5,7 @@
 
 ### Structure and Practices
 
-- Node.js: version 22
+- Node.js
 - Package manager: `pnpm`
 - Unit tests: `test/unit/`
 - E2E tests: `test/e2e/`
