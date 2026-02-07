@@ -8,8 +8,8 @@ replication_factor = 1
 rpc_bind_addr = "[::]:3901"
 rpc_public_addr = "garage:3901"
 
-# Replace this value for any non-local deployment.
-rpc_secret = "REPLACE_WITH_64_HEX_CHARS"
+# Dev-only. Replace this value for any non-local deployment.
+rpc_secret = "0000000000000000000000000000000000000000000000000000000000000000"
 
 [s3_api]
 # Must match the S3 client region.
@@ -22,6 +22,6 @@ root_domain = ".s3.garage.local"
 [admin]
 api_bind_addr = "[::]:3903"
 
-# Replace this token for any non-local deployment.
-admin_token = "REPLACE_WITH_ADMIN_TOKEN"
-metrics_token = "REPLACE_WITH_METRICS_TOKEN"
+# Dev-only. Replace these tokens for any non-local deployment.
+admin_token = "dev-admin-token"
+metrics_token = "dev-metrics-token"

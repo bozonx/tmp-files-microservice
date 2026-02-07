@@ -52,13 +52,6 @@ services:
       - ./garage.toml:/etc/garage.toml:ro
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
-    healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3900/ || exit 1']
-      interval: 30s
-      timeout: 3s
-      retries: 5
-    depends_on:
-      - redis
 
   redis:
     image: redis:8-alpine
