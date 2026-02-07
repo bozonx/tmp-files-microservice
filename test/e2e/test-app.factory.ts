@@ -10,6 +10,8 @@ import type { MetadataAdapter } from '@/adapters/metadata.adapter.js'
 import { DateUtil } from '@/common/utils/date.util.js'
 import { createApp, createDefaultLogger } from '@/app.js'
 import { loadAppEnv } from '@/config/env.js'
+import { createErrorHandler } from '@/middleware/error-handler.js'
+import type { HonoEnv } from '@/types/hono.types.js'
 import { serveStatic } from '@hono/node-server/serve-static'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -169,7 +171,7 @@ class MemoryMetadataAdapter implements MetadataAdapter {
 }
 
 export interface TestApp {
-  app: Hono
+  app: Hono<HonoEnv>
 }
 
 export async function createTestApp(): Promise<TestApp> {
@@ -186,7 +188,8 @@ export async function createTestApp(): Promise<TestApp> {
 
   const apiApp = createApp({ env, storage, metadata, logger })
 
-  const app = new Hono()
+  const app = new Hono<HonoEnv>()
+  app.onError(createErrorHandler())
   app.route('/', apiApp)
 
   const __filename = fileURLToPath(import.meta.url)

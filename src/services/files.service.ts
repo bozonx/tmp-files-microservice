@@ -4,6 +4,7 @@ import type { StorageService } from './storage.service.js'
 import type { UploadedFile, FileInfo } from '../common/interfaces/file.interface.js'
 import { ValidationUtil } from '../common/utils/validation.util.js'
 import { DateUtil } from '../common/utils/date.util.js'
+import { HttpError } from '../common/errors/http.error.js'
 
 export interface FilesServiceDeps {
   env: AppEnv
@@ -53,16 +54,6 @@ export interface DeleteFileResponse {
   fileId: string
   message: string
   deletedAt: string
-}
-
-class HttpError extends Error {
-  public readonly status: number
-
-  constructor(message: string, status: number) {
-    super(message)
-    this.status = status
-    this.name = 'HttpError'
-  }
 }
 
 export class FilesService {

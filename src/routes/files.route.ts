@@ -3,16 +3,7 @@ import type { IncomingHttpHeaders } from 'node:http'
 import type { HonoEnv } from '../types/hono.types.js'
 import type { UploadFileResponse } from '../services/files.service.js'
 import { ValidationUtil } from '../common/utils/validation.util.js'
-
-class HttpError extends Error {
-  public readonly status: number
-
-  constructor(message: string, status: number) {
-    super(message)
-    this.status = status
-    this.name = 'HttpError'
-  }
-}
+import { HttpError } from '../common/errors/http.error.js'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null

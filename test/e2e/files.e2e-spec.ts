@@ -225,4 +225,35 @@ describe('Files (e2e)', () => {
       server.close()
     }
   })
+
+  it('GET /api/v1/files - echoes x-request-id header', async () => {
+    const res = await app.request('/api/v1/files', {
+      method: 'GET',
+      headers: {
+        'x-request-id': 'e2e-request-id-123',
+      },
+    })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('x-request-id')).toBe('e2e-request-id-123')
+  })
+
+  it('GET /api/v1/files - generates x-request-id header when not provided', async () => {
+    const res = await app.request('/api/v1/files', { method: 'GET' })
+    expect(res.status).toBe(200)
+    const requestId = res.headers.get('x-request-id')
+    expect(typeof requestId).toBe('string')
+    expect((requestId ?? '').length).toBeGreaterThan(0)
+  })
+
+  it('POST /api/v1/files/url - returns masked message for internal errors (5xx)', async () => {
+    const res = await app.request('/api/v1/files/url', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ url: 'http://127.0.0.1:65534/file.bin' }),
+    })
+    expect(res.status).toBe(500)
+    const data = (await res.json()) as any
+    expect(data).toHaveProperty('message', 'Internal server error')
+    expect(data).toHaveProperty('requestId')
+  })
 })

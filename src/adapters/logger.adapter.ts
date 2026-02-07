@@ -6,38 +6,50 @@ export interface LoggerAdapter {
 }
 
 export class ConsoleLoggerAdapter implements LoggerAdapter {
-  constructor(private readonly level: string) {}
+  private readonly normalizedLevel: string
+
+  constructor(level: string) {
+    this.normalizedLevel = level.toLowerCase()
+  }
 
   private shouldLog(level: string): boolean {
     const order = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent']
-    const cur = order.indexOf(this.level)
+    const cur = order.indexOf(this.normalizedLevel)
     const lvl = order.indexOf(level)
     if (cur === -1) return true
     if (lvl === -1) return true
-    return lvl >= cur && this.level !== 'silent'
+    return lvl >= cur && this.normalizedLevel !== 'silent'
   }
 
   public debug(message: string, meta?: Record<string, unknown>): void {
     if (!this.shouldLog('debug')) return
     // eslint-disable-next-line no-console
-    console.debug(JSON.stringify({ level: 'debug', message, ...meta }))
+    console.debug(
+      JSON.stringify({ timestamp: new Date().toISOString(), level: 'debug', message, ...meta })
+    )
   }
 
   public info(message: string, meta?: Record<string, unknown>): void {
     if (!this.shouldLog('info')) return
     // eslint-disable-next-line no-console
-    console.log(JSON.stringify({ level: 'info', message, ...meta }))
+    console.log(
+      JSON.stringify({ timestamp: new Date().toISOString(), level: 'info', message, ...meta })
+    )
   }
 
   public warn(message: string, meta?: Record<string, unknown>): void {
     if (!this.shouldLog('warn')) return
     // eslint-disable-next-line no-console
-    console.warn(JSON.stringify({ level: 'warn', message, ...meta }))
+    console.warn(
+      JSON.stringify({ timestamp: new Date().toISOString(), level: 'warn', message, ...meta })
+    )
   }
 
   public error(message: string, meta?: Record<string, unknown>): void {
     if (!this.shouldLog('error')) return
     // eslint-disable-next-line no-console
-    console.error(JSON.stringify({ level: 'error', message, ...meta }))
+    console.error(
+      JSON.stringify({ timestamp: new Date().toISOString(), level: 'error', message, ...meta })
+    )
   }
 }

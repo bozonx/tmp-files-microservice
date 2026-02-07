@@ -17,6 +17,7 @@ export interface AppVariables {
   metadata: MetadataAdapter
   logger: LoggerAdapter
   services: AppServices
+  requestId: string
 }
 
 export type HonoEnv = {

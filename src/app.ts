@@ -14,6 +14,17 @@ export function createApp(bindings: AppBindings): Hono<HonoEnv> {
   const app = new Hono<HonoEnv>()
 
   app.use('*', async (c, next) => {
+    const url = new URL(c.req.url)
+
+    const headerRequestId = c.req.header('x-request-id')
+    const requestId =
+      typeof headerRequestId === 'string' && headerRequestId.trim() !== ''
+        ? headerRequestId.trim()
+        : globalThis.crypto && 'randomUUID' in globalThis.crypto
+          ? (globalThis.crypto as unknown as { randomUUID: () => string }).randomUUID()
+          : `${Date.now()}_${Math.random().toString(16).slice(2)}`
+
+    c.set('requestId', requestId)
     c.set('env', bindings.env)
     c.set('storage', bindings.storage)
     c.set('metadata', bindings.metadata)
@@ -27,7 +38,32 @@ export function createApp(bindings: AppBindings): Hono<HonoEnv> {
         logger: bindings.logger,
       })
     )
-    await next()
+
+    const start = Date.now()
+    const onError = createErrorHandler()
+    try {
+      await next()
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e))
+      return onError(err, c)
+    } finally {
+      const durationMs = Date.now() - start
+      const statusCode = c.res ? c.res.status : 500
+      try {
+        c.header('x-request-id', requestId)
+      } catch {
+        // ignore
+      }
+
+      const logger = c.get('logger')
+      logger.info('Request completed', {
+        requestId,
+        method: c.req.method,
+        path: url.pathname,
+        statusCode,
+        durationMs,
+      })
+    }
   })
 
   app.onError(createErrorHandler())

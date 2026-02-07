@@ -9,6 +9,8 @@ import { loadAppEnv } from './config/env.js'
 import { S3StorageAdapter } from './adapters/node/s3-storage.adapter.js'
 import { RedisMetadataAdapter } from './adapters/node/redis-metadata.adapter.js'
 import { createServices } from './services/services.factory.js'
+import { createErrorHandler } from './middleware/error-handler.js'
+import type { HonoEnv } from './types/hono.types.js'
 
 const env = loadAppEnv(process.env)
 const logger = createDefaultLogger(env)
@@ -47,7 +49,9 @@ const metadata = new RedisMetadataAdapter({ client: redis, keyPrefix: env.REDIS_
 
 const apiApp = createApp({ env, storage, metadata, logger })
 
-const app = new Hono()
+const app = new Hono<HonoEnv>()
+
+app.onError(createErrorHandler())
 
 app.route('/', apiApp)
 
@@ -99,7 +103,10 @@ const server = serve(
 let interval: NodeJS.Timeout | undefined
 if (env.CLEANUP_INTERVAL_MINS > 0) {
   interval = setInterval(() => {
-    void services.cleanup.runCleanup().catch(() => undefined)
+    void services.cleanup.runCleanup().catch((e: unknown) => {
+      const err = e instanceof Error ? e : new Error(String(e))
+      logger.error('Cleanup interval failed', { error: err.message, stack: err.stack })
+    })
   }, env.CLEANUP_INTERVAL_MINS * 60_000)
 }
 
@@ -123,6 +130,16 @@ async function shutdown(signal: string): Promise<void> {
 
 process.on('SIGTERM', () => void shutdown('SIGTERM'))
 process.on('SIGINT', () => void shutdown('SIGINT'))
+
+process.on('unhandledRejection', (reason: unknown) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason))
+  logger.error('Unhandled promise rejection', { error: err.message, stack: err.stack })
+})
+
+process.on('uncaughtException', (err: Error) => {
+  logger.error('Uncaught exception', { error: err.message, stack: err.stack })
+  void shutdown('uncaughtException')
+})
 
 // Expose Node bindings typing (used by routes when detecting multipart streaming)
 export type NodeHonoBindings = HttpBindings
