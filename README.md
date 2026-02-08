@@ -1,6 +1,6 @@
 # Temporary Files Microservice (Hono)
 
-Production-ready microservice for temporary file storage with TTL, content deduplication, search, and scheduled cleanup. Built with Hono and designed to run both on Node.js (Docker) and Cloudflare Workers.
+Production-ready microservice for temporary file storage with TTL, content deduplication, search, and cleanup support. Built with Hono and designed to run both on Node.js (Docker) and Cloudflare Workers.
 
 ## What’s included
 
@@ -97,13 +97,15 @@ Source of truth: `.env.production.example`
 - `LOG_LEVEL` — `trace|debug|info|warn|error|fatal|silent`
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
-  - `MAX_FILE_SIZE_MB` — maximum upload size (MB). Single source of truth for upload limits; enforced by both Fastify multipart and service-level validation.
+  - `MAX_FILE_SIZE_MB` — maximum upload size (MB). Single source of truth for upload limits; enforced by both request parsing and service-level validation.
     - In Node.js runtime, streaming multipart parsing is used.
     - In Workers runtime, multipart parsing uses `Request.formData()`.
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
-  - `CLEANUP_INTERVAL_MINS` — (Legacy) Previously used for cleanup interval. Now cleanup is triggered manually.
+  - `CLEANUP_INTERVAL_MINS` — cleanup interval in minutes.
+    - Currently cleanup is triggered via `POST /{base}/maintenance/run`.
+    - `CLEANUP_INTERVAL_MINS` is reserved for future background scheduling and may be ignored by the current runtime.
   - `ENABLE_UI` — enable web interface at root path (`true|false`, default `false`)
   - `DOWNLOAD_BASE_URL` — Base URL for `downloadUrl` in responses (e.g. `https://files.example.com`). If not set, `downloadUrl` will be relative.
 - Node.js runtime (Docker) — Redis (metadata storage):
@@ -149,8 +151,7 @@ Source of truth: `.env.production.example`
 ## Graceful Shutdown
 
 - The service handles `SIGTERM` and `SIGINT` signals.
-- It stops accepting new connections and gives active requests (including uploads) up to 25 seconds to complete before forcing exit.
-- Cleanup tasks are paused during shutdown to prevent consistency issues.
+- It closes the HTTP server and shuts down Redis connection.
 - You can trigger maintenance manually via `POST /{base}/maintenance/run`.
 
 ## Web UI
@@ -212,7 +213,7 @@ The service exposes a REST API with no built-in authentication. If protection is
 
 - `ttlMins` — integer in minutes. Default is `1440` (1 day).
 - Dates use ISO-8601 (UTC).
-- Upload size limit is defined by `MAX_FILE_SIZE_MB` (single source of truth). This value is enforced by both Fastify multipart and service-level validation.
+- Upload size limit is defined by `MAX_FILE_SIZE_MB` (single source of truth). This value is enforced by both request parsing and service-level validation.
 
 ### Endpoints
 
@@ -385,7 +386,7 @@ Unified error structure:
 - The included Caddyfile shows how to:
   - expose `GET /download/:id` publicly; and
   - guard other routes under `/tmp-files` with Bearer tokens.
-- Ensure `STORAGE_DIR` is a persistent volume and has read/write permissions for the container user.
+- Ensure your Redis and S3-compatible storage are reachable and persistent.
 
 ## Troubleshooting
 
@@ -476,23 +477,10 @@ curl -s "$BASE_URL/files/stats" | jq
 curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 ```
 
-### Migration to Redis
-
-If you are currently using the filesystem for metadata and want to switch to Redis:
-
-1. Ensure Redis is running and accessible.
-2. Set `REDIS_ENABLED=true` and other `REDIS_*` variables in your environment.
-3. Run the migration script:
-   ```bash
-   pnpm ts-node src/scripts/migrate-to-redis.ts
-   ```
-4. Restart the service.
-
 ## More documentation
 
-- Web UI usage guide: [docs/WEB_UI.md](docs/WEB_UI.md)
-- Storage module details: [dev_docs/STORAGE_MODULE.md](dev_docs/STORAGE_MODULE.md)
 - Changelog: [docs/CHANGELOG.md](docs/CHANGELOG.md)
+- Reverse proxy example: [docker/Caddyfile](docker/Caddyfile)
 
 ## FAQ
 
@@ -520,7 +508,7 @@ pnpm install
 cp env.development.example .env.development
 
 # 3) Run in development (watch mode)
-pnpm start:dev
+pnpm dev
 ```
 
 - Default base URL (dev): `http://localhost:8080/api/v1`
@@ -563,8 +551,8 @@ pnpm format
 ### Debugging the app
 
 ```bash
-# Start Node entry in debug with watch
-pnpm start:debug
+# Debug tests
+pnpm test:debug
 ```
 
 Attach your debugger to the Node.js inspector port output by the command.
