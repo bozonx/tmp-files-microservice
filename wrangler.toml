@@ -13,7 +13,7 @@ run_worker_first = true
 # Default variables
 LOG_LEVEL = "info"
 NODE_ENV = "production"
-ENABLE_UI = "false"
+ENABLE_UI = "true"
 BASE_PATH = ""
 DOWNLOAD_BASE_URL = ""
 ALLOWED_MIME_TYPES = ""
