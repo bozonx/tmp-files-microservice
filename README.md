@@ -35,45 +35,41 @@ The service accepts files via REST (`multipart/form-data`), stores them for a ti
 
 ## Quick start
 
-Choose one of the options below.
+## Run modes
 
-### Option A — Docker Compose (prebuilt image)
+This repository supports running the service in:
+
+- Node.js runtime (recommended for Docker/prod): `src/index.node.ts` -> `dist/src/index.node.js`
+- Cloudflare Workers runtime: `src/index.worker.ts`
+
+Below are the recommended ways to run it in production and development.
+
+### Production
+
+#### Production (container) — Docker Compose
+
+Use the production compose file that runs the microservice + Redis + Garage (S3-compatible).
 
 ```bash
-# Start service
 docker compose -f docker/docker-compose.yml up -d
 
-# Health check
 curl http://localhost:8080/api/v1/health
 ```
 
-Default base URL with Compose: `http://localhost:8080/api/v1`
-
-Notes:
-- The provided Compose file uses a prebuilt image. Replace the image reference if you maintain a private registry.
-- To customize environment variables, edit `docker/docker-compose.yml` (environment section) or switch to using an `env_file` and point it to `.env.production`.
-
-### Option B — Build your own Docker image
+#### Production (container) — Docker run
 
 ```bash
-# 1) Build application
-pnpm install
-pnpm build
-
-# 2) Build image (Dockerfile expects prebuilt dist/)
-docker build -f docker/Dockerfile -t tmp-files-microservice:local .
-
-# 3) Run container (reads env from .env.production)
 cp .env.production.example .env.production
-docker run -d --name tmp-files-microservice \
-  --env-file ./.env.production -p 8080:8080 \
-  tmp-files-microservice:local
 
-# 4) Health check
+docker run -d --name tmp-files-microservice \
+  --env-file ./.env.production \
+  -p 8080:8080 \
+  ghcr.io/bozonx/tmp-files-microservice:latest
+
 curl http://localhost:8080/api/v1/health
 ```
 
-### Option C — Bare-metal (Node.js)
+#### Production (local) — Node.js
 
 ```bash
 pnpm install
@@ -82,9 +78,71 @@ pnpm build
 pnpm start:prod
 ```
 
-Default base URL: `http://localhost:8080/api/v1`
+### Development
 
-**Web UI**: After starting the service with `ENABLE_UI=true`, open `http://localhost:8080/` in your browser to access the upload interface.
+#### Development (local) — Node.js + local Redis/Garage
+
+The simplest way is to use the helper script, then run the dev server.
+
+```bash
+pnpm setup:dev
+pnpm dev
+```
+
+The API base URL in dev is `http://{LISTEN_HOST}:{LISTEN_PORT}/api/v1` from your `.env.development`.
+
+If you prefer manual setup:
+
+```bash
+cp .env.development.example .env.development
+docker compose -f docker-compose.yml up -d --remove-orphans redis garage
+pnpm install
+pnpm dev
+```
+
+#### Development (container)
+
+This repo does not ship a dedicated dev container with hot-reload out of the box.
+Recommended approach:
+
+- Run Redis/Garage via `docker-compose.yml`
+- Run the Node.js app locally via `pnpm dev`
+
+If you want to run the app itself in a container, build the image and run it (no hot reload):
+
+```bash
+pnpm install
+pnpm build
+docker build -f docker/Dockerfile -t tmp-files-microservice:local .
+
+cp .env.production.example .env.production
+docker run -d --name tmp-files-microservice \
+  --env-file ./.env.production \
+  -p 8080:8080 \
+  tmp-files-microservice:local
+```
+
+### Cloudflare Workers
+
+#### Worker (dev)
+
+```bash
+pnpm install
+cp .env.development.example .env.development
+pnpm dev:worker
+```
+
+Notes:
+
+- `pnpm dev:worker` links `.env.development` to `.dev.vars` for Wrangler.
+- You must provide Cloudflare bindings for KV/R2 in your Wrangler setup.
+
+#### Worker (deploy)
+
+```bash
+pnpm install
+pnpm deploy
+```
 
 ## Environment variables
 
@@ -410,7 +468,7 @@ Define base URL for your environment:
 # For Docker Compose (default in this README)
 BASE_URL="http://localhost:8080/api/v1"
 # For dev mode
-# BASE_URL="http://localhost:8080/api/v1"
+# BASE_URL="http://{LISTEN_HOST}:{LISTEN_PORT}/api/v1"
 ```
 
 - `ttlMins` is provided in minutes (default 1440 = 1 day). In responses, `ttlMins` is also returned in minutes.
@@ -505,13 +563,13 @@ curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
 pnpm install
 
 # 2) Configure environment (dev)
-cp env.development.example .env.development
+cp .env.development.example .env.development
 
 # 3) Run in development (watch mode)
 pnpm dev
 ```
 
-- Default base URL (dev): `http://localhost:8080/api/v1`
+- Default base URL (dev): `http://{LISTEN_HOST}:{LISTEN_PORT}/api/v1`
 
 ### Tests
 
