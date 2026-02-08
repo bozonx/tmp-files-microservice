@@ -4,7 +4,7 @@ services:
     container_name: tmp-files-microservice-garage-dev
     hostname: tmp-files-microservice-garage-dev
     restart: unless-stopped
-    command: [ 'server', '-c', '/etc/garage.toml' ]
+    command: [ '/garage', 'server', '-c', '/etc/garage.toml' ]
     environment:
       - RUST_LOG=garage=info
     ports:
