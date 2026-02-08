@@ -11,8 +11,9 @@ if [ -z "${GARAGE_CONTAINER_NAME:-}" ]; then
   elif docker ps --format '{{.Names}}' | grep -q "^garaged$"; then
     GARAGE_CONTAINER_NAME="garaged"
   else
-    GARAGE_CONTAINER_NAME="tmp-files-microservice-garage-dev" # Default fallback
+    GARAGE_CONTAINER_NAME="garaged" # Default fallback
   fi
+  echo "Auto-detected Garage container: $GARAGE_CONTAINER_NAME"
 fi
 
 echo "DEBUG: Script started. Bucket=$BUCKET_NAME, Key=$KEY_NAME"
