@@ -38,14 +38,20 @@ export default {
 
     const url = new URL(request.url)
     const basePath = appEnv.BASE_PATH
-    const uiPrefix = basePath ? `/${basePath}/ui` : '/ui'
 
-    if (url.pathname === (basePath ? `/${basePath}` : '/') || url.pathname === uiPrefix) {
-      return Response.redirect(`${uiPrefix}/`, 302)
-    }
+    if (appEnv.ENABLE_UI) {
+      const rootPath = basePath ? `/${basePath}` : '/'
+      const assetsPrefix = basePath ? `/${basePath}/public/` : '/public/'
 
-    if (url.pathname === `${uiPrefix}/` || url.pathname.startsWith(`${uiPrefix}/public/`)) {
-      return env.ASSETS.fetch(request)
+      if (url.pathname === rootPath || url.pathname === `${rootPath}/`) {
+        return env.ASSETS.fetch(request)
+      }
+
+      if (url.pathname.startsWith(assetsPrefix)) {
+        const newUrl = new URL(request.url)
+        newUrl.pathname = url.pathname.replace(assetsPrefix, '/')
+        return env.ASSETS.fetch(new Request(newUrl.toString(), request))
+      }
     }
 
     return app.fetch(request, env, ctx)

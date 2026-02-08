@@ -25,6 +25,7 @@ export interface AppEnv {
   S3_ACCESS_KEY_ID: string
   S3_SECRET_ACCESS_KEY: string
   S3_FORCE_PATH_STYLE: boolean
+  ENABLE_UI: boolean
 }
 
 export type RuntimeEnvSource = Record<string, unknown>
@@ -112,5 +113,6 @@ export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
     S3_ACCESS_KEY_ID: readString(envSource, 'S3_ACCESS_KEY_ID', ''),
     S3_SECRET_ACCESS_KEY: readString(envSource, 'S3_SECRET_ACCESS_KEY', ''),
     S3_FORCE_PATH_STYLE: readBool(envSource, 'S3_FORCE_PATH_STYLE', false),
+    ENABLE_UI: readBool(envSource, 'ENABLE_UI', false),
   }
 }

@@ -7,15 +7,8 @@ describe('Web UI (e2e)', () => {
     ;({ app } = await createTestApp())
   })
 
-  it('GET / - redirects to /ui/', async () => {
-    const res = await app.request('/', { method: 'GET', redirect: 'manual' })
-
-    expect(res.status).toBe(302)
-    expect(res.headers.get('location')).toBe('/ui/')
-  })
-
-  it('GET /ui/ - serves index.html', async () => {
-    const res = await app.request('/ui/', { method: 'GET' })
+  it('GET / - serves index.html', async () => {
+    const res = await app.request('/', { method: 'GET' })
 
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('text/html')
@@ -23,8 +16,8 @@ describe('Web UI (e2e)', () => {
     expect(body).toContain('<!DOCTYPE html>')
   })
 
-  it('GET /ui/public/app.js - serves static file', async () => {
-    const res = await app.request('/ui/public/app.js', { method: 'GET' })
+  it('GET /public/app.js - serves static file', async () => {
+    const res = await app.request('/public/app.js', { method: 'GET' })
 
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('javascript')

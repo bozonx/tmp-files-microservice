@@ -15,6 +15,7 @@ ENABLE_DEDUPLICATION = "true"
 MAX_TTL_MIN = "44640"
 MAX_FILE_SIZE_MB = "100"
 CLEANUP_INTERVAL_MINS = "10"
+ENABLE_UI = "false"
 
 [[r2_buckets]]
 binding = "R2_BUCKET"

@@ -58,7 +58,7 @@ const uiDirPath = pathname.endsWith('/')
         ? pathname.replace(/\/[^/]*$/, '/')
         : `${pathname}/`;
 const uiBasePath = uiDirPath === '/' ? '' : uiDirPath.replace(/\/+$/, '');
-const apiBasePath = uiBasePath.replace(/\/ui$/, '');
+const apiBasePath = uiBasePath;
 const API_BASE_URL = `${window.location.origin}${apiBasePath}/api/v1`;
 
 function normalizeApiActionUrl(value) {

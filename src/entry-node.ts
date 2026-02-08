@@ -65,32 +65,31 @@ app.onError(createErrorHandler())
 app.route('/', apiApp)
 
 const basePath = env.BASE_PATH
-const uiPrefix = basePath ? `/${basePath}/ui` : '/ui'
 const rootPath = basePath ? `/${basePath}` : '/'
 
-app.get(rootPath, (c) => c.redirect(`${uiPrefix}/`, 302))
-app.get(uiPrefix, (c) => c.redirect(`${uiPrefix}/`, 302))
-
-app.get(`${uiPrefix}/`, async () => {
-  const { readFile } = await import('node:fs/promises')
-  const { resolve } = await import('node:path')
-  const html = await readFile(resolve(process.cwd(), 'public', 'index.html'), 'utf-8')
-  return new Response(html, {
-    status: 200,
-    headers: {
-      'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'no-cache',
-    },
+if (env.ENABLE_UI) {
+  app.get(rootPath, async () => {
+    const { readFile } = await import('node:fs/promises')
+    const { resolve } = await import('node:path')
+    const html = await readFile(resolve(process.cwd(), 'public', 'index.html'), 'utf-8')
+    return new Response(html, {
+      status: 200,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-cache',
+      },
+    })
   })
-})
 
-app.use(
-  `${uiPrefix}/public/*`,
-  serveStatic({
-    root: './public',
-    rewriteRequestPath: (path) => path.replace(new RegExp(`^${uiPrefix}/public`), ''),
-  })
-)
+  const assetsPrefix = basePath ? `/${basePath}/public` : '/public'
+  app.use(
+    `${assetsPrefix}/*`,
+    serveStatic({
+      root: './public',
+      rewriteRequestPath: (path) => path.replace(new RegExp(`^${assetsPrefix}`), ''),
+    })
+  )
+}
 
 // Create services once for background cleanup loop.
 // Route-level services are created per request in app.ts.

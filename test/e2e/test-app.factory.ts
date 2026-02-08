@@ -182,6 +182,7 @@ export async function createTestApp(): Promise<TestApp> {
     LOG_LEVEL: 'silent',
     CLEANUP_INTERVAL_MINS: '0',
     MAX_FILE_SIZE_MB: '10',
+    ENABLE_UI: 'true',
   })
   const logger = createDefaultLogger(env)
 
@@ -200,20 +201,20 @@ export async function createTestApp(): Promise<TestApp> {
   app.onError(createErrorHandler())
   app.route('/', apiApp)
 
-  const __filename = fileURLToPath(import.meta.url)
-  const __dirname = path.dirname(__filename)
-  const publicDir = path.resolve(__dirname, '..', '..', 'public')
+  if (env.ENABLE_UI) {
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = path.dirname(__filename)
+    const publicDir = path.resolve(__dirname, '..', '..', 'public')
 
-  app.get('/', (c) => c.redirect('/ui/', 302))
-  app.get('/ui', (c) => c.redirect('/ui/', 302))
-  app.get('/ui/', serveStatic({ root: publicDir, path: 'index.html' }))
-  app.get(
-    '/ui/public/*',
-    serveStatic({
-      root: publicDir,
-      rewriteRequestPath: (p) => p.replace(/^\/ui\/public/, ''),
-    })
-  )
+    app.get('/', serveStatic({ root: publicDir, path: 'index.html' }))
+    app.get(
+      '/public/*',
+      serveStatic({
+        root: publicDir,
+        rewriteRequestPath: (p) => p.replace(/^\/public/, ''),
+      })
+    )
+  }
 
   return { app }
 }

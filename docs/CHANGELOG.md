@@ -6,7 +6,8 @@
 - Feature: Dual runtime support:
   - Node.js/Docker: **S3-compatible storage** + **Redis metadata**.
   - Cloudflare Workers: **R2 storage** + **KV metadata**.
-- Feature: Web UI is served at `/{BASE_PATH}/ui` in both runtimes.
+- Feature: Web UI moved to root path `/{BASE_PATH}/` and is now disabled by default.
+- Feature: Added `ENABLE_UI` environment variable to toggle Web UI availability (default: `false`).
 - Change: Multipart handling is runtime-specific:
   - Node.js: streaming parser (Busboy)
   - Workers: `Request.formData()`
