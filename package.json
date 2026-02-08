@@ -7,7 +7,7 @@
   "scripts": {
     "setup:dev": "bash scripts/setup-dev.sh",
     "dev": "tsx watch --env-file=.env.development src/index.node.ts",
-    "dev:worker": "ln -sf .env.development .dev.vars && wrangler dev src/index.worker.ts --define ENABLE_UI_BUILD:true",
+    "dev:worker": "ln -sf .env.development .dev.vars && wrangler dev src/index.worker.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/src/index.node.js",
     "start:prod": "node dist/src/index.node.js",
