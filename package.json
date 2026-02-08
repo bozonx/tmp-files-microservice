@@ -3,15 +3,15 @@
   "name": "tmp-files-microservice",
   "version": "1.2.0",
   "description": "Temporary files microservice",
-  "main": "dist/src/entry-node.js",
+  "main": "dist/src/index.node.js",
   "scripts": {
+    "dev": "tsx watch src/index.node.ts",
+    "dev:worker": "ln -sf .env.development .dev.vars && wrangler dev src/index.worker.ts --define ENABLE_UI_BUILD:true",
     "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/src/index.node.js",
+    "start:prod": "node dist/src/index.node.js",
+    "deploy": "wrangler deploy src/index.worker.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "node dist/src/entry-node.js",
-    "start:dev": "NODE_ENV=development node --env-file=.env.development --import tsx --watch src/entry-node.ts",
-    "start:prod": "NODE_ENV=production node dist/src/entry-node.js",
-    "dev:wrangler": "wrangler dev src/entry-cloudflare.ts",
-    "deploy:wrangler": "wrangler deploy src/entry-cloudflare.ts",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest --selectProjects unit",
@@ -20,8 +20,7 @@
     "test:debug": "NODE_OPTIONS='--experimental-vm-modules' node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --detectOpenHandles",
     "test:unit:debug": "NODE_OPTIONS='--experimental-vm-modules' node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --selectProjects unit --detectOpenHandles",
     "test:e2e:debug": "NODE_OPTIONS='--experimental-vm-modules' node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --selectProjects e2e --detectOpenHandles",
-    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' jest --selectProjects e2e",
-    "migrate:redis": "echo 'Removed: legacy NestJS migration is no longer supported' && exit 1"
+    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' jest --selectProjects e2e"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.984.0",

@@ -1,36 +1,41 @@
 name = "tmp-files-microservice"
-main = "src/entry-cloudflare.ts"
-compatibility_date = "2025-02-01"
+compatibility_date = "2024-02-06"
 compatibility_flags = ["nodejs_compat"]
 
-[workers_dev]
-enabled = true
+main = "src/index.worker.ts"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
 
 [vars]
+# Default variables
+LOG_LEVEL = "info"
+NODE_ENV = "production"
+ENABLE_UI = "false"
 BASE_PATH = ""
-LOG_LEVEL = "warn"
 DOWNLOAD_BASE_URL = ""
 ALLOWED_MIME_TYPES = ""
 ENABLE_DEDUPLICATION = "true"
 MAX_TTL_MIN = "44640"
 MAX_FILE_SIZE_MB = "100"
 CLEANUP_INTERVAL_MINS = "10"
-ENABLE_UI = "false"
 
-[[r2_buckets]]
-binding = "R2_BUCKET"
-bucket_name = "tmp-files"
-
-[[kv_namespaces]]
-binding = "METADATA_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-
+# Production environment
 [env.production]
-kv_namespaces = [{ binding = "METADATA_KV", id = "REPLACE_WITH_KV_NAMESPACE_ID" }]
+name = "tmp-files-microservice-production"
+
+# Staging environment
+[env.staging]
+name = "tmp-files-microservice-staging"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
 
 [triggers]
 crons = ["*/10 * * * *"]
 
-[assets]
-directory = "./public"
-binding = "ASSETS"
+[define]
+ENABLE_UI_BUILD = "false"

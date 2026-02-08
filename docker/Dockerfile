@@ -8,12 +8,6 @@ ENV LISTEN_HOST=0.0.0.0
 ENV LISTEN_PORT=8080
 ENV TZ=UTC
 ENV LOG_LEVEL=warn
-ENV CLEANUP_INTERVAL_MINS=10
-ENV REDIS_ENABLED=false
-ENV REDIS_HOST=redis
-ENV REDIS_PORT=6379
-ENV REDIS_DB=0
-ENV REDIS_KEY_PREFIX=tmp_files:
 
 # Install tini for better signal handling
 RUN apk add --no-cache tini
@@ -28,10 +22,7 @@ RUN pnpm install --prod --frozen-lockfile --prefer-offline || pnpm install --pro
 # Copy pre-built application
 COPY dist ./dist
 
-# Copy Web UI static files
-COPY public ./public
-
 EXPOSE 8080
 
 ENTRYPOINT ["tini", "--"]
-CMD ["node", "dist/src/entry-node.js"]
+CMD ["node", "dist/src/index.node.js"]
