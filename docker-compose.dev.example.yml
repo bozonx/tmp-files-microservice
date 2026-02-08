@@ -1,0 +1,35 @@
+services:
+  garage:
+    image: dxflrs/garage:v2.2.0
+    container_name: tmp-files-microservice-garage-dev
+    hostname: tmp-files-microservice-garage-dev
+    restart: unless-stopped
+    command: [ 'server', '-c', '/etc/garage.toml' ]
+    environment:
+      - RUST_LOG=garage=info
+    ports:
+      - '3900:3900'
+      - '3901:3901'
+      - '3902:3902'
+      - '3903:3903'
+    volumes:
+      - ./garage.toml:/etc/garage.toml:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+
+  redis:
+    image: redis:8-alpine
+    container_name: tmp-files-microservice-redis-dev
+    hostname: tmp-files-microservice-redis-dev
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: [ 'CMD', 'redis-cli', 'ping' ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  garage_meta:
+  garage_data:
