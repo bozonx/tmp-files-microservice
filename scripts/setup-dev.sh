@@ -9,18 +9,6 @@ if [ ! -f .env.development ]; then
   cp .env.development.example .env.development
 fi
 
-# 2. Create Garage directories
-echo "Creating Garage directories..."
-mkdir -p test-data/garage/meta test-data/garage/data
-# Using sudo only if necessary, but following the requested example pattern
-# Note: chown might fail if not running as root or without sudo, 
-# but we'll try to follow the user's provided snippet.
-if [ "$EUID" -ne 0 ]; then
-  echo "Applying permissions to test-data/garage (may require sudo)..."
-  sudo chown -R 1000:1000 test-data/garage || echo "Warning: Could not chown test-data/garage. This might be okay if you're not on Linux or have different permissions."
-else
-  chown -R 1000:1000 test-data/garage
-fi
 
 # 3. Start Redis and Garage
 echo "Starting Redis and Garage..."
