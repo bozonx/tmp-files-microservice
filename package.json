@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node dist/src/entry-node.js",
-    "start:dev": "NODE_ENV=development node --watch src/entry-node.ts",
+    "start:dev": "NODE_ENV=development node --env-file=.env.development --import tsx --watch src/entry-node.ts",
     "start:prod": "NODE_ENV=production node dist/src/entry-node.js",
     "dev:wrangler": "wrangler dev src/entry-cloudflare.ts",
     "deploy:wrangler": "wrangler deploy src/entry-cloudflare.ts",
@@ -55,6 +55,7 @@
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "wrangler": "^3.114.0"
   },
