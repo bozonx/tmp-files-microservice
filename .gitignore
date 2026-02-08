@@ -2,6 +2,7 @@ test-data/
 dist/
 test-nest/
 /docker-compose.yml
+.wrangler/
 
 # dotenv environment variable files
 .env

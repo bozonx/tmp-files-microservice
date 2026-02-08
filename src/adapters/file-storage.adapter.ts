@@ -4,7 +4,8 @@ export interface FileStorageAdapter {
   saveFile(
     input: ReadableStream<Uint8Array>,
     key: string,
-    mimeType: string
+    mimeType: string,
+    size?: number
   ): Promise<StorageOperationResult<string>>
 
   readFile(key: string): Promise<StorageOperationResult<Uint8Array>>

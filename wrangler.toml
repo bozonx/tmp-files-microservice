@@ -38,3 +38,11 @@ invocation_logs = true
 
 [define]
 ENABLE_UI_BUILD = "false"
+
+[[kv_namespaces]]
+binding = "METADATA_KV"
+id = "fake-id-for-local-dev"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "tmp-files"

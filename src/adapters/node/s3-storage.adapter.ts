@@ -21,7 +21,8 @@ export class S3StorageAdapter implements FileStorageAdapter {
   public async saveFile(
     input: ReadableStream<Uint8Array>,
     key: string,
-    mimeType: string
+    mimeType: string,
+    size?: number
   ): Promise<StorageOperationResult<string>> {
     try {
       const reader = input.getReader()

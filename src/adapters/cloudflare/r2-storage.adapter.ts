@@ -13,10 +13,20 @@ export class R2StorageAdapter implements FileStorageAdapter {
   public async saveFile(
     input: ReadableStream<Uint8Array>,
     key: string,
-    mimeType: string
+    mimeType: string,
+    size?: number
   ): Promise<StorageOperationResult<string>> {
     try {
-      await this.deps.bucket.put(key, input, {
+      // In Cloudflare Workers, R2.put() requires a known length for streams.
+      // If a size is provided and FixedLengthStream is available, we use it to wrap the stream.
+      let uploadInput: ReadableStream<Uint8Array> | ArrayBuffer | string = input
+      
+      const fixedLengthStream = (globalThis as unknown as { FixedLengthStream?: any }).FixedLengthStream
+      if (size !== undefined && size > 0 && fixedLengthStream) {
+        uploadInput = input.pipeThrough(new fixedLengthStream(size))
+      }
+
+      await this.deps.bucket.put(key, uploadInput, {
         httpMetadata: {
           contentType: mimeType,
         },

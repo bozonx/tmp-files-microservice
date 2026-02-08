@@ -125,14 +125,15 @@ export class StorageService {
       const uploadRes = await this.deps.fileStorage.saveFile(
         processedStream.stream,
         key,
-        params.file.mimetype ?? 'application/octet-stream'
+        params.file.mimetype ?? 'application/octet-stream',
+        params.file.size
       )
-
-      const processed = processedStream.getResult()
 
       if (!uploadRes.success) {
         return { success: false, error: uploadRes.error }
       }
+
+      const processed = processedStream.getResult()
 
       if (this.enableDeduplication) {
         const existing = await this.deps.metadata.findFileByHash(processed.hashHex)
