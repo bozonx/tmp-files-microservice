@@ -176,9 +176,24 @@ export class StorageService {
       return { success: true, data: fileInfo }
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e))
-      this.deps.logger.error('Failed to save file', { error: err.message })
+      this.deps.logger.error('Failed to save file', {
+        error: err.message,
+        stack: err.stack,
+        fileId,
+      })
 
-      await this.deps.fileStorage.deleteFile(key).catch(() => undefined)
+      // Attempt to delete the file from storage if metadata/processing failed
+      await this.deps.fileStorage.deleteFile(key).catch((cleanupErr: unknown) => {
+        const cErr = cleanupErr instanceof Error ? cleanupErr : new Error(String(cleanupErr))
+        this.deps.logger.error(
+          'Failed to cleanup file after metadata failure. POTENTIAL ORPHAN FILE!',
+          {
+            key,
+            error: cErr.message,
+            stack: cErr.stack,
+          }
+        )
+      })
       return { success: false, error: `Failed to save file: ${err.message}` }
     }
   }
