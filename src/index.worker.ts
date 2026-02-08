@@ -57,30 +57,5 @@ export default {
     return app.fetch(request, env, ctx)
   },
 
-  scheduled(_event: ScheduledEvent, env: CloudflareBindings, ctx: ExecutionContext): void {
-    const appEnv = loadAppEnv(env as unknown as Record<string, unknown>)
-    const logger = createDefaultLogger(appEnv)
 
-    const storage = new R2StorageAdapter({ bucket: env.R2_BUCKET })
-    const metadata = new KvMetadataAdapter({ kv: env.METADATA_KV })
-    const app = createApp(
-      { env: appEnv, storage, metadata, logger },
-      {
-        createFilesRoutes: () => createFilesRoutesWorkers(),
-      }
-    )
-
-    const basePath = appEnv.BASE_PATH
-    const apiBase = basePath ? `/${basePath}/api/v1` : '/api/v1'
-
-    ctx.waitUntil(
-      Promise.resolve(
-        app.fetch(
-          new Request(`http://internal${apiBase}/cleanup/run`, { method: 'POST' }),
-          env,
-          ctx
-        )
-      )
-    )
-  },
 }

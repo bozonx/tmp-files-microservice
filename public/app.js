@@ -105,10 +105,10 @@ cleanupBtn.addEventListener('click', async () => {
 
     cleanupBtn.disabled = true;
     try {
-        const response = await fetch(`${API_BASE_URL}/cleanup/run`, { method: 'POST' });
+        const response = await fetch(`${API_BASE_URL}/maintenance/run`, { method: 'POST' });
         const data = await response.json();
         if (response.ok) {
-            showToast(data.message || 'Cleanup completed');
+            showToast(data.message || 'Maintenance completed');
             refreshAll();
         } else {
             throw new Error(data.message || 'Cleanup failed');

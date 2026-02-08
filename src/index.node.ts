@@ -108,20 +108,12 @@ const server = serve(
   }
 )
 
-let interval: NodeJS.Timeout | undefined
-if (env.CLEANUP_INTERVAL_MINS > 0) {
-  interval = setInterval(() => {
-    void services.cleanup.runCleanup().catch((e: unknown) => {
-      const err = e instanceof Error ? e : new Error(String(e))
-      logger.error('Cleanup interval failed', { error: err.message, stack: err.stack })
-    })
-  }, env.CLEANUP_INTERVAL_MINS * 60_000)
-}
+
 
 async function shutdown(signal: string): Promise<void> {
   logger.warn('Shutdown signal received', { signal })
 
-  if (interval) clearInterval(interval)
+
 
   server.close(() => {
     logger.info('HTTP server closed')

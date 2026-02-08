@@ -34,8 +34,7 @@ name = "tmp-files-microservice-staging"
 enabled = true
 invocation_logs = true
 
-[triggers]
-crons = ["*/10 * * * *"]
+
 
 [define]
 ENABLE_UI_BUILD = "false"

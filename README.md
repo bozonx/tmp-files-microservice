@@ -31,7 +31,7 @@ The service accepts files via REST (`multipart/form-data`), stores them for a ti
   - Metadata storage: **KV**
   - UI assets served via Workers Assets binding
 - **FilesService** validates inputs, enforces limits, and exposes application use-cases.
-- **CleanupService** removes expired files (interval controlled by `CLEANUP_INTERVAL_MINS`; Workers cleanup is triggered by a cron schedule).
+- **CleanupService** removes expired files (manually triggered via `/maintenance/run` endpoint).
 
 ## Quick start
 
@@ -103,7 +103,7 @@ Source of truth: `.env.production.example`
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
-  - `CLEANUP_INTERVAL_MINS` — cleanup interval in minutes (default 10, set 0 to disable)
+  - `CLEANUP_INTERVAL_MINS` — (Legacy) Previously used for cleanup interval. Now cleanup is triggered manually.
   - `ENABLE_UI` — enable web interface at root path (`true|false`, default `false`)
   - `DOWNLOAD_BASE_URL` — Base URL for `downloadUrl` in responses (e.g. `https://files.example.com`). If not set, `downloadUrl` will be relative.
 - Node.js runtime (Docker) — Redis (metadata storage):
@@ -141,7 +141,7 @@ Source of truth: `.env.production.example`
 
 ## Cleanup behavior
 
-- Controlled by `CLEANUP_INTERVAL_MINS`. Set `0` or less to disable scheduling.
+- Cleanup is triggered manually via the `/maintenance/run` endpoint.
 - Expired files are removed from storage and metadata; logs include delete count and freed bytes.
 - Orphaned objects (objects in storage but missing from metadata) are automatically identified and removed to reclaim space.
 - Processing is done in batches of 1000 files (`CLEANUP_BATCH_SIZE`) to manage memory usage.
@@ -151,7 +151,7 @@ Source of truth: `.env.production.example`
 - The service handles `SIGTERM` and `SIGINT` signals.
 - It stops accepting new connections and gives active requests (including uploads) up to 25 seconds to complete before forcing exit.
 - Cleanup tasks are paused during shutdown to prevent consistency issues.
-- You can trigger cleanup manually via `POST /{base}/cleanup/run`.
+- You can trigger maintenance manually via `POST /{base}/maintenance/run`.
 
 ## Web UI
 
@@ -190,7 +190,7 @@ The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScri
 - `GET /{base}/files` — list/search with filters
 - `GET /{base}/files/stats` — aggregated stats
 - `GET /{base}/files/:id/exists` — existence check
-- `POST /{base}/cleanup/run` — run cleanup immediately
+- `POST /{base}/maintenance/run` — run maintenance/cleanup immediately
 
 ## REST API specification (REST-only)
 
@@ -337,15 +337,14 @@ Errors: 400, 404 (not found), 500.
   - The `isExpired` field is always present and is a boolean
   - 400 is returned for an invalid `id`
 
-#### Manual cleanup
-- POST `/{base}/cleanup/run`
-- Description: triggers cleanup of expired files immediately.
+- POST `/{base}/maintenance/run`
+- Description: triggers maintenance/cleanup of expired files immediately.
 - 200 response:
 ```json
-{ "success": true, "message": "Cleanup completed" }
+{ "success": true, "message": "Maintenance completed" }
 ```
 
-Errors: 500 (if cleanup failed)
+Errors: 500 (if maintenance failed)
 
 ### Error handling
 
