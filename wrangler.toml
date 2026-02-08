@@ -34,10 +34,10 @@ name = "tmp-files-microservice-staging"
 enabled = true
 invocation_logs = true
 
-[[kv_namespaces]]
-binding = "METADATA_KV"
-id = "fake-id-for-local-dev"
+#[[kv_namespaces]]
+#binding = "METADATA_KV"
+#id = "fake-id-for-local-dev"
 
-[[r2_buckets]]
-binding = "R2_BUCKET"
-bucket_name = "tmp-files"
+#[[r2_buckets]]
+#binding = "R2_BUCKET"
+#bucket_name = "tmp-files"
