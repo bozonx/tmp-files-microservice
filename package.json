@@ -5,6 +5,7 @@
   "description": "Temporary files microservice",
   "main": "dist/src/index.node.js",
   "scripts": {
+    "setup:dev": "bash scripts/setup-dev.sh",
     "dev": "tsx watch src/index.node.ts",
     "dev:worker": "ln -sf .env.development .dev.vars && wrangler dev src/index.worker.ts --define ENABLE_UI_BUILD:true",
     "build": "tsc -p tsconfig.build.json",

@@ -14,8 +14,8 @@ services:
       - '3903:3903'
     volumes:
       - ./garage.toml:/etc/garage.toml:ro
-      - garage_meta:/var/lib/garage/meta
-      - garage_data:/var/lib/garage/data
+      - ./test-data/garage/meta:/var/lib/garage/meta
+      - ./test-data/garage/data:/var/lib/garage/data
 
   redis:
     image: redis:8-alpine
@@ -29,7 +29,3 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-
-volumes:
-  garage_meta:
-  garage_data:
