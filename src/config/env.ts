@@ -8,7 +8,7 @@ export interface AppEnv {
 
   MAX_FILE_SIZE_MB: number
   ALLOWED_MIME_TYPES: string[]
-  ENABLE_DEDUPLICATION: boolean
+
   MAX_TTL_MIN: number
 
   S3_ENDPOINT?: string
@@ -87,7 +87,7 @@ export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
 
     MAX_FILE_SIZE_MB,
     ALLOWED_MIME_TYPES: parseAllowedMimeTypes(readString(envSource, 'ALLOWED_MIME_TYPES', '')),
-    ENABLE_DEDUPLICATION: readBool(envSource, 'ENABLE_DEDUPLICATION', true),
+
     MAX_TTL_MIN,
 
     S3_ENDPOINT: readString(envSource, 'S3_ENDPOINT', '') || undefined,

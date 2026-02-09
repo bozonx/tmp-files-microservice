@@ -47,7 +47,7 @@ export const createMockEnvSource = (
   DOWNLOAD_BASE_URL: '',
   MAX_FILE_SIZE_MB: '10',
   ALLOWED_MIME_TYPES: '',
-  ENABLE_DEDUPLICATION: 'true',
+
   MAX_TTL_MIN: '44640',
   ...overrides,
 })

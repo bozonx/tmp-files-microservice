@@ -17,7 +17,6 @@ describe('StorageService (basic)', () => {
       saveFileInfo: jest.fn().mockResolvedValue(undefined),
       getFileInfo: jest.fn().mockResolvedValue(null),
       deleteFileInfo: jest.fn().mockResolvedValue(undefined),
-      findFileByHash: jest.fn().mockResolvedValue(null),
       searchFiles: jest.fn() as any,
       getStats: jest.fn().mockResolvedValue({
         totalFiles: 0,
@@ -41,7 +40,6 @@ describe('StorageService (basic)', () => {
     const env = loadAppEnv(
       createMockEnvSource({
         MAX_FILE_SIZE_MB: '1',
-        ENABLE_DEDUPLICATION: 'true',
       })
     )
 

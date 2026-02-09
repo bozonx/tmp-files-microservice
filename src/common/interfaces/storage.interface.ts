@@ -5,7 +5,7 @@ export interface StorageConfig {
   basePath: string
   maxFileSize: number
   allowedMimeTypes: string[]
-  enableDeduplication: boolean
+
 }
 
 export interface StorageMetadata {

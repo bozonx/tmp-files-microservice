@@ -3,9 +3,10 @@
 ## Unreleased
 
 - Breaking: Migrated HTTP layer from NestJS/Fastify to **Hono**.
+- Breaking: Removed deduplication logic and `ENABLE_DEDUPLICATION` configuration.
 - Feature: Dual runtime support:
-  - Node.js/Docker: **S3-compatible storage** + **Redis metadata**.
-  - Cloudflare Workers: **R2 storage** + **KV metadata**.
+  - Node.js/Docker: **S3-compatible storage** + **Storage-based metadata**.
+  - Cloudflare Workers: **R2 storage** + **Storage-based metadata**.
 - Feature: Web UI moved to root path `/{BASE_PATH}/` and is now disabled by default.
 - Feature: Added `ENABLE_UI` environment variable to toggle Web UI availability (default: `false`).
 - Change: Multipart handling is runtime-specific:

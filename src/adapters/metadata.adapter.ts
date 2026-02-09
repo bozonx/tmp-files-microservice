@@ -8,7 +8,7 @@ export interface MetadataAdapter {
   getFileInfo(fileId: string): Promise<FileInfo | null>
   deleteFileInfo(fileId: string): Promise<void>
 
-  findFileByHash(hash: string): Promise<FileInfo | null>
+
 
   searchFiles(params: FileSearchParams): Promise<FileSearchResult>
   getStats(): Promise<FileStats>

@@ -15,7 +15,7 @@ export interface CloudflareBindings {
   DOWNLOAD_BASE_URL?: string
   MAX_FILE_SIZE_MB?: string
   ALLOWED_MIME_TYPES?: string
-  ENABLE_DEDUPLICATION?: string
+
   MAX_TTL_MIN?: string
 }
 

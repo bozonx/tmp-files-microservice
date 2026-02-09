@@ -22,12 +22,12 @@ describe('loadAppEnv', () => {
   it('uses fallbacks for invalid inputs', () => {
     const cfg = loadAppEnv({
       LISTEN_PORT: 'not-a-number',
-      ENABLE_DEDUPLICATION: 'nope',
+
       NODE_ENV: 'invalid',
     })
 
     expect(cfg.LISTEN_PORT).toBe(8080)
-    expect(cfg.ENABLE_DEDUPLICATION).toBe(false)
+
     expect(cfg.NODE_ENV).toBe('production')
   })
 })

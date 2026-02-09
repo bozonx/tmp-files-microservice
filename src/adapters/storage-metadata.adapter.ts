@@ -77,10 +77,7 @@ export class StorageMetadataAdapter implements MetadataAdapter {
     }
   }
 
-  public async findFileByHash(_hash: string): Promise<FileInfo | null> {
-    // Deduplication is disabled in this mode
-    return null
-  }
+
 
   public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
     const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX)

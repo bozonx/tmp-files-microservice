@@ -1,6 +1,6 @@
 # Temporary Files Microservice (Hono)
 
-Production-ready microservice for temporary file storage with TTL, content deduplication, search, and cleanup support. Built with Hono and designed to run both on Node.js (Docker) and Cloudflare Workers.
+Production-ready microservice for temporary file storage with TTL, search, and cleanup support. Built with Hono and designed to run both on Node.js (Docker) and Cloudflare Workers.
 
 ## What’s included
 
@@ -17,7 +17,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 
 ## Overview
 
-The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttlMins` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks. SHA-256 based deduplication prevents storing duplicate content.
+The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttlMins` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks.
 
 ### Architecture at a glance
 
@@ -159,7 +159,7 @@ Source of truth: `.env.production.example`
     - In Node.js runtime, streaming multipart parsing is used.
     - In Workers runtime, multipart parsing uses `Request.formData()`.
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
-  - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
+
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
   - `ENABLE_UI` — enable web interface at root path (`true|false`, default `false`)
   - `DOWNLOAD_BASE_URL` — Base URL for `downloadUrl` in responses (e.g. `https://files.example.com`). If not set, `downloadUrl` will be relative.
@@ -185,7 +185,7 @@ Source of truth: `.env.production.example`
   - Node.js: S3-compatible bucket
   - Cloudflare Workers: R2 bucket
 - Metadata is stored as custom headers on the main objects and as JSON marker files in a `metadata/` directory.
-- Deduplication: if the same file content (by SHA-256) is uploaded again, existing metadata is reused to avoid duplicate storage.
+
 
 ## Cleanup behavior
 
@@ -534,8 +534,7 @@ curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
   - This service aims to be lightweight and self-contained. For large-scale needs, you can replace the storage layer with a DB-backed implementation.
 - How do I change the base path?
   - Set `BASE_PATH` (without slashes). The UI will be served at `/{BASE_PATH}/` and the API will be served at `/{BASE_PATH}/api/v1`. The Web UI does not read `BASE_PATH` directly; it derives the API base path from the current browser URL.
-- Can I disable deduplication?
-  - Yes, set `ENABLE_DEDUPLICATION=false`.
+
 
 ## Development
 

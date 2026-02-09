@@ -16,8 +16,8 @@ import type {
 } from '../common/interfaces/storage.interface.js'
 import { DateUtil } from '../common/utils/date.util.js'
 import { FilenameUtil } from '../common/utils/filename.util.js'
-import { sha256 } from '@noble/hashes/sha256'
-import { bytesToHex } from '@noble/hashes/utils'
+import { sha256 } from '@noble/hashes/sha2.js'
+import { bytesToHex } from '@noble/hashes/utils.js'
 
 export interface StorageServiceDeps {
   env: AppEnv
@@ -159,9 +159,7 @@ export class StorageService {
     return this.deps.env.ALLOWED_MIME_TYPES
   }
 
-  private get enableDeduplication(): boolean {
-    return this.deps.env.ENABLE_DEDUPLICATION
-  }
+
 
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return
