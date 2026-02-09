@@ -8,6 +8,8 @@
     "setup:dev": "bash scripts/setup-dev.sh",
     "dev": "tsx watch --env-file=.env.development src/index.node.ts",
     "dev:worker": "ln -sf .env.development .dev.vars && wrangler dev src/index.worker.ts --env dev",
+    "build:node": "tsc -p tsconfig.build.json",
+    "start:node": "node dist/src/index.node.js",
     "build": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy src/index.worker.ts",
     "deploy:staging": "wrangler deploy src/index.worker.ts --env staging",

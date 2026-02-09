@@ -39,7 +39,11 @@ export function createErrorHandler(): ErrorHandler<HonoEnv> {
       statusCode,
       message: rawMessage,
       error: err instanceof Error ? err.name : 'UnknownError',
-      stack: err instanceof Error ? err.stack : undefined,
+      stack: statusCode >= 500 && err instanceof Error ? err.stack : undefined,
+      cause:
+        statusCode >= 500 && err instanceof Error
+          ? String((err as { cause?: unknown }).cause ?? '') || undefined
+          : undefined,
     }
 
     if (maybeLogger) {

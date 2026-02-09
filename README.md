@@ -74,8 +74,8 @@ curl http://localhost:8080/api/v1/health
 ```bash
 pnpm install
 cp .env.production.example .env.production
-pnpm build
-pnpm start:prod
+pnpm build:node
+pnpm start:node
 ```
 
 ### Development
@@ -95,7 +95,7 @@ If you prefer manual setup:
 
 ```bash
 cp .env.development.example .env.development
-docker compose -f docker-compose.yml up -d --remove-orphans garage
+docker compose -f docker/docker-compose.yml up -d --remove-orphans garage
 pnpm install
 pnpm dev
 ```
@@ -112,7 +112,7 @@ If you want to run the app itself in a container, build the image and run it (no
 
 ```bash
 pnpm install
-pnpm build
+pnpm build:node
 docker build -f docker/Dockerfile -t tmp-files-microservice:local .
 
 cp .env.production.example .env.production
@@ -136,6 +136,7 @@ Notes:
 
 - `pnpm dev:worker` links `.env.development` to `.dev.vars` for Wrangler.
 - You must provide Cloudflare bindings for R2 in your Wrangler setup.
+- `POST {base}/files/url` requires `Content-Length` from the remote server.
 
 #### Worker (deploy)
 
@@ -211,6 +212,11 @@ Source of truth: `.env.production.example`
   - service-level validation in `FilesService`.
 - Exceeding the limit returns HTTP 413.
 
+Worker note (R2):
+
+- `POST {base}/files/url` requires the remote server to return a valid `Content-Length` header.
+  This is required for streaming uploads to R2.
+
 ## Storage and metadata
 
 - Files and metadata are stored in an object storage backend:
@@ -224,7 +230,7 @@ Source of truth: `.env.production.example`
 - Cleanup is triggered manually via the `/maintenance/run` endpoint.
 - Expired files are removed from storage and metadata; logs include delete count and freed bytes.
 - Orphaned objects (objects in storage but missing from metadata) are automatically identified and removed to reclaim space.
-- Processing is done in batches of 1000 files (`CLEANUP_BATCH_SIZE`) to manage memory usage.
+- Processing is done in batches of up to 1000 expired files per run.
 
 ## Graceful Shutdown
 

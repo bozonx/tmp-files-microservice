@@ -46,26 +46,7 @@ export class StorageMetadataAdapter implements MetadataAdapter {
   }
 
   public async getFileInfo(fileId: string): Promise<FileInfo | null> {
-    // Attempt to get metadata directly from the main file headers first (optimization)
-    const headerRes = await this.deps.storage.getMetadata(fileId)
-    if (headerRes.success && headerRes.data?.['original-name'] && headerRes.data['expires-at']) {
-      const meta = headerRes.data
-      return {
-        id: fileId,
-        originalName: meta['original-name'] || '',
-        storedName: meta['stored-name'] || fileId,
-        mimeType: meta['mime-type'] || 'application/octet-stream',
-        size: Number.parseInt(meta['size'] || '0', 10),
-        hash: meta['hash'] || '',
-        uploadedAt: meta['uploaded-at'] || new Date(0).toISOString(),
-        ttl: Number.parseInt(meta['ttl'] || '0', 10),
-        expiresAt: meta['expires-at'] || new Date(0).toISOString(),
-        filePath: fileId,
-        metadata: {},
-      }
-    }
-
-    // Fallback: search in metadata/ folder
+    // Search in metadata/ folder
     const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX)
     const match = allMetaKeys.find((k) => k.endsWith(`__${fileId}.json`))
     if (!match) return null
@@ -87,10 +68,6 @@ export class StorageMetadataAdapter implements MetadataAdapter {
   public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
     const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX)
     const files: FileInfo[] = []
-
-    console.log(
-      `[StorageMetadata] Found ${allMetaKeys.length} keys with prefix "${METADATA_PREFIX}"`
-    )
 
     const concurrency = 20
     for (let i = 0; i < allMetaKeys.length; i += concurrency) {
@@ -123,7 +100,7 @@ export class StorageMetadataAdapter implements MetadataAdapter {
 
               files.push(info)
             } catch (e) {
-              console.error(`[StorageMetadata] Error parsing metadata for key ${key}:`, e)
+              // ignore invalid metadata files
             }
           }
         })

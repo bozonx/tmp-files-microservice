@@ -91,13 +91,30 @@ export class FilesService {
     return false
   }
 
+  private isPrivateIpv6(ip: string): boolean {
+    const normalized = ip.toLowerCase()
+
+    if (normalized === '::1') return true
+    if (normalized === '0:0:0:0:0:0:0:1') return true
+
+    // Unique local addresses (fc00::/7)
+    if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true
+
+    // Link-local addresses (fe80::/10)
+    if (normalized.startsWith('fe8') || normalized.startsWith('fe9')) return true
+    if (normalized.startsWith('fea') || normalized.startsWith('feb')) return true
+
+    return false
+  }
+
   private isBlockedHostname(hostname: string): boolean {
     const h = hostname.toLowerCase()
     if (h === 'localhost' || h.endsWith('.localhost')) return true
     if (h === '0.0.0.0') return true
     if (h === '::1') return true
     if (h.endsWith('.local')) return true
-    if (this.isPrivateIpv4(h)) return true
+    if (h.includes(':') && this.isPrivateIpv6(h)) return true
+    if (!h.includes(':') && this.isPrivateIpv4(h)) return true
     return false
   }
 
@@ -113,7 +130,7 @@ export class FilesService {
     try {
       const addresses = await this.dnsResolver.lookupAll(url.hostname)
       for (const addr of addresses) {
-        if (this.isPrivateIpv4(addr) || addr === '::1') {
+        if (this.isPrivateIpv4(addr) || this.isPrivateIpv6(addr)) {
           throw new HttpError('URL resolves to a private network address', 400)
         }
       }
@@ -135,6 +152,21 @@ export class FilesService {
     if (protocol !== 'http:' && protocol !== 'https:') {
       throw new HttpError('Only http/https URLs are allowed', 400)
     }
+
+    const portRaw = url.port.trim()
+    if (portRaw !== '') {
+      const port = Number.parseInt(portRaw, 10)
+      if (!Number.isFinite(port) || port <= 0 || port > 65535) {
+        throw new HttpError('Invalid URL port', 400)
+      }
+
+      // Workers runtime is more restricted because it cannot reliably perform DNS-based private IP checks.
+      if (!this.isProbablyNodeRuntime()) {
+        if (port !== 80 && port !== 443) {
+          throw new HttpError('Only ports 80 and 443 are allowed', 400)
+        }
+      }
+    }
     return url
   }
 
@@ -147,9 +179,26 @@ export class FilesService {
     for (let i = 0; i <= maxRedirects; i++) {
       await this.assertRemoteAddressAllowed(current)
 
-      const res = await fetch(current, {
-        redirect: 'manual',
-      })
+      const controller = new AbortController()
+      const timeoutMs = 15_000
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+      let res: Response
+      try {
+        res = await fetch(current, {
+          redirect: 'manual',
+          signal: controller.signal,
+        })
+      } catch (e: unknown) {
+        const err = e instanceof Error ? e : new Error(String(e))
+        const name = (err as { name?: unknown }).name
+        if (name === 'AbortError') {
+          throw new HttpError('Remote request timed out', 504)
+        }
+        throw err
+      } finally {
+        clearTimeout(timeoutId)
+      }
 
       if (res.status >= 300 && res.status < 400) {
         const loc = res.headers.get('location')
@@ -188,6 +237,12 @@ export class FilesService {
     const contentType = res.headers.get('content-type') ?? 'application/octet-stream'
     const contentLength = res.headers.get('content-length')
     const size = contentLength ? Number.parseInt(contentLength, 10) : 0
+
+    if (!this.isProbablyNodeRuntime()) {
+      if (!contentLength || !Number.isFinite(size) || size <= 0) {
+        throw new HttpError('Remote response must include a valid Content-Length header', 400)
+      }
+    }
 
     const max = this.deps.env.MAX_FILE_SIZE_MB * 1024 * 1024
     if (size && size > max) {

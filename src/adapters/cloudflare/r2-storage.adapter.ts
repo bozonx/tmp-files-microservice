@@ -40,7 +40,6 @@ export class R2StorageAdapter implements FileStorageAdapter {
       return { success: true, data: key }
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e))
-      console.error(`[R2StorageAdapter] Upload failed for key ${key}:`, err)
       return { success: false, error: `R2 upload failed: ${err.message}` }
     }
   }
