@@ -443,7 +443,6 @@ elements.loadMoreBtn.addEventListener('click', () => {
 elements.refreshBtn.addEventListener('click', () => window.ui.refreshAll());
 
 elements.cleanupBtn.addEventListener('click', async () => {
-    if (!confirm('Execute manual maintenance cycle? All expired resources will be permanently excised.')) return;
     try {
         const res = await api.runMaintenance();
         console.log('Maintenance result:', res);

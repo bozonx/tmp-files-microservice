@@ -97,37 +97,42 @@ export class StorageMetadataAdapter implements MetadataAdapter {
 
     console.log(`[StorageMetadata] Found ${allMetaKeys.length} keys with prefix "${METADATA_PREFIX}"`)
 
-    for (const key of allMetaKeys) {
-      // metadata/[expiresAt]__[id].json
-      const filename = key.slice(METADATA_PREFIX.length)
-      const [expiresTsStr] = filename.split('__')
-      const expiresTs = Number.parseInt(expiresTsStr, 10)
+    const concurrency = 20
+    for (let i = 0; i < allMetaKeys.length; i += concurrency) {
+      const batch = allMetaKeys.slice(i, i + concurrency)
+      await Promise.all(
+        batch.map(async (key) => {
+          // metadata/[expiresAt]__[id].json
+          const filename = key.slice(METADATA_PREFIX.length)
+          const [expiresTsStr] = filename.split('__')
+          const expiresTs = Number.parseInt(expiresTsStr, 10)
 
-      const isExpired = DateUtil.isExpired(new Date(expiresTs))
-      // console.log(`[StorageMetadata] Key: ${key}, ExpiresTs: ${expiresTs}, IsExpired: ${isExpired}, ParamsExpiredOnly: ${params.expiredOnly}`)
-      
-      if (params.expiredOnly && !isExpired) continue
+          const isExpired = DateUtil.isExpired(new Date(expiresTs))
 
-      const contentRes = await this.deps.storage.readFile(key)
-      if (contentRes.success && contentRes.data) {
-        try {
-          const content = new TextDecoder().decode(contentRes.data)
-          // console.log(`[StorageMetadata] Content for ${key}:`, content.slice(0, 100))
-          const info = JSON.parse(content) as FileInfo
-          
-          // Apply filters
-          if (params.mimeType && info.mimeType !== params.mimeType) continue
-          if (params.minSize !== undefined && info.size < params.minSize) continue
-          if (params.maxSize !== undefined && info.size > params.maxSize) continue
-          
-          files.push(info)
-        } catch (e) {
-          console.error(`[StorageMetadata] Error parsing metadata for key ${key}:`, e)
-          // ignore corrupt meta files
-        }
-      } else {
-        console.error(`[StorageMetadata] Failed to read metadata file for key ${key}`)
-      }
+          // Optimization: skip reading file if we only want expired and this one isn't (or vice versa)
+          if (params.expiredOnly !== undefined) {
+            if (params.expiredOnly && !isExpired) return
+            if (!params.expiredOnly && isExpired) return
+          }
+
+          const contentRes = await this.deps.storage.readFile(key)
+          if (contentRes.success && contentRes.data) {
+            try {
+              const content = new TextDecoder().decode(contentRes.data)
+              const info = JSON.parse(content) as FileInfo
+
+              // Apply filters
+              if (params.mimeType && info.mimeType !== params.mimeType) return
+              if (params.minSize !== undefined && info.size < params.minSize) return
+              if (params.maxSize !== undefined && info.size > params.maxSize) return
+
+              files.push(info)
+            } catch (e) {
+              console.error(`[StorageMetadata] Error parsing metadata for key ${key}:`, e)
+            }
+          }
+        })
+      )
     }
 
     files.sort((a, b) => DateUtil.toTimestamp(b.uploadedAt) - DateUtil.toTimestamp(a.uploadedAt))

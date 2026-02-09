@@ -345,6 +345,9 @@ export class StorageService {
 
     let deleted = 0
     for (const key of keys) {
+      // Important: don't delete metadata prefix files here, they are managed differently
+      if (key.startsWith('metadata/')) continue
+
       if (!valid.has(key)) {
         await this.deps.fileStorage.deleteFile(key)
         deleted += 1
