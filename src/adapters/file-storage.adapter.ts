@@ -1,4 +1,7 @@
-import type { StorageOperationResult } from '../common/interfaces/storage.interface.js'
+import type {
+  StorageOperationResult,
+  StorageRange,
+} from '../common/interfaces/storage.interface.js'
 
 export interface FileStorageAdapter {
   saveFile(
@@ -11,7 +14,10 @@ export interface FileStorageAdapter {
 
   readFile(key: string): Promise<StorageOperationResult<Uint8Array>>
 
-  createReadStream(key: string): Promise<StorageOperationResult<ReadableStream<Uint8Array>>>
+  createReadStream(
+    key: string,
+    range?: StorageRange
+  ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>>
 
   getMetadata(key: string): Promise<StorageOperationResult<Record<string, string>>>
 

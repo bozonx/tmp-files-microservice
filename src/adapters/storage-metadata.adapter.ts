@@ -25,7 +25,7 @@ export class StorageMetadataAdapter implements MetadataAdapter {
   public async saveFileInfo(fileInfo: FileInfo): Promise<void> {
     const key = this.metadataKey(fileInfo.expiresAt, fileInfo.id)
     const content = new TextEncoder().encode(JSON.stringify(fileInfo))
-    
+
     // We store the data both in headers (for fast retrieval during download)
     // and as a marker file (for efficient cleanup listing)
     const res = await this.deps.storage.saveFile(
@@ -48,12 +48,7 @@ export class StorageMetadataAdapter implements MetadataAdapter {
   public async getFileInfo(fileId: string): Promise<FileInfo | null> {
     // Attempt to get metadata directly from the main file headers first (optimization)
     const headerRes = await this.deps.storage.getMetadata(fileId)
-    if (
-      headerRes.success &&
-      headerRes.data &&
-      headerRes.data['original-name'] &&
-      headerRes.data['expires-at']
-    ) {
+    if (headerRes.success && headerRes.data?.['original-name'] && headerRes.data['expires-at']) {
       const meta = headerRes.data
       return {
         id: fileId,
@@ -89,13 +84,13 @@ export class StorageMetadataAdapter implements MetadataAdapter {
     }
   }
 
-
-
   public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
     const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX)
     const files: FileInfo[] = []
 
-    console.log(`[StorageMetadata] Found ${allMetaKeys.length} keys with prefix "${METADATA_PREFIX}"`)
+    console.log(
+      `[StorageMetadata] Found ${allMetaKeys.length} keys with prefix "${METADATA_PREFIX}"`
+    )
 
     const concurrency = 20
     for (let i = 0; i < allMetaKeys.length; i += concurrency) {
@@ -136,7 +131,7 @@ export class StorageMetadataAdapter implements MetadataAdapter {
     }
 
     files.sort((a, b) => DateUtil.toTimestamp(b.uploadedAt) - DateUtil.toTimestamp(a.uploadedAt))
-    
+
     const total = files.length
     let out = files
     if (params.offset) out = out.slice(params.offset)

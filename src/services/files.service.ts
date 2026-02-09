@@ -6,6 +6,7 @@ import { ValidationUtil } from '../common/utils/validation.util.js'
 import { DateUtil } from '../common/utils/date.util.js'
 import { HttpError } from '../common/errors/http.error.js'
 import { NullDnsResolver, type DnsResolver } from '../common/interfaces/dns-resolver.interface.js'
+import type { StorageRange } from '../common/interfaces/storage.interface.js'
 
 export interface FilesServiceDeps {
   env: AppEnv
@@ -325,6 +326,7 @@ export class FilesService {
 
   public async downloadFileStream(params: {
     fileId: string
+    range?: StorageRange
   }): Promise<{ stream: ReadableStream<Uint8Array>; fileInfo: FileInfo }> {
     const idValidation = ValidationUtil.validateFileId(params.fileId)
     if (!idValidation.isValid) {
@@ -340,7 +342,7 @@ export class FilesService {
     }
 
     const info = fileRes.data as FileInfo
-    const streamRes = await this.deps.storage.createFileReadStream(params.fileId)
+    const streamRes = await this.deps.storage.createFileReadStream(params.fileId, params.range)
     if (!streamRes.success) {
       throw new HttpError(`Failed to create read stream: ${streamRes.error}`, 500)
     }

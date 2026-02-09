@@ -1,7 +1,10 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import type { FileStorageAdapter } from '../file-storage.adapter.js'
-import type { StorageOperationResult } from '../../common/interfaces/storage.interface.js'
+import type {
+  StorageOperationResult,
+  StorageRange,
+} from '../../common/interfaces/storage.interface.js'
 
 export interface R2StorageAdapterDeps {
   bucket: R2Bucket
@@ -21,8 +24,9 @@ export class R2StorageAdapter implements FileStorageAdapter {
       // In Cloudflare Workers, R2.put() requires a known length for streams.
       // If a size is provided and FixedLengthStream is available, we use it to wrap the stream.
       let uploadInput: ReadableStream<Uint8Array> | ArrayBuffer | string = input
-      
-      const fixedLengthStream = (globalThis as unknown as { FixedLengthStream?: any }).FixedLengthStream
+
+      const fixedLengthStream = (globalThis as unknown as { FixedLengthStream?: any })
+        .FixedLengthStream
       if (size !== undefined && size > 0 && fixedLengthStream) {
         uploadInput = input.pipeThrough(new fixedLengthStream(size))
       }
@@ -54,10 +58,11 @@ export class R2StorageAdapter implements FileStorageAdapter {
   }
 
   public async createReadStream(
-    key: string
+    key: string,
+    range?: StorageRange
   ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
     try {
-      const obj = await this.deps.bucket.get(key)
+      const obj = await this.deps.bucket.get(key, { range })
       if (!obj?.body) return { success: false, error: 'NotFound' }
       return { success: true, data: obj.body }
     } catch (e: unknown) {

@@ -144,6 +144,34 @@ pnpm install
 pnpm deploy
 ```
 
+Deployment notes:
+
+- This project expects an R2 bucket binding named `R2_BUCKET` (see `wrangler.toml`).
+- `wrangler.toml` contains non-secret defaults under `[vars]`. For sensitive values (for example auth tokens), use Wrangler secrets.
+- Typical flow:
+
+```bash
+# Authenticate once
+wrangler login
+
+# Create buckets (once per environment, names must match `wrangler.toml`)
+wrangler r2 bucket create tmp-files-microservice
+wrangler r2 bucket create tmp-files-microservice-dev
+wrangler r2 bucket create tmp-files-microservice-staging
+
+# Set secrets (per environment)
+wrangler secret put AUTH_BEARER_TOKENS
+wrangler secret put AUTH_BEARER_TOKENS --env dev
+wrangler secret put AUTH_BEARER_TOKENS --env staging
+
+# Deploy to production (default)
+pnpm deploy
+
+# Deploy to a named environment
+pnpm deploy:dev
+pnpm deploy:staging
+```
+
 ## Environment variables
 
 Source of truth: `.env.production.example`
@@ -247,7 +275,12 @@ The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScri
 
 ## REST API specification (REST-only)
 
-The service exposes a REST API with no built-in authentication. If protection is required, use an API Gateway. Swagger/OpenAPI and GraphQL are not provided.
+The service exposes a REST API. Swagger/OpenAPI and GraphQL are not provided.
+
+Authentication is optional:
+
+- If **no** auth env vars are set, authentication is **not** enforced.
+- If at least one auth method is configured, authentication is enforced according to the rules in the “Authentication” section.
 
 ### Base path
 
@@ -255,6 +288,15 @@ The service exposes a REST API with no built-in authentication. If protection is
 - The base URL for UI is: `/{BASE_PATH}/` (if `ENABLE_UI=true`)
 - Default: `/api/v1` (API) and `/` (UI)
 - The `BASE_PATH` variable is set via environment (`.env`), without leading or trailing slashes. It is empty by default.
+
+For convenience in this README, `base` always means `/{BASE_PATH}/api/v1`.
+
+Examples:
+
+- With `BASE_PATH` empty: `base = /api/v1`
+- With `BASE_PATH=tmp-files`: `base = /tmp-files/api/v1`
+
+The health endpoint is always `GET {base}/health`.
 
 ### Data formats
 
@@ -429,6 +471,32 @@ Unified error structure:
 - Consider antivirus/malware scanning in your ingestion pipeline depending on your risk profile.
 - Sensitive headers are redacted in logs.
 
+## Authentication
+
+The service supports optional built-in authentication.
+
+### API authentication
+
+If at least one of these is configured:
+
+- `AUTH_BASIC_USER` + `AUTH_BASIC_PASS`
+- `AUTH_BEARER_TOKENS`
+
+Then all API routes require authentication **except** downloads:
+
+- Public: `GET {base}/download/:id`
+- Protected: everything else under `{base}/*`.
+
+Accepted methods:
+
+- Basic: `Authorization: Basic <base64(user:pass)>`
+- Bearer: `Authorization: Bearer <token>` where `<token>` is listed in `AUTH_BEARER_TOKENS` (comma-separated)
+
+### UI authentication
+
+- If `ENABLE_UI=true` and `AUTH_BASIC_USER`/`AUTH_BASIC_PASS` are configured, the UI requires Basic auth.
+- If UI auth is not configured, the UI is public.
+
 ## Logging
 
 - Production: structured JSON via Pino (level via `LOG_LEVEL`).
@@ -442,6 +510,10 @@ Unified error structure:
   - expose `GET /download/:id` publicly; and
   - guard other routes under `/tmp-files` with Bearer tokens.
 - Ensure your S3-compatible storage is reachable and persistent.
+
+Reverse proxy note:
+
+- `docker/Caddyfile` uses its own env var name `AUTH_TOKENS` for the gateway-level Bearer check. This is independent from the application-level `AUTH_BEARER_TOKENS`.
 
 ## Troubleshooting
 
@@ -466,6 +538,10 @@ Define base URL for your environment:
 BASE_URL="http://localhost:8080/api/v1"
 # For dev mode
 # BASE_URL="http://{LISTEN_HOST}:{LISTEN_PORT}/api/v1"
+
+# Optional API auth
+# export AUTH_HEADER='-H "Authorization: Bearer your-token"'
+# export AUTH_HEADER='-u your-user:your-pass'
 ```
 
 - `ttlMins` is provided in minutes (default 1440 = 1 day). In responses, `ttlMins` is also returned in minutes.
@@ -480,6 +556,7 @@ curl -s "$BASE_URL/health"
 
 ```bash
 curl -s -X POST \
+  ${AUTH_HEADER:-} \
   -F "file=@./README.md" \
   -F "ttlMins=60" \
   "$BASE_URL/files" | jq
@@ -489,6 +566,7 @@ curl -s -X POST \
 
 ```bash
 curl -s -X POST \
+  ${AUTH_HEADER:-} \
   -H "Content-Type: application/json" \
   -d '{"url":"https://example.com/file.bin","ttlMins":1440, "metadata":"{\"source\":\"example\"}"}' \
   "$BASE_URL/files/url" | jq
@@ -498,7 +576,7 @@ curl -s -X POST \
 
 ```bash
 FILE_ID="<uuid>"
-curl -s "$BASE_URL/files/$FILE_ID" | jq
+curl -s ${AUTH_HEADER:-} "$BASE_URL/files/$FILE_ID" | jq
 ```
 
 - **Download**
@@ -510,26 +588,26 @@ curl -L -o downloaded.bin "$BASE_URL/download/$FILE_ID"
 - **Delete**
 
 ```bash
-curl -s -X DELETE "$BASE_URL/files/$FILE_ID" | jq
+curl -s -X DELETE ${AUTH_HEADER:-} "$BASE_URL/files/$FILE_ID" | jq
 ```
 
 
 - **List/Search**
 
 ```bash
-curl -s "$BASE_URL/files?mimeType=text/plain&limit=5&offset=0" | jq
+curl -s ${AUTH_HEADER:-} "$BASE_URL/files?mimeType=text/plain&limit=5&offset=0" | jq
 ```
 
 - **Stats**
 
 ```bash
-curl -s "$BASE_URL/files/stats" | jq
+curl -s ${AUTH_HEADER:-} "$BASE_URL/files/stats" | jq
 ```
 
 - **Existence check**
 
 ```bash
-curl -s "$BASE_URL/files/$FILE_ID/exists" | jq
+curl -s ${AUTH_HEADER:-} "$BASE_URL/files/$FILE_ID/exists" | jq
 ```
 
 ## More documentation

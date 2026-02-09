@@ -5,7 +5,6 @@ export interface StorageConfig {
   basePath: string
   maxFileSize: number
   allowedMimeTypes: string[]
-
 }
 
 export interface StorageMetadata {
@@ -20,6 +19,11 @@ export interface StorageOperationResult<T = unknown> {
   success: boolean
   error?: string
   data?: T
+}
+
+export interface StorageRange {
+  offset: number
+  length?: number
 }
 
 export interface DirectoryInfo {

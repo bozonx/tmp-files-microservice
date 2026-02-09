@@ -9,7 +9,10 @@ import {
 import { Upload } from '@aws-sdk/lib-storage'
 import { Readable } from 'node:stream'
 import type { FileStorageAdapter } from '../file-storage.adapter.js'
-import type { StorageOperationResult } from '../../common/interfaces/storage.interface.js'
+import type {
+  StorageOperationResult,
+  StorageRange,
+} from '../../common/interfaces/storage.interface.js'
 
 export interface S3StorageAdapterDeps {
   client: S3Client
@@ -77,10 +80,21 @@ export class S3StorageAdapter implements FileStorageAdapter {
   }
 
   public async createReadStream(
-    key: string
+    key: string,
+    range?: StorageRange
   ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
     try {
-      const cmd = new GetObjectCommand({ Bucket: this.deps.bucket, Key: key })
+      let rangeHeader: string | undefined
+      if (range) {
+        const end = range.length ? range.offset + range.length - 1 : ''
+        rangeHeader = `bytes=${range.offset}-${end}`
+      }
+
+      const cmd = new GetObjectCommand({
+        Bucket: this.deps.bucket,
+        Key: key,
+        Range: rangeHeader,
+      })
       const res = await this.deps.client.send(cmd)
       const body = res.Body
       if (!body) return { success: false, error: 'NotFound' }

@@ -8,7 +8,7 @@ export function createMaintenanceRoutes(): Hono<HonoEnv> {
   app.post('/maintenance/run', async (c: Context<HonoEnv>) => {
     const logger = c.get('logger')
     logger.info('Starting maintenance cycle')
-    
+
     try {
       const services = c.get('services')
       await services.cleanup.runCleanup()

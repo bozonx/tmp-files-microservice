@@ -8,8 +8,6 @@ export interface MetadataAdapter {
   getFileInfo(fileId: string): Promise<FileInfo | null>
   deleteFileInfo(fileId: string): Promise<void>
 
-
-
   searchFiles(params: FileSearchParams): Promise<FileSearchResult>
   getStats(): Promise<FileStats>
   getAllFileIds(): Promise<string[]>

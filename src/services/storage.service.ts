@@ -13,6 +13,7 @@ import type {
   FileSearchResult,
   StorageHealth,
   StorageOperationResult,
+  StorageRange,
 } from '../common/interfaces/storage.interface.js'
 import { DateUtil } from '../common/utils/date.util.js'
 import { FilenameUtil } from '../common/utils/filename.util.js'
@@ -159,8 +160,6 @@ export class StorageService {
     return this.deps.env.ALLOWED_MIME_TYPES
   }
 
-
-
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return
     await this.deps.metadata.initialize()
@@ -188,7 +187,7 @@ export class StorageService {
       }
 
       const processedStream = this.createHashingLimitedStream(remainingStream)
-      
+
       const uploadRes = await this.deps.fileStorage.saveFile(
         processedStream.stream,
         key,
@@ -197,8 +196,8 @@ export class StorageService {
         {
           'mime-type': mimeType,
           'original-name': params.file.originalname,
-          'size': String(params.file.size),
-          'ttl': String(params.ttl),
+          size: String(params.file.size),
+          ttl: String(params.ttl),
           'expires-at': DateUtil.toISOString(DateUtil.createExpirationDate(params.ttl)),
           'uploaded-at': DateUtil.toISOString(DateUtil.now().toDate()),
         }
@@ -279,13 +278,13 @@ export class StorageService {
   }
 
   public async createFileReadStream(
-    fileId: string
+    fileId: string,
+    range?: StorageRange
   ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
     const infoRes = await this.getFileInfo(fileId)
     if (!infoRes.success) return { success: false, error: infoRes.error }
-
     const info = infoRes.data as FileInfo
-    return this.deps.fileStorage.createReadStream(info.filePath)
+    return this.deps.fileStorage.createReadStream(info.filePath, range)
   }
 
   public async deleteFile(fileId: string): Promise<FileOperationResult> {
