@@ -8,7 +8,6 @@ import { createFilesRoutesWorkers } from './routes/files.route.workers.js'
 
 export interface CloudflareBindings {
   R2_BUCKET: R2Bucket
-  METADATA_KV: KVNamespace
   ASSETS: { fetch: (req: Request) => Promise<Response> }
 
   BASE_PATH?: string

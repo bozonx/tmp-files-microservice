@@ -3,7 +3,6 @@ import type { HttpBindings } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { S3Client } from '@aws-sdk/client-s3'
-import { Redis } from 'ioredis'
 import { createApp, createDefaultLogger } from './app.js'
 import { loadAppEnv } from './config/env.js'
 import { S3StorageAdapter } from './adapters/node/s3-storage.adapter.js'
@@ -96,12 +95,8 @@ const server = serve(
   }
 )
 
-
-
 async function shutdown(signal: string): Promise<void> {
   logger.warn('Shutdown signal received', { signal })
-
-
 
   server.close(() => {
     logger.info('HTTP server closed')

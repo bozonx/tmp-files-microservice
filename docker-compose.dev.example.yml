@@ -17,19 +17,6 @@ services:
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
 
-  redis:
-    image: redis:8-alpine
-    container_name: tmp-files-microservice-redis-dev
-    hostname: tmp-files-microservice-redis-dev
-    restart: unless-stopped
-    ports:
-      - '6379:6379'
-    healthcheck:
-      test: [ 'CMD', 'redis-cli', 'ping' ]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
 volumes:
   garage_meta:
   garage_data:

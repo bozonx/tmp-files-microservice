@@ -12,13 +12,6 @@ export interface AppEnv {
   MAX_TTL_MIN: number
   CLEANUP_INTERVAL_MINS: number
 
-  REDIS_ENABLED: boolean
-  REDIS_HOST: string
-  REDIS_PORT: number
-  REDIS_PASSWORD?: string
-  REDIS_DB: number
-  REDIS_KEY_PREFIX: string
-
   S3_ENDPOINT?: string
   S3_REGION: string
   S3_BUCKET: string
@@ -99,13 +92,6 @@ export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
     ENABLE_DEDUPLICATION: readBool(envSource, 'ENABLE_DEDUPLICATION', true),
     MAX_TTL_MIN,
     CLEANUP_INTERVAL_MINS,
-
-    REDIS_ENABLED: readBool(envSource, 'REDIS_ENABLED', false),
-    REDIS_HOST: readString(envSource, 'REDIS_HOST', 'localhost'),
-    REDIS_PORT: readInt(envSource, 'REDIS_PORT', 6379),
-    REDIS_PASSWORD: readString(envSource, 'REDIS_PASSWORD', '') || undefined,
-    REDIS_DB: readInt(envSource, 'REDIS_DB', 0),
-    REDIS_KEY_PREFIX: readString(envSource, 'REDIS_KEY_PREFIX', 'tmp_files:'),
 
     S3_ENDPOINT: readString(envSource, 'S3_ENDPOINT', '') || undefined,
     S3_REGION: readString(envSource, 'S3_REGION', 'us-east-1'),

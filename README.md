@@ -12,7 +12,7 @@ Production-ready microservice for temporary file storage with TTL, content dedup
 - **Multi-file Upload**: Support for uploading multiple files in a single request
 - Unit and E2E tests (Jest)
 - Docker/Docker Compose support
-- Cloudflare Workers + R2 + KV support (Wrangler)
+- Cloudflare Workers + R2 support (Wrangler)
 - No built-in auth; expose behind your API Gateway
 
 ## Overview
@@ -24,11 +24,11 @@ The service accepts files via REST (`multipart/form-data`), stores them for a ti
 - **Hono** for HTTP routing, compatible with both Node.js and Cloudflare Workers.
 - **Node.js runtime (Docker)**:
   - File storage: **S3-compatible** (AWS S3 / Minio / Garage / etc.)
-  - Metadata storage: **Redis**
+  - Metadata storage: **Storage-based** (co-located with files in S3)
   - Multipart upload parsing: streaming via Busboy (does not buffer entire upload)
 - **Cloudflare Workers runtime**:
   - File storage: **R2**
-  - Metadata storage: **KV**
+  - Metadata storage: **Storage-based** (co-located with files in R2)
   - UI assets served via Workers Assets binding
 - **FilesService** validates inputs, enforces limits, and exposes application use-cases.
 - **CleanupService** removes expired files (manually triggered via `/maintenance/run` endpoint).
@@ -48,7 +48,7 @@ Below are the recommended ways to run it in production and development.
 
 #### Production (container) — Docker Compose
 
-Use the production compose file that runs the microservice + Redis + Garage (S3-compatible).
+Use the production compose file that runs the microservice + Garage (S3-compatible).
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
@@ -80,7 +80,7 @@ pnpm start:prod
 
 ### Development
 
-#### Development (local) — Node.js + local Redis/Garage
+#### Development (local) — Node.js + local Garage
 
 The simplest way is to use the helper script, then run the dev server.
 
@@ -95,7 +95,7 @@ If you prefer manual setup:
 
 ```bash
 cp .env.development.example .env.development
-docker compose -f docker-compose.yml up -d --remove-orphans redis garage
+docker compose -f docker-compose.yml up -d --remove-orphans garage
 pnpm install
 pnpm dev
 ```
@@ -105,7 +105,7 @@ pnpm dev
 This repo does not ship a dedicated dev container with hot-reload out of the box.
 Recommended approach:
 
-- Run Redis/Garage via `docker-compose.yml`
+- Run Garage via `docker-compose.yml`
 - Run the Node.js app locally via `pnpm dev`
 
 If you want to run the app itself in a container, build the image and run it (no hot reload):
@@ -135,7 +135,7 @@ pnpm dev:worker
 Notes:
 
 - `pnpm dev:worker` links `.env.development` to `.dev.vars` for Wrangler.
-- You must provide Cloudflare bindings for KV/R2 in your Wrangler setup.
+- You must provide Cloudflare bindings for R2 in your Wrangler setup.
 
 #### Worker (deploy)
 
@@ -166,13 +166,6 @@ Source of truth: `.env.production.example`
     - `CLEANUP_INTERVAL_MINS` is reserved for future background scheduling and may be ignored by the current runtime.
   - `ENABLE_UI` — enable web interface at root path (`true|false`, default `false`)
   - `DOWNLOAD_BASE_URL` — Base URL for `downloadUrl` in responses (e.g. `https://files.example.com`). If not set, `downloadUrl` will be relative.
-- Node.js runtime (Docker) — Redis (metadata storage):
-  - `REDIS_ENABLED` — must be `true`
-  - `REDIS_HOST` — Redis host
-  - `REDIS_PORT` — Redis port
-  - `REDIS_PASSWORD` — Redis password
-  - `REDIS_DB` — Redis database index (default `0`)
-  - `REDIS_KEY_PREFIX` — prefix for Redis keys (default `tmp_files:`)
 - Node.js runtime (Docker) — S3 storage:
   - `S3_ENDPOINT`
   - `S3_REGION`
@@ -191,12 +184,10 @@ Source of truth: `.env.production.example`
 
 ## Storage and metadata
 
-- Files are stored in an object storage backend:
+- Files and metadata are stored in an object storage backend:
   - Node.js: S3-compatible bucket
   - Cloudflare Workers: R2 bucket
-- Metadata is stored in:
-  - Node.js: Redis
-  - Cloudflare Workers: KV
+- Metadata is stored as custom headers on the main objects and as JSON marker files in a `metadata/` directory.
 - Deduplication: if the same file content (by SHA-256) is uploaded again, existing metadata is reused to avoid duplicate storage.
 
 ## Cleanup behavior
@@ -209,7 +200,7 @@ Source of truth: `.env.production.example`
 ## Graceful Shutdown
 
 - The service handles `SIGTERM` and `SIGINT` signals.
-- It closes the HTTP server and shuts down Redis connection.
+- It closes the HTTP server.
 - You can trigger maintenance manually via `POST /{base}/maintenance/run`.
 
 ## Web UI
@@ -444,14 +435,14 @@ Unified error structure:
 - The included Caddyfile shows how to:
   - expose `GET /download/:id` publicly; and
   - guard other routes under `/tmp-files` with Bearer tokens.
-- Ensure your Redis and S3-compatible storage are reachable and persistent.
+- Ensure your S3-compatible storage is reachable and persistent.
 
 ## Troubleshooting
 
 - 413 Payload Too Large: increase `MAX_FILE_SIZE_MB` (and restart) or upload smaller files.
 - 400 Validation errors: check `ttlMins`, JSON `metadata`, or file ID format.
 - 404 Not Found: the file does not exist or has expired.
-- Startup fails with storage error: verify connectivity/credentials for your storage backends (S3/R2 and Redis/KV).
+- Startup fails with storage error: verify connectivity/credentials for your storage backends (S3/R2).
 
 ## Errors
 

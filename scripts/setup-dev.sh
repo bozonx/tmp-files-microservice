@@ -10,9 +10,9 @@ if [ ! -f .env.development ]; then
 fi
 
 
-# 3. Start Redis and Garage
-echo "Starting Redis and Garage..."
-docker compose -f docker-compose.yml up -d --remove-orphans redis garage
+# 3. Start Garage
+echo "Starting Garage..."
+docker compose -f docker-compose.yml up -d --remove-orphans garage
 
 # 4. Wait for services
 echo "Waiting for services to be healthy..."
@@ -30,7 +30,6 @@ echo ""
 echo "✅ Development environment is ready!"
 echo ""
 echo "Services:"
-echo "  - Redis: localhost:6379"
 echo "  - Garage S3 API: http://localhost:3900"
 echo "  - Garage Admin API: http://localhost:3903"
 echo ""
