@@ -193,7 +193,7 @@ export class StorageService {
         processedStream.stream,
         key,
         mimeType,
-        undefined,
+        params.file.size,
         {
           'mime-type': mimeType,
           'original-name': params.file.originalname,
