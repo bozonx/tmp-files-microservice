@@ -203,7 +203,7 @@ export class FilesService {
       originalname: nameFromUrl,
       mimetype: contentType,
       size,
-      stream: res.body,
+      stream: res.body as ReadableStream<Uint8Array>,
     }
 
     return this.uploadFile({ file, ttl: params.ttl, metadata: params.metadata })

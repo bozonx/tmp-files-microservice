@@ -14,7 +14,8 @@ export class R2StorageAdapter implements FileStorageAdapter {
     input: ReadableStream<Uint8Array>,
     key: string,
     mimeType: string,
-    size?: number
+    size?: number,
+    metadata?: Record<string, string>
   ): Promise<StorageOperationResult<string>> {
     try {
       // In Cloudflare Workers, R2.put() requires a known length for streams.
@@ -30,6 +31,7 @@ export class R2StorageAdapter implements FileStorageAdapter {
         httpMetadata: {
           contentType: mimeType,
         },
+        customMetadata: metadata,
       })
       return { success: true, data: key }
     } catch (e: unknown) {
@@ -63,6 +65,17 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
+  public async getMetadata(key: string): Promise<StorageOperationResult<Record<string, string>>> {
+    try {
+      const obj = await this.deps.bucket.head(key)
+      if (!obj) return { success: false, error: 'NotFound' }
+      return { success: true, data: obj.customMetadata ?? {} }
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e))
+      return { success: false, error: `R2 metadata fetch failed: ${err.message}` }
+    }
+  }
+
   public async deleteFile(key: string): Promise<StorageOperationResult<void>> {
     try {
       await this.deps.bucket.delete(key)
@@ -73,12 +86,12 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async listAllKeys(): Promise<string[]> {
+  public async listAllKeys(prefix?: string): Promise<string[]> {
     const keys: string[] = []
     let cursor: string | undefined
 
     do {
-      const res = await this.deps.bucket.list({ cursor })
+      const res = await this.deps.bucket.list({ cursor, prefix })
       for (const obj of res.objects) {
         keys.push(obj.key)
       }

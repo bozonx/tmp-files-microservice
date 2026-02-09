@@ -3,7 +3,7 @@
 import { createApp, createDefaultLogger } from './app.js'
 import { loadAppEnv } from './config/env.js'
 import { R2StorageAdapter } from './adapters/cloudflare/r2-storage.adapter.js'
-import { KvMetadataAdapter } from './adapters/cloudflare/kv-metadata.adapter.js'
+import { StorageMetadataAdapter } from './adapters/storage-metadata.adapter.js'
 import { createFilesRoutesWorkers } from './routes/files.route.workers.js'
 
 export interface CloudflareBindings {
@@ -27,7 +27,7 @@ export default {
     const logger = createDefaultLogger(appEnv)
 
     const storage = new R2StorageAdapter({ bucket: env.R2_BUCKET })
-    const metadata = new KvMetadataAdapter({ kv: env.METADATA_KV })
+    const metadata = new StorageMetadataAdapter({ storage })
 
     const app = createApp(
       { env: appEnv, storage, metadata, logger },

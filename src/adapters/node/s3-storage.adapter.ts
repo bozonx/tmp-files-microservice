@@ -4,6 +4,7 @@ import {
   DeleteObjectCommand,
   HeadBucketCommand,
   ListObjectsV2Command,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import { Readable } from 'node:stream'
@@ -22,7 +23,8 @@ export class S3StorageAdapter implements FileStorageAdapter {
     input: ReadableStream<Uint8Array>,
     key: string,
     mimeType: string,
-    size?: number
+    size?: number,
+    metadata?: Record<string, string>
   ): Promise<StorageOperationResult<string>> {
     try {
       const reader = input.getReader()
@@ -44,6 +46,7 @@ export class S3StorageAdapter implements FileStorageAdapter {
           Key: key,
           Body: body,
           ContentType: mimeType,
+          Metadata: metadata,
         },
       })
 
@@ -91,6 +94,17 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
+  public async getMetadata(key: string): Promise<StorageOperationResult<Record<string, string>>> {
+    try {
+      const cmd = new HeadObjectCommand({ Bucket: this.deps.bucket, Key: key })
+      const res = await this.deps.client.send(cmd)
+      return { success: true, data: res.Metadata ?? {} }
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e))
+      return { success: false, error: `S3 metadata fetch failed: ${err.message}` }
+    }
+  }
+
   public async deleteFile(key: string): Promise<StorageOperationResult<void>> {
     try {
       const cmd = new DeleteObjectCommand({ Bucket: this.deps.bucket, Key: key })
@@ -102,7 +116,7 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async listAllKeys(): Promise<string[]> {
+  public async listAllKeys(prefix?: string): Promise<string[]> {
     const keys: string[] = []
     let continuationToken: string | undefined
 
@@ -110,6 +124,7 @@ export class S3StorageAdapter implements FileStorageAdapter {
       do {
         const cmd = new ListObjectsV2Command({
           Bucket: this.deps.bucket,
+          Prefix: prefix,
           ContinuationToken: continuationToken,
         })
 

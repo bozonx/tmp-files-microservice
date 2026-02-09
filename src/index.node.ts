@@ -7,7 +7,7 @@ import { Redis } from 'ioredis'
 import { createApp, createDefaultLogger } from './app.js'
 import { loadAppEnv } from './config/env.js'
 import { S3StorageAdapter } from './adapters/node/s3-storage.adapter.js'
-import { RedisMetadataAdapter } from './adapters/node/redis-metadata.adapter.js'
+import { StorageMetadataAdapter } from './adapters/storage-metadata.adapter.js'
 import { createServices } from './services/services.factory.js'
 import { createErrorHandler } from './middleware/error-handler.js'
 import type { HonoEnv } from './types/hono.types.js'
@@ -35,19 +35,7 @@ const s3Client = new S3Client({
 
 const storage = new S3StorageAdapter({ client: s3Client, bucket: env.S3_BUCKET })
 
-if (!env.REDIS_ENABLED) {
-  throw new Error('REDIS_ENABLED=true is required in Node runtime')
-}
-
-const redis = new Redis({
-  host: env.REDIS_HOST,
-  port: env.REDIS_PORT,
-  password: env.REDIS_PASSWORD,
-  db: env.REDIS_DB,
-  keyPrefix: env.REDIS_KEY_PREFIX,
-})
-
-const metadata = new RedisMetadataAdapter({ client: redis, keyPrefix: env.REDIS_KEY_PREFIX })
+const metadata = new StorageMetadataAdapter({ storage })
 
 const dnsResolver = new NodeDnsResolver()
 
@@ -118,12 +106,6 @@ async function shutdown(signal: string): Promise<void> {
   server.close(() => {
     logger.info('HTTP server closed')
   })
-
-  try {
-    await redis.quit()
-  } catch {
-    // ignore
-  }
 
   process.exit(0)
 }

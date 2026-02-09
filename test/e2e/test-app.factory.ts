@@ -20,19 +20,26 @@ import { fileURLToPath } from 'node:url'
 
 class MemoryFileStorageAdapter implements FileStorageAdapter {
   private readonly data = new Map<string, Uint8Array>()
+  private readonly metadata = new Map<string, Record<string, string>>()
 
   public async saveFile(
     input: ReadableStream<Uint8Array>,
     key: string,
-    _mimeType: string
+    _mimeType: string,
+    _size?: number,
+    metadata?: Record<string, string>
   ): Promise<StorageOperationResult<string>> {
     try {
       const chunks: Uint8Array[] = []
       const reader = input.getReader()
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-        if (value) chunks.push(value)
+      try {
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
+          if (value) chunks.push(value)
+        }
+      } finally {
+        reader.releaseLock()
       }
 
       const size = chunks.reduce((s, c) => s + c.byteLength, 0)
@@ -44,6 +51,7 @@ class MemoryFileStorageAdapter implements FileStorageAdapter {
       }
 
       this.data.set(key, out)
+      this.metadata.set(key, metadata ?? {})
       return { success: true, data: key }
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e))
@@ -53,6 +61,12 @@ class MemoryFileStorageAdapter implements FileStorageAdapter {
 
   public async readFile(key: string): Promise<StorageOperationResult<Uint8Array>> {
     const v = this.data.get(key)
+    if (!v) return { success: false, error: 'NotFound' }
+    return { success: true, data: v }
+  }
+
+  public async getMetadata(key: string): Promise<StorageOperationResult<Record<string, string>>> {
+    const v = this.metadata.get(key)
     if (!v) return { success: false, error: 'NotFound' }
     return { success: true, data: v }
   }
@@ -78,8 +92,10 @@ class MemoryFileStorageAdapter implements FileStorageAdapter {
     return { success: true }
   }
 
-  public async listAllKeys(): Promise<string[]> {
-    return Array.from(this.data.keys())
+  public async listAllKeys(prefix?: string): Promise<string[]> {
+    const keys = Array.from(this.data.keys())
+    if (prefix) return keys.filter((k) => k.startsWith(prefix))
+    return keys
   }
 
   public async isHealthy(): Promise<boolean> {
@@ -136,10 +152,11 @@ class MemoryMetadataAdapter implements MetadataAdapter {
     }
     if (params.expiredOnly) files = files.filter((f) => DateUtil.isExpired(f.expiresAt as Date))
 
-    files.sort(
-      (a, b) =>
-        DateUtil.toTimestamp(b.uploadedAt as Date) - DateUtil.toTimestamp(a.uploadedAt as Date)
-    )
+    files.sort((a, b) => {
+      const ta = typeof a.uploadedAt === 'string' ? DateUtil.toTimestamp(a.uploadedAt) : (a.uploadedAt as Date).getTime()
+      const tb = typeof b.uploadedAt === 'string' ? DateUtil.toTimestamp(b.uploadedAt) : (b.uploadedAt as Date).getTime()
+      return tb - ta
+    })
 
     const total = files.length
     if (params.offset) files = files.slice(params.offset)
@@ -179,7 +196,7 @@ export interface TestApp {
 export async function createTestApp(): Promise<TestApp> {
   const env = loadAppEnv({
     NODE_ENV: 'test',
-    LOG_LEVEL: 'silent',
+    LOG_LEVEL: 'info',
     CLEANUP_INTERVAL_MINS: '0',
     MAX_FILE_SIZE_MB: '10',
     ENABLE_UI: 'true',

@@ -39,14 +39,72 @@ export class StorageService {
     return cryptoAny.randomUUID()
   }
 
+  /**
+   * Reads enough chunks from the stream to reach the target size.
+   * Internal helper to avoid deadlocks in TransformStream when peeling off the first chunk.
+   */
+  private async peekFirstChunk(
+    stream: ReadableStream<Uint8Array>,
+    targetSize: number
+  ): Promise<{ chunks: Uint8Array[]; remainingStream: ReadableStream<Uint8Array> }> {
+    const reader = stream.getReader()
+    const chunks: Uint8Array[] = []
+    let totalRead = 0
+    let doneReading = false
+
+    try {
+      while (totalRead < targetSize) {
+        const { value, done } = await reader.read()
+        if (done) {
+          doneReading = true
+          break
+        }
+        if (value) {
+          chunks.push(value)
+          totalRead += value.byteLength
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+
+    const remainingStream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        // Push already read chunks back
+        for (const chunk of chunks) {
+          controller.enqueue(chunk)
+        }
+        if (doneReading) {
+          controller.close()
+          return
+        }
+        // Pipe the rest
+        const restReader = stream.getReader()
+        try {
+          while (true) {
+            const { value, done } = await restReader.read()
+            if (done) break
+            controller.enqueue(value)
+          }
+          controller.close()
+        } catch (e) {
+          controller.error(e)
+        } finally {
+          restReader.releaseLock()
+        }
+      },
+    })
+
+    return { chunks, remainingStream }
+  }
+
   private createHashingLimitedStream(input: ReadableStream<Uint8Array>): {
     stream: ReadableStream<Uint8Array>
-    getResult: () => { hashHex: string; size: number; firstChunk?: Uint8Array }
+    getResult: () => { hashHex: string; size: number }
   } {
     const hasher = sha256.create()
     let size = 0
-    let firstChunk: Uint8Array | undefined
-    let finalized: { hashHex: string; size: number; firstChunk?: Uint8Array } | undefined
+    let finalized: { hashHex: string; size: number } | undefined
 
     const transformer = new TransformStream<Uint8Array, Uint8Array>({
       transform: (chunk, controller) => {
@@ -54,14 +112,12 @@ export class StorageService {
         if (size > this.maxFileSizeBytes) {
           throw new Error(`File size ${size} exceeds maximum allowed size ${this.maxFileSizeBytes}`)
         }
-
-        firstChunk ??= chunk
         hasher.update(chunk)
         controller.enqueue(chunk)
       },
       flush: () => {
         const digest = hasher.digest()
-        finalized = { hashHex: bytesToHex(digest), size, firstChunk }
+        finalized = { hashHex: bytesToHex(digest), size }
       },
     })
 
@@ -120,38 +176,38 @@ export class StorageService {
     const key = fileId
 
     try {
-      const processedStream = this.createHashingLimitedStream(params.file.stream)
+      // Manually peek at the first 4KB for MIME detection to avoid deadlocks
+      const { chunks, remainingStream } = await this.peekFirstChunk(params.file.stream, 4096)
+      const firstChunk = chunks.length > 0 ? chunks[0] : undefined
 
+      const mimeType = await this.detectMimeTypeFromFirstChunk(
+        params.file.mimetype ?? 'application/octet-stream',
+        firstChunk
+      )
+
+      if (this.allowedMimeTypes.length > 0 && !this.allowedMimeTypes.includes(mimeType)) {
+        return { success: false, error: `MIME type ${mimeType} is not allowed` }
+      }
+
+      const processedStream = this.createHashingLimitedStream(remainingStream)
+      
       const uploadRes = await this.deps.fileStorage.saveFile(
         processedStream.stream,
         key,
-        params.file.mimetype ?? 'application/octet-stream',
-        params.file.size
+        mimeType,
+        undefined,
+        {
+          'mime-type': mimeType,
+          'original-name': params.file.originalname,
+        }
       )
 
       if (!uploadRes.success) {
         return { success: false, error: uploadRes.error }
       }
 
+      // NOW we can get the result because the stream is exhausted by the storage adapter
       const processed = processedStream.getResult()
-
-      if (this.enableDeduplication) {
-        const existing = await this.deps.metadata.findFileByHash(processed.hashHex)
-        if (existing) {
-          await this.deps.fileStorage.deleteFile(key)
-          return { success: true, data: existing }
-        }
-      }
-
-      const mimeType = await this.detectMimeTypeFromFirstChunk(
-        params.file.mimetype ?? 'application/octet-stream',
-        processed.firstChunk
-      )
-      if (this.allowedMimeTypes.length > 0 && !this.allowedMimeTypes.includes(mimeType)) {
-        await this.deps.fileStorage.deleteFile(key)
-        return { success: false, error: `MIME type ${mimeType} is not allowed` }
-      }
-
       const safeFilename = FilenameUtil.generateSafeFilename(
         params.file.originalname,
         processed.hashHex
