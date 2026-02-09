@@ -1,7 +1,7 @@
 #!/bin/bash
 # We avoid 'set -e' here to handle intermediate check failures manually.
 
-BUCKET_NAME=${S3_BUCKET:-tmp-files}
+BUCKET_NAME=${S3_BUCKET:-tmp-files-microservice}
 KEY_NAME=${GARAGE_KEY_NAME:-tmp-files-app}
 
 # Auto-detect container name if not specified

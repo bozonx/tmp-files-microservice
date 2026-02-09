@@ -13,6 +13,9 @@
   - Node.js: streaming parser (Busboy)
   - Workers: `Request.formData()`
 - Change: Maintenance/Cleanup is manually triggered via `/maintenance/run` endpoint (compatible with both runtimes).
+- Change: Unified default bucket name to `tmp-files-microservice` across all configs and scripts.
+- Change: Improved `setup-dev.sh` to handle `docker-compose.yml` generation and numbering.
+- Change: Updated `ENABLE_UI=true` by default in production `docker-compose.yml`.
 
 ## 0.2.1 - 2025-11-02
 

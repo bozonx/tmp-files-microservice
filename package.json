@@ -8,6 +8,7 @@
     "setup:dev": "bash scripts/setup-dev.sh",
     "dev": "tsx watch --env-file=.env.development src/index.node.ts",
     "dev:worker": "ln -sf .env.development .dev.vars && wrangler dev src/index.worker.ts --env dev",
+    "build": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy src/index.worker.ts",
     "deploy:staging": "wrangler deploy src/index.worker.ts --env staging",
     "deploy:dev": "wrangler deploy src/index.worker.ts --env dev",
@@ -60,7 +61,15 @@
   "author": "Ivan K",
   "license": "MIT",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=22.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "unrs-resolver",
+      "workerd"
+    ]
   },
   "packageManager": "pnpm@10.28.2"
 }

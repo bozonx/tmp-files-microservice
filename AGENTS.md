@@ -1,7 +1,7 @@
 ## Agent Rules (alwaysApply)
 
 - Microservice with REST API
-- Stack: TypeScript, NestJS, Fastify, Docker
+- Stack: TypeScript, Hono, Node.js/Cloudflare Workers, Docker
 
 ### Structure and Practices
 

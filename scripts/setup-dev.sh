@@ -8,21 +8,24 @@ if [ ! -f .env.development ]; then
   echo "Creating .env.development from example..."
   cp .env.development.example .env.development
 fi
+if [ ! -f docker-compose.yml ]; then
+  echo "Creating docker-compose.yml from example..."
+  cp docker-compose.dev.example.yml docker-compose.yml
+fi
 
-
-# 3. Start Garage
+# 2. Start Garage
 echo "Starting Garage..."
 docker compose -f docker-compose.yml up -d --remove-orphans garage
 
-# 4. Wait for services
+# 3. Wait for services
 echo "Waiting for services to be healthy..."
 sleep 5
 
-# 5. Install dependencies
+# 4. Install dependencies
 echo "Installing dependencies..."
 pnpm install
 
-# 6. Initialize Garage
+# 5. Initialize Garage
 echo "Initializing Garage bucket and key..."
 bash scripts/init-garage.sh
 
