@@ -41,7 +41,12 @@ export class StorageMetadataAdapter implements MetadataAdapter {
   public async getFileInfo(fileId: string): Promise<FileInfo | null> {
     // Attempt to get metadata directly from the main file headers first (optimization)
     const headerRes = await this.deps.storage.getMetadata(fileId)
-    if (headerRes.success && headerRes.data && headerRes.data['original-name']) {
+    if (
+      headerRes.success &&
+      headerRes.data &&
+      headerRes.data['original-name'] &&
+      headerRes.data['expires-at']
+    ) {
       const meta = headerRes.data
       return {
         id: fileId,
@@ -83,6 +88,8 @@ export class StorageMetadataAdapter implements MetadataAdapter {
     const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX)
     const files: FileInfo[] = []
 
+    console.log(`[StorageMetadata] Found ${allMetaKeys.length} keys with prefix "${METADATA_PREFIX}"`)
+
     for (const key of allMetaKeys) {
       // metadata/[expiresAt]__[id].json
       const filename = key.slice(METADATA_PREFIX.length)
@@ -90,12 +97,16 @@ export class StorageMetadataAdapter implements MetadataAdapter {
       const expiresTs = Number.parseInt(expiresTsStr, 10)
 
       const isExpired = DateUtil.isExpired(new Date(expiresTs))
+      // console.log(`[StorageMetadata] Key: ${key}, ExpiresTs: ${expiresTs}, IsExpired: ${isExpired}, ParamsExpiredOnly: ${params.expiredOnly}`)
+      
       if (params.expiredOnly && !isExpired) continue
 
       const contentRes = await this.deps.storage.readFile(key)
       if (contentRes.success && contentRes.data) {
         try {
-          const info = JSON.parse(new TextDecoder().decode(contentRes.data)) as FileInfo
+          const content = new TextDecoder().decode(contentRes.data)
+          // console.log(`[StorageMetadata] Content for ${key}:`, content.slice(0, 100))
+          const info = JSON.parse(content) as FileInfo
           
           // Apply filters
           if (params.mimeType && info.mimeType !== params.mimeType) continue
@@ -103,9 +114,12 @@ export class StorageMetadataAdapter implements MetadataAdapter {
           if (params.maxSize !== undefined && info.size > params.maxSize) continue
           
           files.push(info)
-        } catch {
+        } catch (e) {
+          console.error(`[StorageMetadata] Error parsing metadata for key ${key}:`, e)
           // ignore corrupt meta files
         }
+      } else {
+        console.error(`[StorageMetadata] Failed to read metadata file for key ${key}`)
       }
     }
 

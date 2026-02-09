@@ -197,6 +197,10 @@ export class StorageService {
         {
           'mime-type': mimeType,
           'original-name': params.file.originalname,
+          'size': String(params.file.size),
+          'ttl': String(params.ttl),
+          'expires-at': DateUtil.toISOString(DateUtil.createExpirationDate(params.ttl)),
+          'uploaded-at': DateUtil.toISOString(DateUtil.now().toDate()),
         }
       )
 
