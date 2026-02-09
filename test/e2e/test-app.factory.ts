@@ -137,9 +137,7 @@ class MemoryMetadataAdapter implements MetadataAdapter {
   public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
     let files = Array.from(this.byId.values())
 
-    if (!params.expiredOnly) {
-      files = files.filter((f) => !DateUtil.isExpired(f.expiresAt as Date))
-    }
+
 
     if (params.mimeType) files = files.filter((f) => f.mimeType === params.mimeType)
     if (params.minSize !== undefined) files = files.filter((f) => f.size >= params.minSize!)

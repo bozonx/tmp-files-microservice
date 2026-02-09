@@ -94,7 +94,6 @@ export class StorageMetadataAdapter implements MetadataAdapter {
 
       const isExpired = DateUtil.isExpired(new Date(expiresTs))
       if (params.expiredOnly && !isExpired) continue
-      if (!params.expiredOnly && isExpired) continue
 
       const contentRes = await this.deps.storage.readFile(key)
       if (contentRes.success && contentRes.data) {

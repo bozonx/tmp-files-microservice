@@ -446,10 +446,12 @@ elements.cleanupBtn.addEventListener('click', async () => {
     if (!confirm('Execute manual maintenance cycle? All expired resources will be permanently excised.')) return;
     try {
         const res = await api.runMaintenance();
+        console.log('Maintenance result:', res);
         showToast(res.message || 'Maintenance cycle complete');
         window.ui.refreshAll();
     } catch (err) {
-        showToast('Maintenance failure');
+        console.error('Maintenance execution failed:', err);
+        showToast(`Maintenance failure: ${err.message || 'Check console logs'}`);
     }
 });
 
