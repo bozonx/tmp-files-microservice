@@ -79,7 +79,8 @@ export function createApp(bindings: AppBindings, routes: AppRouteFactories): Hon
   app.use(
     `${apiBase}/*`,
     createApiAuthMiddleware({
-      isExcludedPath: (pathname) => pathname.startsWith(`${apiBase}/download/`),
+      isExcludedPath: (pathname) =>
+        pathname.startsWith(`${apiBase}/download/`) || pathname === `${apiBase}/health`,
     })
   )
 

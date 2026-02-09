@@ -8,7 +8,10 @@ describe('Maintenance (e2e)', () => {
   })
 
   it('POST /api/v1/maintenance/run returns success', async () => {
-    const res = await app.request('/api/v1/maintenance/run', { method: 'POST' })
+    const res = await app.request('/api/v1/maintenance/run', {
+      method: 'POST',
+      headers: { authorization: 'Bearer e2e-token' },
+    })
 
     expect(res.status).toBe(200)
     const body = await res.json()
