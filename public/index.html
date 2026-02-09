@@ -4,29 +4,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Temporary Files Upload</title>
+  <title>Temporary Files &bull; Secure Storage</title>
   <meta name="description" content="Upload temporary files with configurable TTL">
   <link rel="stylesheet" href="public/styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338bdf8'><path d='M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12'/></svg>">
 </head>
 
 <body>
   <div class="container">
     <header>
-      <h1>Temporary Files Upload</h1>
-      <p>Upload files with automatic expiration</p>
+      <h1>Temporary Files</h1>
+      <p>Secure upload with automatic granular expiration</p>
     </header>
 
     <div id="statsContainer" class="stats-grid hidden">
       <div class="stat-card">
-        <div class="stat-label">Total Files</div>
+        <div class="stat-label">Active Files</div>
         <div id="statTotalFiles" class="stat-value">-</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total Size</div>
+        <div class="stat-label">Total Volume</div>
         <div id="statTotalSize" class="stat-value">-</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Storage Used</div>
+        <div class="stat-label">Storage Quota</div>
         <div id="statStorageUsed" class="stat-value">-</div>
       </div>
     </div>
@@ -36,46 +37,46 @@
         <div class="upload-area" id="uploadArea">
           <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
             stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <p class="upload-text">
-            <span class="upload-text-main">Click to upload</span>
-            <span class="upload-text-sub">or drag and drop (multiple files supported)</span>
-          </p>
+          <div class="upload-text">
+            <span class="upload-text-main">Drop files here or click to browse</span>
+            <span class="upload-text-sub">Supports multi-file upload & large volumes</span>
+          </div>
           <input type="file" id="fileInput" name="file" multiple>
           <p class="file-name" id="fileName"></p>
         </div>
 
         <div class="form-group" id="urlGroup">
           <label for="fileUrl">
-            Or upload from URL
-            <span class="label-hint">Optional</span>
+            Retrieve from URL
+            <span class="label-hint">Remote fetch</span>
           </label>
           <input type="url" id="fileUrl" name="fileUrl" placeholder="https://example.com/file.pdf">
-          <p class="field-hint">If local files are provided, URL upload will be ignored</p>
+          <p class="field-hint">Fetch files directly from the web into storage</p>
         </div>
 
         <div class="form-row">
           <div class="form-group field-half">
             <label for="ttlMins">
-              TTL (minutes)
-              <span class="label-hint">Default: 1440</span>
+              Lifespan (minutes)
+              <span class="label-hint">Autodelete after</span>
             </label>
-            <input type="number" id="ttlMins" name="ttlMins" min="1" placeholder="1440">
+            <input type="number" id="ttlMins" name="ttlMins" min="1" placeholder="1440 (24h)">
           </div>
 
           <div class="form-group field-half">
             <label for="metadata">
-              Metadata (JSON)
-              <span class="label-hint">Optional</span>
+              Custom Metadata
+              <span class="label-hint">JSON format</span>
             </label>
-            <input type="text" id="metadata" name="metadata" placeholder='{"user": "admin"}'>
+            <input type="text" id="metadata" name="metadata" placeholder='{"purpose": "shared", "project": "X"}'>
           </div>
         </div>
 
         <button type="submit" id="submitBtn" class="btn-primary">
-          <span id="btnText">Upload Files</span>
+          <span id="btnText">Initialize Upload</span>
           <span id="btnLoader" class="loader hidden"></span>
         </button>
       </form>
@@ -84,15 +85,15 @@
 
       <section class="files-section">
         <div class="section-header">
-          <h2>File Management</h2>
+          <h2>Registry</h2>
           <div class="header-actions">
-            <button id="cleanupBtn" class="btn-secondary btn-danger-outline" title="Trigger manual cleanup">
+            <button id="cleanupBtn" class="btn-secondary btn-danger-outline" title="Trigger manual maintenance">
               <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
-              Cleanup
+              Prune
             </button>
             <button id="refreshBtn" class="btn-secondary">
               <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -107,7 +108,7 @@
 
         <div class="filters-bar">
           <div class="search-input">
-            <input type="text" id="searchInput" placeholder="Search by name or ID...">
+            <input type="text" id="searchInput" placeholder="Search by name, ID or hash...">
             <button id="searchBtn" class="btn-icon">
               <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
@@ -117,30 +118,30 @@
             </button>
           </div>
           <button id="toggleFilters" class="btn-secondary">
-            Filters
+            Advanced Filters
           </button>
         </div>
 
         <div id="filtersPanel" class="filters-panel hidden">
           <div class="filter-group">
             <label>MIME Type</label>
-            <input type="text" id="filterMime" placeholder="e.g. image/png">
+            <input type="text" id="filterMime" placeholder="e.g. video/mp4">
           </div>
           <div class="filter-group">
-            <label>Expired Only</label>
+            <label>Status</label>
             <select id="filterExpired">
-              <option value="">All Files</option>
+              <option value="">All Records</option>
               <option value="true">Expired Only</option>
               <option value="false">Live Only</option>
             </select>
           </div>
           <div class="filter-group">
-            <label>Uploaded After</label>
+            <label>Since</label>
             <input type="date" id="filterAfter">
           </div>
-          <div class="filter-group">
-            <button id="applyFilters" class="btn-primary btn-sm">Apply</button>
-            <button id="resetFilters" class="btn-secondary btn-sm">Reset</button>
+          <div class="filter-group" style="display: flex; gap: 0.5rem;">
+            <button id="applyFilters" class="btn-primary" style="padding: 0.625rem 1.25rem; font-size: 0.85rem; width: auto;">Apply</button>
+            <button id="resetFilters" class="btn-secondary" style="padding: 0.625rem 1.25rem; font-size: 0.85rem; width: auto;">Clear</button>
           </div>
         </div>
 
@@ -148,37 +149,40 @@
           <table id="filesTable">
             <thead>
               <tr>
-                <th>Name / ID</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Expires</th>
-                <th>Actions</th>
+                <th>Resource Identity</th>
+                <th>Format</th>
+                <th>Volume</th>
+                <th>Expiry</th>
+                <th style="text-align: right;">Operations</th>
               </tr>
             </thead>
             <tbody id="filesList">
-              <!-- Files will be loaded here -->
+              <!-- Dynamically populated -->
             </tbody>
           </table>
+          
           <div id="loadMoreContainer" class="load-more hidden">
-            <button id="loadMoreBtn" class="btn-secondary">Load More</button>
+            <button id="loadMoreBtn" class="btn-secondary">Retrieve more</button>
             <span id="loadMoreLoader" class="loader small hidden"></span>
           </div>
+
           <div id="filesLoader" class="loader-container hidden">
-            <span class="loader"></span>
+            <span class="loader small"></span>
           </div>
+
           <div id="noFiles" class="no-files hidden">
-            No files found matching criteria
+            <p>No records identified matching the criteria</p>
           </div>
         </div>
       </section>
     </main>
 
     <footer>
-      <p>Temporary Files Microservice &bull; v1.2.0</p>
+      <p>&copy; 2024 Temporary Files Microservice &bull; v1.3.0 &bull; Secure Storage Utility</p>
     </footer>
   </div>
 
-  <div id="toast" class="toast hidden">Link copied to clipboard!</div>
+  <div id="toast" class="toast hidden">Copied to clipboard</div>
 
   <script src="public/app.js"></script>
 </body>
