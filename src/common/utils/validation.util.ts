@@ -7,9 +7,19 @@ export class ValidationUtil {
 
   public static validateUploadedFile(
     file: UploadedFile,
-    allowedMimeTypes: string[] = [],
-    maxFileSize: number = this.DEFAULT_MAX_FILE_SIZE
+    options: {
+      allowedMimeTypes?: string[]
+      blockExecutables?: boolean
+      blockArchives?: boolean
+      maxFileSize?: number
+    } = {}
   ): { isValid: boolean; errors: string[] } {
+    const {
+      allowedMimeTypes = [],
+      blockExecutables = false,
+      blockArchives = false,
+      maxFileSize = this.DEFAULT_MAX_FILE_SIZE,
+    } = options
     const errors: string[] = []
 
     if (!file) {
@@ -33,8 +43,20 @@ export class ValidationUtil {
 
     if (!file.mimetype || typeof file.mimetype !== 'string' || file.mimetype.trim() === '') {
       errors.push('MIME type is required')
-    } else if (allowedMimeTypes.length > 0 && !allowedMimeTypes.includes(file.mimetype)) {
-      errors.push(`MIME type '${file.mimetype}' is not allowed`)
+    } else {
+      if (allowedMimeTypes.length > 0 && !allowedMimeTypes.includes(file.mimetype)) {
+        errors.push(`MIME type '${file.mimetype}' is not allowed`)
+      }
+
+      const filename = file.originalname.toLowerCase()
+
+      if (blockExecutables && this.isExecutable(file.mimetype, filename)) {
+        errors.push('Executable files are not allowed')
+      }
+
+      if (blockArchives && this.isArchive(file.mimetype, filename)) {
+        errors.push('Archive files are not allowed')
+      }
     }
 
     if (!file.stream) {
@@ -217,5 +239,35 @@ export class ValidationUtil {
     } catch {
       return false
     }
+  }
+
+  private static isExecutable(mimeType: string, filename: string): boolean {
+    const exeMimes = [
+      'application/x-msdownload',
+      'application/x-sh',
+      'application/x-bash',
+      'application/x-executable',
+      'application/x-mach-binary',
+      'application/vnd.microsoft.portable-executable',
+    ]
+    const exeExts = ['.exe', '.bat', '.sh', '.cmd', '.bin', '.msi', '.jar']
+
+    return exeMimes.includes(mimeType) || exeExts.some((ext) => filename.endsWith(ext))
+  }
+
+  private static isArchive(mimeType: string, filename: string): boolean {
+    const archiveMimes = [
+      'application/zip',
+      'application/x-rar-compressed',
+      'application/x-7z-compressed',
+      'application/x-tar',
+      'application/x-gzip',
+      'application/x-bzip2',
+      'application/x-xz',
+      'application/x-compress',
+    ]
+    const archiveExts = ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.z']
+
+    return archiveMimes.includes(mimeType) || archiveExts.some((ext) => filename.endsWith(ext))
   }
 }

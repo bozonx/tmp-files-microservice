@@ -12,6 +12,8 @@ export interface AppEnv {
 
   MAX_FILE_SIZE_MB: number
   ALLOWED_MIME_TYPES: string[]
+  BLOCK_EXECUTABLE_UPLOADS: boolean
+  BLOCK_ARCHIVE_UPLOADS: boolean
 
   MAX_TTL_MIN: number
 
@@ -108,6 +110,9 @@ export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
 
     MAX_FILE_SIZE_MB,
     ALLOWED_MIME_TYPES: parseAllowedMimeTypes(readString(envSource, 'ALLOWED_MIME_TYPES', '')),
+
+    BLOCK_EXECUTABLE_UPLOADS: readBool(envSource, 'BLOCK_EXECUTABLE_UPLOADS', false),
+    BLOCK_ARCHIVE_UPLOADS: readBool(envSource, 'BLOCK_ARCHIVE_UPLOADS', false),
 
     MAX_TTL_MIN,
 

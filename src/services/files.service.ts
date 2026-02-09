@@ -254,11 +254,12 @@ export class FilesService {
   }): Promise<UploadFileResponse> {
     const maxFileSize = this.deps.env.MAX_FILE_SIZE_MB * 1024 * 1024
 
-    const v = ValidationUtil.validateUploadedFile(
-      params.file,
-      this.deps.env.ALLOWED_MIME_TYPES,
-      maxFileSize
-    )
+    const v = ValidationUtil.validateUploadedFile(params.file, {
+      allowedMimeTypes: this.deps.env.ALLOWED_MIME_TYPES,
+      maxFileSize,
+      blockExecutables: this.deps.env.BLOCK_EXECUTABLE_UPLOADS,
+      blockArchives: this.deps.env.BLOCK_ARCHIVE_UPLOADS,
+    })
     if (!v.isValid) {
       const tooLarge = v.errors.some((e) => e.includes('exceeds maximum allowed size'))
       throw new HttpError(`File validation failed: ${v.errors.join(', ')}`, tooLarge ? 413 : 400)

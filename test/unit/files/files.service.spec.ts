@@ -137,4 +137,75 @@ describe('FilesService', () => {
     expect(res.downloadPath).toBe('/api/v1/download/test-id')
     expect(res.downloadUrl).toBe('https://cdn.example.com/api/v1/download/test-id')
   })
+
+  it('uploadFile throws 400 when executable is blocked', async () => {
+    const env = loadAppEnv(createMockEnvSource({ BLOCK_EXECUTABLE_UPLOADS: 'true' }))
+    const testService = new FilesService({ env, storage, logger: createMockLogger() })
+
+    await expect(
+      testService.uploadFile({
+        file: {
+          originalname: 'malicious.exe',
+          mimetype: 'application/x-msdownload',
+          size: 100,
+          stream: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new Uint8Array([77, 90])) // 'MZ' magic
+              controller.close()
+            },
+          }),
+        },
+        ttl: 60,
+      })
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining('Executable files are not allowed') })
+  })
+
+  it('uploadFile throws 400 when archive is blocked', async () => {
+    const env = loadAppEnv(createMockEnvSource({ BLOCK_ARCHIVE_UPLOADS: 'true' }))
+    const testService = new FilesService({ env, storage, logger: createMockLogger() })
+
+    await expect(
+      testService.uploadFile({
+        file: {
+          originalname: 'secrets.zip',
+          mimetype: 'application/zip',
+          size: 100,
+          stream: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new Uint8Array([80, 75, 3, 4])) // ZIP magic
+              controller.close()
+            },
+          }),
+        },
+        ttl: 60,
+      })
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining('Archive files are not allowed') })
+  })
+
+  it('uploadFile allows executable when blocking is disabled', async () => {
+    const env = loadAppEnv(createMockEnvSource({ BLOCK_EXECUTABLE_UPLOADS: 'false' }))
+    const testService = new FilesService({ env, storage, logger: createMockLogger() })
+
+    storage.saveFile.mockResolvedValue({
+      success: true,
+      data: { id: 'ok-exe', originalName: 'tool.exe', mimeType: 'application/x-msdownload', size: 100, uploadedAt: new Date(), ttl: 60, expiresAt: new Date(), hash: 'sh1' } as any,
+    })
+
+    const res = await testService.uploadFile({
+      file: {
+        originalname: 'tool.exe',
+        mimetype: 'application/x-msdownload',
+        size: 100,
+        stream: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array([77, 90]))
+            controller.close()
+          },
+        }),
+      },
+      ttl: 60,
+    })
+
+    expect(res.file.id).toBe('ok-exe')
+  })
 })
