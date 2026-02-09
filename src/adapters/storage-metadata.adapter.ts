@@ -24,18 +24,25 @@ export class StorageMetadataAdapter implements MetadataAdapter {
 
   public async saveFileInfo(fileInfo: FileInfo): Promise<void> {
     const key = this.metadataKey(fileInfo.expiresAt, fileInfo.id)
+    const content = new TextEncoder().encode(JSON.stringify(fileInfo))
+    
     // We store the data both in headers (for fast retrieval during download)
     // and as a marker file (for efficient cleanup listing)
-    await this.deps.storage.saveFile(
+    const res = await this.deps.storage.saveFile(
       new ReadableStream({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode(JSON.stringify(fileInfo)))
+          controller.enqueue(content)
           controller.close()
         },
       }),
       key,
-      'application/json'
+      'application/json',
+      content.byteLength
     )
+
+    if (!res.success) {
+      throw new Error(`Failed to save metadata file: ${res.error}`)
+    }
   }
 
   public async getFileInfo(fileId: string): Promise<FileInfo | null> {
