@@ -11,9 +11,7 @@
 - Change: Multipart handling is runtime-specific:
   - Node.js: streaming parser (Busboy)
   - Workers: `Request.formData()`
-- Change: Scheduled cleanup is supported in both runtimes:
-  - Node.js: interval via `CLEANUP_INTERVAL_MINS`
-  - Workers: cron trigger (Wrangler)
+- Change: Maintenance/Cleanup is manually triggered via `/maintenance/run` endpoint (compatible with both runtimes).
 
 ## 0.2.1 - 2025-11-02
 

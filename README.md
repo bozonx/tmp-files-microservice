@@ -161,9 +161,6 @@ Source of truth: `.env.production.example`
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
   - `ENABLE_DEDUPLICATION` — enable SHA-256 deduplication (`true|false`)
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
-  - `CLEANUP_INTERVAL_MINS` — cleanup interval in minutes.
-    - Currently cleanup is triggered via `POST /{base}/maintenance/run`.
-    - `CLEANUP_INTERVAL_MINS` is reserved for future background scheduling and may be ignored by the current runtime.
   - `ENABLE_UI` — enable web interface at root path (`true|false`, default `false`)
   - `DOWNLOAD_BASE_URL` — Base URL for `downloadUrl` in responses (e.g. `https://files.example.com`). If not set, `downloadUrl` will be relative.
 - Node.js runtime (Docker) — S3 storage:

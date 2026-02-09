@@ -197,7 +197,6 @@ export async function createTestApp(): Promise<TestApp> {
   const env = loadAppEnv({
     NODE_ENV: 'test',
     LOG_LEVEL: 'info',
-    CLEANUP_INTERVAL_MINS: '0',
     MAX_FILE_SIZE_MB: '10',
     ENABLE_UI: 'true',
   })

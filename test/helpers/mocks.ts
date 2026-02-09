@@ -49,7 +49,5 @@ export const createMockEnvSource = (
   ALLOWED_MIME_TYPES: '',
   ENABLE_DEDUPLICATION: 'true',
   MAX_TTL_MIN: '44640',
-  CLEANUP_INTERVAL_MINS: '0',
-  REDIS_ENABLED: 'false',
   ...overrides,
 })

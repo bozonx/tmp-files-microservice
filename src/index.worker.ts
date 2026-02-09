@@ -17,7 +17,6 @@ export interface CloudflareBindings {
   ALLOWED_MIME_TYPES?: string
   ENABLE_DEDUPLICATION?: string
   MAX_TTL_MIN?: string
-  CLEANUP_INTERVAL_MINS?: string
 }
 
 export default {

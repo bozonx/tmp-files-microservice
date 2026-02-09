@@ -10,7 +10,6 @@ export interface AppEnv {
   ALLOWED_MIME_TYPES: string[]
   ENABLE_DEDUPLICATION: boolean
   MAX_TTL_MIN: number
-  CLEANUP_INTERVAL_MINS: number
 
   S3_ENDPOINT?: string
   S3_REGION: string
@@ -77,7 +76,6 @@ export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
 
   const MAX_FILE_SIZE_MB = readInt(envSource, 'MAX_FILE_SIZE_MB', 100)
   const MAX_TTL_MIN = readInt(envSource, 'MAX_TTL_MIN', 44640)
-  const CLEANUP_INTERVAL_MINS = readInt(envSource, 'CLEANUP_INTERVAL_MINS', 10)
 
   return {
     NODE_ENV,
@@ -91,7 +89,6 @@ export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
     ALLOWED_MIME_TYPES: parseAllowedMimeTypes(readString(envSource, 'ALLOWED_MIME_TYPES', '')),
     ENABLE_DEDUPLICATION: readBool(envSource, 'ENABLE_DEDUPLICATION', true),
     MAX_TTL_MIN,
-    CLEANUP_INTERVAL_MINS,
 
     S3_ENDPOINT: readString(envSource, 'S3_ENDPOINT', '') || undefined,
     S3_REGION: readString(envSource, 'S3_REGION', 'us-east-1'),
