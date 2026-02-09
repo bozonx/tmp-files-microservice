@@ -16,6 +16,9 @@
 - Change: Unified default bucket name to `tmp-files-microservice` across all configs and scripts.
 - Change: Improved `setup-dev.sh` to handle `docker-compose.yml` generation and numbering.
 - Change: Updated `ENABLE_UI=true` by default in production `docker-compose.yml`.
+- Feature: Added optional built-in authentication:
+  - API: Basic/Bearer auth required when configured (download endpoint remains public)
+  - UI: optional Basic auth
 
 ## 0.2.1 - 2025-11-02
 

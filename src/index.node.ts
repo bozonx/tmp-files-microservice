@@ -9,6 +9,7 @@ import { S3StorageAdapter } from './adapters/node/s3-storage.adapter.js'
 import { StorageMetadataAdapter } from './adapters/storage-metadata.adapter.js'
 import { createServices } from './services/services.factory.js'
 import { createErrorHandler } from './middleware/error-handler.js'
+import { createUiBasicAuthMiddleware } from './middleware/auth.middleware.js'
 import type { HonoEnv } from './types/hono.types.js'
 import { createFilesRoutesNode } from './routes/files.route.node.js'
 import { NodeDnsResolver } from './adapters/node/dns-resolver.node.js'
@@ -55,6 +56,13 @@ const basePath = env.BASE_PATH
 const rootPath = basePath ? `/${basePath}` : '/'
 
 if (env.ENABLE_UI) {
+  app.use('*', async (c, next) => {
+    c.set('env', env)
+    await next()
+  })
+
+  app.use(`${rootPath}/*`, createUiBasicAuthMiddleware())
+
   app.get(rootPath, async () => {
     const { readFile } = await import('node:fs/promises')
     const { resolve } = await import('node:path')

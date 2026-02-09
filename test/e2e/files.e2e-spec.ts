@@ -3,6 +3,7 @@ import { createTestApp } from './test-app.factory.js'
 
 describe('Files (e2e)', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>['app']
+  const authHeaders = { authorization: 'Bearer e2e-token' }
 
   beforeEach(async () => {
     ;({ app } = await createTestApp())
@@ -13,7 +14,11 @@ describe('Files (e2e)', () => {
     form.set('ttlMins', '5')
     form.set('file', new File([new TextEncoder().encode('hello')], 'a.txt', { type: 'text/plain' }))
 
-    const res = await app.request('/api/v1/files', { method: 'POST', body: form })
+    const res = await app.request('/api/v1/files', {
+      method: 'POST',
+      headers: authHeaders,
+      body: form,
+    })
     if (res.status !== 201) {
       throw new Error(`Unexpected status ${res.status}: ${await res.text()}`)
     }
@@ -26,7 +31,11 @@ describe('Files (e2e)', () => {
     form.set('ttlMins', '0')
     form.set('file', new File([new TextEncoder().encode('hello')], 'a.txt', { type: 'text/plain' }))
 
-    const res = await app.request('/api/v1/files', { method: 'POST', body: form })
+    const res = await app.request('/api/v1/files', {
+      method: 'POST',
+      headers: authHeaders,
+      body: form,
+    })
     if (res.status !== 201) {
       throw new Error(`Unexpected status ${res.status}: ${await res.text()}`)
     }
@@ -54,7 +63,7 @@ describe('Files (e2e)', () => {
     try {
       const res = await app.request('/api/v1/files/url', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders },
         body: JSON.stringify({ url: fileUrl, ttlMins: 5 }),
       })
       expect(res.status).toBe(201)
@@ -85,7 +94,7 @@ describe('Files (e2e)', () => {
     try {
       const res = await app.request('/api/v1/files/url', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders },
         body: JSON.stringify({ url: fileUrl, ttlMins: 0 }),
       })
       expect(res.status).toBe(201)
@@ -97,7 +106,7 @@ describe('Files (e2e)', () => {
   })
 
   it('GET /api/v1/files - lists files', async () => {
-    const res = await app.request('/api/v1/files', { method: 'GET' })
+    const res = await app.request('/api/v1/files', { method: 'GET', headers: authHeaders })
     expect(res.status).toBe(200)
     const data = (await res.json()) as any
     expect(data).toHaveProperty('files')
@@ -107,7 +116,7 @@ describe('Files (e2e)', () => {
   })
 
   it('GET /api/v1/files/stats - returns stats', async () => {
-    const res = await app.request('/api/v1/files/stats', { method: 'GET' })
+    const res = await app.request('/api/v1/files/stats', { method: 'GET', headers: authHeaders })
     expect(res.status).toBe(200)
     const data = (await res.json()) as any
     expect(data).toHaveProperty('stats')
@@ -115,13 +124,19 @@ describe('Files (e2e)', () => {
   })
 
   it('GET /api/v1/files/:id - returns 404 for non-existing file', async () => {
-    const res = await app.request('/api/v1/files/non-existing-id', { method: 'GET' })
+    const res = await app.request('/api/v1/files/non-existing-id', {
+      method: 'GET',
+      headers: authHeaders,
+    })
     expect([404, 400]).toContain(res.status)
   })
 
   it('GET /api/v1/files/:id/exists - returns exists=false for non-existing', async () => {
     const id = 'non-existing-id'
-    const res = await app.request(`/api/v1/files/${id}/exists`, { method: 'GET' })
+    const res = await app.request(`/api/v1/files/${id}/exists`, {
+      method: 'GET',
+      headers: authHeaders,
+    })
     expect(res.status).toBe(200)
     const data = (await res.json()) as any
 
@@ -137,12 +152,18 @@ describe('Files (e2e)', () => {
 
   it('GET /api/v1/files/:id/exists - returns 400 for invalid id', async () => {
     const badId = 'bad id!'
-    const res = await app.request(`/api/v1/files/${badId}/exists`, { method: 'GET' })
+    const res = await app.request(`/api/v1/files/${badId}/exists`, {
+      method: 'GET',
+      headers: authHeaders,
+    })
     expect(res.status).toBe(400)
   })
 
   it('DELETE /api/v1/files/:id - returns 404 for non-existing file', async () => {
-    const res = await app.request('/api/v1/files/non-existing-id', { method: 'DELETE' })
+    const res = await app.request('/api/v1/files/non-existing-id', {
+      method: 'DELETE',
+      headers: authHeaders,
+    })
     expect([404, 400]).toContain(res.status)
   })
 
@@ -167,7 +188,7 @@ describe('Files (e2e)', () => {
     try {
       const res = await app.request('/api/v1/files/url', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders },
         body: JSON.stringify({ url: fileUrl, ttlMins: 1440, metadata: '{"source":"e2e"}' }),
       })
       expect(res.status).toBe(201)
@@ -191,7 +212,7 @@ describe('Files (e2e)', () => {
   it('POST /api/v1/files/url - returns 400 when url is missing', async () => {
     const res = await app.request('/api/v1/files/url', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...authHeaders },
       body: JSON.stringify({ ttlMins: 1440 }),
     })
     expect(res.status).toBe(400)
@@ -217,7 +238,7 @@ describe('Files (e2e)', () => {
     try {
       const res = await app.request('/api/v1/files/url', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders },
         body: JSON.stringify({ url: fileUrl, ttlMins: 1440, metadata: 'not json' }),
       })
       expect(res.status).toBe(400)
@@ -231,6 +252,7 @@ describe('Files (e2e)', () => {
       method: 'GET',
       headers: {
         'x-request-id': 'e2e-request-id-123',
+        ...authHeaders,
       },
     })
     expect(res.status).toBe(200)
@@ -238,7 +260,7 @@ describe('Files (e2e)', () => {
   })
 
   it('GET /api/v1/files - generates x-request-id header when not provided', async () => {
-    const res = await app.request('/api/v1/files', { method: 'GET' })
+    const res = await app.request('/api/v1/files', { method: 'GET', headers: authHeaders })
     expect(res.status).toBe(200)
     const requestId = res.headers.get('x-request-id')
     expect(typeof requestId).toBe('string')
@@ -248,7 +270,7 @@ describe('Files (e2e)', () => {
   it('POST /api/v1/files/url - returns masked message for internal errors (5xx)', async () => {
     const res = await app.request('/api/v1/files/url', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...authHeaders },
       body: JSON.stringify({ url: 'http://127.0.0.1:65534/file.bin' }),
     })
     expect(res.status).toBe(500)

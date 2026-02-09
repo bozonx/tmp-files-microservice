@@ -137,8 +137,6 @@ class MemoryMetadataAdapter implements MetadataAdapter {
   public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
     let files = Array.from(this.byId.values())
 
-
-
     if (params.mimeType) files = files.filter((f) => f.mimeType === params.mimeType)
     if (params.minSize !== undefined) files = files.filter((f) => f.size >= params.minSize!)
     if (params.maxSize !== undefined) files = files.filter((f) => f.size <= params.maxSize!)
@@ -151,8 +149,14 @@ class MemoryMetadataAdapter implements MetadataAdapter {
     if (params.expiredOnly) files = files.filter((f) => DateUtil.isExpired(f.expiresAt as Date))
 
     files.sort((a, b) => {
-      const ta = typeof a.uploadedAt === 'string' ? DateUtil.toTimestamp(a.uploadedAt) : (a.uploadedAt as Date).getTime()
-      const tb = typeof b.uploadedAt === 'string' ? DateUtil.toTimestamp(b.uploadedAt) : (b.uploadedAt as Date).getTime()
+      const ta =
+        typeof a.uploadedAt === 'string'
+          ? DateUtil.toTimestamp(a.uploadedAt)
+          : (a.uploadedAt as Date).getTime()
+      const tb =
+        typeof b.uploadedAt === 'string'
+          ? DateUtil.toTimestamp(b.uploadedAt)
+          : (b.uploadedAt as Date).getTime()
       return tb - ta
     })
 
@@ -197,6 +201,7 @@ export async function createTestApp(): Promise<TestApp> {
     LOG_LEVEL: 'info',
     MAX_FILE_SIZE_MB: '10',
     ENABLE_UI: 'true',
+    AUTH_BEARER_TOKENS: 'e2e-token',
   })
   const logger = createDefaultLogger(env)
 

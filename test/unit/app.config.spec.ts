@@ -9,6 +9,9 @@ describe('loadAppEnv', () => {
       NODE_ENV: 'test',
       LOG_LEVEL: 'info',
       DOWNLOAD_BASE_URL: 'https://cdn.example.com/',
+      AUTH_BASIC_USER: 'user',
+      AUTH_BASIC_PASS: 'pass',
+      AUTH_BEARER_TOKENS: 't1, t2',
     })
 
     expect(cfg.LISTEN_PORT).toBe(8080)
@@ -17,6 +20,9 @@ describe('loadAppEnv', () => {
     expect(cfg.NODE_ENV).toBe('test')
     expect(cfg.LOG_LEVEL).toBe('info')
     expect(cfg.DOWNLOAD_BASE_URL).toBe('https://cdn.example.com')
+    expect(cfg.AUTH_BASIC_USER).toBe('user')
+    expect(cfg.AUTH_BASIC_PASS).toBe('pass')
+    expect(cfg.AUTH_BEARER_TOKENS).toEqual(['t1', 't2'])
   })
 
   it('uses fallbacks for invalid inputs', () => {

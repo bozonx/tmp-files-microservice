@@ -6,6 +6,10 @@ export interface AppEnv {
   LOG_LEVEL: string
   DOWNLOAD_BASE_URL: string
 
+  AUTH_BASIC_USER?: string
+  AUTH_BASIC_PASS?: string
+  AUTH_BEARER_TOKENS: string[]
+
   MAX_FILE_SIZE_MB: number
   ALLOWED_MIME_TYPES: string[]
 
@@ -66,6 +70,13 @@ function parseAllowedMimeTypes(input: string): string[] {
     .filter((v) => v !== '')
 }
 
+function parseCommaSeparatedList(input: string): string[] {
+  return input
+    .split(',')
+    .map((v) => v.trim())
+    .filter((v) => v !== '')
+}
+
 export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
   const nodeEnvRaw = readString(envSource, 'NODE_ENV', 'production')
   const NODE_ENV = (
@@ -77,6 +88,12 @@ export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
   const MAX_FILE_SIZE_MB = readInt(envSource, 'MAX_FILE_SIZE_MB', 100)
   const MAX_TTL_MIN = readInt(envSource, 'MAX_TTL_MIN', 44640)
 
+  const AUTH_BASIC_USER = readString(envSource, 'AUTH_BASIC_USER', '').trim() || undefined
+  const AUTH_BASIC_PASS = readString(envSource, 'AUTH_BASIC_PASS', '').trim() || undefined
+  const AUTH_BEARER_TOKENS = parseCommaSeparatedList(
+    readString(envSource, 'AUTH_BEARER_TOKENS', '')
+  )
+
   return {
     NODE_ENV,
     LISTEN_HOST: readString(envSource, 'LISTEN_HOST', '0.0.0.0'),
@@ -84,6 +101,10 @@ export function loadAppEnv(envSource: RuntimeEnvSource): AppEnv {
     BASE_PATH,
     LOG_LEVEL: readString(envSource, 'LOG_LEVEL', 'warn'),
     DOWNLOAD_BASE_URL: readString(envSource, 'DOWNLOAD_BASE_URL', '').replace(/\/+$/, ''),
+
+    AUTH_BASIC_USER,
+    AUTH_BASIC_PASS,
+    AUTH_BEARER_TOKENS,
 
     MAX_FILE_SIZE_MB,
     ALLOWED_MIME_TYPES: parseAllowedMimeTypes(readString(envSource, 'ALLOWED_MIME_TYPES', '')),

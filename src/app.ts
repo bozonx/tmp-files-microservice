@@ -6,6 +6,7 @@ import { createHealthRoutes } from './routes/health.route.js'
 import { createDownloadRoutes } from './routes/download.route.js'
 import { createMaintenanceRoutes } from './routes/maintenance.route.js'
 import { createErrorHandler } from './middleware/error-handler.js'
+import { createApiAuthMiddleware } from './middleware/auth.middleware.js'
 import { createServices } from './services/services.factory.js'
 import type { AppBindings, HonoEnv } from './types/hono.types.js'
 
@@ -74,6 +75,13 @@ export function createApp(bindings: AppBindings, routes: AppRouteFactories): Hon
 
   const basePath = bindings.env.BASE_PATH
   const apiBase = basePath ? `/${basePath}/api/v1` : '/api/v1'
+
+  app.use(
+    `${apiBase}/*`,
+    createApiAuthMiddleware({
+      isExcludedPath: (pathname) => pathname.startsWith(`${apiBase}/download/`),
+    })
+  )
 
   app.route(apiBase, createHealthRoutes())
   app.route(apiBase, routes.createFilesRoutes())

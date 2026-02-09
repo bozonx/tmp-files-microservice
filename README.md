@@ -13,7 +13,7 @@ Production-ready microservice for temporary file storage with TTL, search, and c
 - Unit and E2E tests (Jest)
 - Docker/Docker Compose support
 - Cloudflare Workers + R2 support (Wrangler)
-- No built-in auth; expose behind your API Gateway
+- Optional built-in auth (Basic for UI, Basic/Bearer for API)
 
 ## Overview
 
@@ -163,6 +163,10 @@ Source of truth: `.env.production.example`
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
   - `ENABLE_UI` — enable web interface at root path (`true|false`, default `false`)
   - `DOWNLOAD_BASE_URL` — Base URL for `downloadUrl` in responses (e.g. `https://files.example.com`). If not set, `downloadUrl` will be relative.
+- Authentication:
+  - `AUTH_BASIC_USER` — Basic auth username (UI; also accepted by API if provided)
+  - `AUTH_BASIC_PASS` — Basic auth password
+  - `AUTH_BEARER_TOKENS` — comma-separated list of allowed Bearer tokens for API (e.g. `token1,token2`)
 - Node.js runtime (Docker) — S3 storage:
   - `S3_ENDPOINT`
   - `S3_REGION`
@@ -212,7 +216,9 @@ The service includes a simple web interface for uploading files, accessible at t
   - Add optional JSON metadata
   - View upload results with download, info, and delete links
   - Priority: local files take precedence over URL uploads when both are provided
-- **Security**: The UI has no built-in authentication. In production, protect it using your reverse proxy (e.g., Basic Auth, IP whitelist, or OAuth).
+- **Security**:
+  - UI supports optional **Basic Auth** via `AUTH_BASIC_USER` / `AUTH_BASIC_PASS`.
+  - API supports optional **Basic** or **Bearer** auth (see “Authentication” section below).
 
 The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScript with no external dependencies.
 
@@ -414,8 +420,11 @@ Unified error structure:
 
 ## Security and hardening
 
-- The service has no built-in auth; put it behind your API Gateway or reverse proxy.
-- Example Caddy config exposes `/download/:id` publicly while guarding other routes with Bearer auth.
+- If no auth env vars are set, authentication is not enforced.
+- If at least one auth method is configured:
+  - API routes under `/{BASE_PATH}/api/v1/*` require auth **except** `GET /{BASE_PATH}/api/v1/download/:id`.
+  - UI routes under `/{BASE_PATH}/` use **Basic Auth** when `AUTH_BASIC_USER` and `AUTH_BASIC_PASS` are configured.
+- Example Caddy config can still be used to add additional protections (rate limits, IP allowlists, etc.).
 - Validate inputs at the gateway if needed (rate limits, WAF rules).
 - Consider antivirus/malware scanning in your ingestion pipeline depending on your risk profile.
 - Sensitive headers are redacted in logs.
