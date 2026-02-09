@@ -35,4 +35,4 @@ invocation_logs = true
 
 [[r2_buckets]]
 binding = "R2_BUCKET"
-bucket_name = "tmp-files"
+bucket_name = "tmp-files-microservice"
