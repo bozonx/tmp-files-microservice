@@ -68,6 +68,25 @@ describe('Files (e2e)', () => {
     expect(data?.file?.metadata?.source).toBe('e2e')
   })
 
+  it('POST /api/v1/files (raw) - supports upload without content-length (chunked/unknown length)', async () => {
+    const body = new TextEncoder().encode('hello chunked')
+    const res = await app.request('/api/v1/files', {
+      method: 'POST',
+      headers: {
+        ...authHeaders,
+        'x-ttl-mins': '5',
+        'x-file-name': 'chunked.txt',
+        'content-type': 'text/plain',
+      },
+      body,
+    })
+    if (res.status !== 201) {
+      throw new Error(`Unexpected status ${res.status}: ${await res.text()}`)
+    }
+    const data = (await res.json()) as any
+    expect(data?.file?.size).toBe(body.byteLength)
+  })
+
   it('POST /api/v1/files/url - honors provided ttlMins (e.g., 5)', async () => {
     const server = http.createServer((req, res) => {
       if (req.url === '/file.bin') {

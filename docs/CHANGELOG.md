@@ -5,6 +5,7 @@
 - Breaking: Migrated HTTP layer from NestJS/Fastify to **Hono**.
 - Breaking: Removed deduplication logic and `ENABLE_DEDUPLICATION` configuration.
 - Breaking: Switched `POST /files` upload from `multipart/form-data` to raw body (`application/octet-stream`) with upload parameters passed via headers.
+- Change: `Content-Length` header is now optional for `POST /files` (chunked / unknown-length uploads are supported). In Cloudflare Workers/R2 runtime, uploads without `Content-Length` are buffered in memory before being stored.
 - Feature: Dual runtime support:
   - Node.js/Docker: **S3-compatible storage** + **Storage-based metadata**.
   - Cloudflare Workers: **R2 storage** + **Storage-based metadata**.

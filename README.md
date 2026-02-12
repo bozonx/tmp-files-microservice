@@ -320,12 +320,15 @@ The health endpoint is always `GET {base}/health`.
 #### Upload file
 - POST `/{base}/files`
 - Headers:
-  - `Content-Length` — file size in bytes (**required**)
+  - `Content-Length` — file size in bytes (optional)
   - `Content-Type` — file MIME type (optional, default: `application/octet-stream`)
   - `X-File-Name` — original file name (optional, default: `unknown`)
   - `X-Ttl-Mins` — integer in minutes (optional, default: 1440)
   - `X-Metadata` — JSON object serialized as string (optional)
 - Body: raw file bytes
+- Notes:
+  - In Node.js runtime, the request body is streamed to storage.
+  - In Cloudflare Workers/R2 runtime, if `Content-Length` is not provided, the service buffers the entire request body in memory before uploading to R2.
 - Success 201 response:
   - Returns a single file object (see below).
 ```json
@@ -352,7 +355,6 @@ The health endpoint is always `GET {base}/health`.
 ```
 
 - Errors:
-  - 411 — missing or invalid `Content-Length` header
   - 400 — validation errors (e.g., invalid MIME, negative size, malformed JSON in `metadata`)
   - 413 — file exceeds the maximum allowed size (`MAX_FILE_SIZE_MB`)
   - 500 — internal error

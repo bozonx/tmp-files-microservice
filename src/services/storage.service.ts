@@ -141,11 +141,13 @@ export class StorageService {
 
     try {
       // file-type uses Node Buffer; for Workers we just skip detection.
-      const maybeBuffer = (globalThis as unknown as { Buffer?: typeof Buffer }).Buffer
+      const maybeBuffer = (
+        globalThis as unknown as { Buffer?: { from: (b: Uint8Array) => unknown } }
+      ).Buffer
       if (!maybeBuffer) return fallbackMime
 
       const { fileTypeFromBuffer } = await import('file-type')
-      const detected = await fileTypeFromBuffer(maybeBuffer.from(firstChunk))
+      const detected = await fileTypeFromBuffer(maybeBuffer.from(firstChunk) as any)
       return detected?.mime ?? fallbackMime
     } catch {
       return fallbackMime
@@ -188,19 +190,23 @@ export class StorageService {
 
       const processedStream = this.createHashingLimitedStream(remainingStream)
 
+      const customMetadata: Record<string, string> = {
+        'mime-type': mimeType,
+        'original-name': params.file.originalname,
+        ttl: String(params.ttl),
+        'expires-at': DateUtil.toISOString(DateUtil.createExpirationDate(params.ttl)),
+        'uploaded-at': DateUtil.toISOString(DateUtil.now().toDate()),
+      }
+      if (params.file.size > 0) {
+        customMetadata.size = String(params.file.size)
+      }
+
       const uploadRes = await this.deps.fileStorage.saveFile(
         processedStream.stream,
         key,
         mimeType,
         params.file.size,
-        {
-          'mime-type': mimeType,
-          'original-name': params.file.originalname,
-          size: String(params.file.size),
-          ttl: String(params.ttl),
-          'expires-at': DateUtil.toISOString(DateUtil.createExpirationDate(params.ttl)),
-          'uploaded-at': DateUtil.toISOString(DateUtil.now().toDate()),
-        }
+        customMetadata
       )
 
       if (!uploadRes.success) {

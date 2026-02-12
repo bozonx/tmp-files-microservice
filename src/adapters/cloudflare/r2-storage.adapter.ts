@@ -13,6 +13,28 @@ export interface R2StorageAdapterDeps {
 export class R2StorageAdapter implements FileStorageAdapter {
   constructor(private readonly deps: R2StorageAdapterDeps) {}
 
+  private async readStreamToArrayBuffer(input: ReadableStream<Uint8Array>): Promise<ArrayBuffer> {
+    const reader = input.getReader()
+    const chunks: Uint8Array[] = []
+    let total = 0
+
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      if (!value) continue
+      chunks.push(value)
+      total += value.byteLength
+    }
+
+    const merged = new Uint8Array(total)
+    let offset = 0
+    for (const chunk of chunks) {
+      merged.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    return merged.buffer
+  }
+
   public async saveFile(
     input: ReadableStream<Uint8Array>,
     key: string,
@@ -29,6 +51,8 @@ export class R2StorageAdapter implements FileStorageAdapter {
         .FixedLengthStream
       if (size !== undefined && size > 0 && fixedLengthStream) {
         uploadInput = input.pipeThrough(new fixedLengthStream(size))
+      } else if (size === undefined || size <= 0) {
+        uploadInput = await this.readStreamToArrayBuffer(input)
       }
 
       await this.deps.bucket.put(key, uploadInput, {
