@@ -320,6 +320,7 @@ The health endpoint is always `GET {base}/health`.
 #### Upload file
 - POST `/{base}/files`
 - Headers:
+  - `Content-Length` — file size in bytes (**required**)
   - `Content-Type` — file MIME type (optional, default: `application/octet-stream`)
   - `X-File-Name` — original file name (optional, default: `unknown`)
   - `X-Ttl-Mins` — integer in minutes (optional, default: 1440)
@@ -351,6 +352,7 @@ The health endpoint is always `GET {base}/health`.
 ```
 
 - Errors:
+  - 411 — missing or invalid `Content-Length` header
   - 400 — validation errors (e.g., invalid MIME, negative size, malformed JSON in `metadata`)
   - 413 — file exceeds the maximum allowed size (`MAX_FILE_SIZE_MB`)
   - 500 — internal error

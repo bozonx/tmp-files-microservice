@@ -70,12 +70,12 @@ export function createFilesRoutesWorkers(): Hono<HonoEnv> {
     const mimeType = (c.req.header('content-type') ?? '').trim() || 'application/octet-stream'
 
     const contentLengthRaw = c.req.header('content-length')
-    const contentLength =
-      contentLengthRaw && contentLengthRaw.trim() !== ''
-        ? Number.parseInt(contentLengthRaw, 10)
-        : undefined
-    if (contentLength !== undefined && (!Number.isFinite(contentLength) || contentLength < 0)) {
-      throw new HttpError('Header "content-length" must be a non-negative integer', 400)
+    if (!contentLengthRaw || contentLengthRaw.trim() === '') {
+      throw new HttpError('Header "content-length" is required', 411)
+    }
+    const contentLength = Number.parseInt(contentLengthRaw, 10)
+    if (!Number.isFinite(contentLength) || contentLength <= 0) {
+      throw new HttpError('Header "content-length" must be a positive integer', 411)
     }
 
     const bodyStream = c.req.raw.body
@@ -88,7 +88,7 @@ export function createFilesRoutesWorkers(): Hono<HonoEnv> {
       file: {
         originalname: originalName,
         mimetype: mimeType,
-        size: contentLength ?? 0,
+        size: contentLength,
         stream: bodyStream,
       },
       ttl,

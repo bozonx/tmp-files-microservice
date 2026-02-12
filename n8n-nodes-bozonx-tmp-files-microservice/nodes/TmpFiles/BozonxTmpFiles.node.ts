@@ -188,6 +188,7 @@ export class BozonxTmpFiles implements INodeType {
 						'x-ttl-mins': String(ttlMins),
 						'x-file-name': (fileName || 'file').toString(),
 						'content-type': (mimeType || 'application/octet-stream').toString(),
+						'content-length': String(dataBuffer.length),
 						...(metadata && metadata.trim() !== '' ? { 'x-metadata': metadata } : {}),
 					};
 				} else {

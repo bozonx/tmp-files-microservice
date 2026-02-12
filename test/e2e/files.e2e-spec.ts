@@ -10,15 +10,17 @@ describe('Files (e2e)', () => {
   })
 
   it('POST /api/v1/files (raw) - honors provided x-ttl-mins (e.g., 5)', async () => {
+    const body = new TextEncoder().encode('hello')
     const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: {
         ...authHeaders,
         'x-ttl-mins': '5',
         'x-file-name': 'a.txt',
+        'content-length': String(body.byteLength),
         'content-type': 'text/plain',
       },
-      body: new TextEncoder().encode('hello'),
+      body,
     })
     if (res.status !== 201) {
       throw new Error(`Unexpected status ${res.status}: ${await res.text()}`)
@@ -28,15 +30,17 @@ describe('Files (e2e)', () => {
   })
 
   it('POST /api/v1/files (raw) - x-ttl-mins=0 is treated as present and coerced to minimum 1', async () => {
+    const body = new TextEncoder().encode('hello')
     const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: {
         ...authHeaders,
         'x-ttl-mins': '0',
         'x-file-name': 'a.txt',
+        'content-length': String(body.byteLength),
         'content-type': 'text/plain',
       },
-      body: new TextEncoder().encode('hello'),
+      body,
     })
     if (res.status !== 201) {
       throw new Error(`Unexpected status ${res.status}: ${await res.text()}`)
@@ -46,6 +50,7 @@ describe('Files (e2e)', () => {
   })
 
   it('POST /api/v1/files (raw) - accepts x-metadata JSON object header', async () => {
+    const body = new TextEncoder().encode('hello')
     const res = await app.request('/api/v1/files', {
       method: 'POST',
       headers: {
@@ -53,9 +58,10 @@ describe('Files (e2e)', () => {
         'x-ttl-mins': '5',
         'x-file-name': 'meta.txt',
         'x-metadata': '{"source":"e2e"}',
+        'content-length': String(body.byteLength),
         'content-type': 'text/plain',
       },
-      body: new TextEncoder().encode('hello'),
+      body,
     })
     expect(res.status).toBe(201)
     const data = (await res.json()) as any
