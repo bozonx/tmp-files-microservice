@@ -1,3 +1,3 @@
 export const HTTP_CONSTANTS = {
-  MULTIPART_OVERHEAD_MB: 2,
+  REQUEST_OVERHEAD_MB: 0,
 } as const

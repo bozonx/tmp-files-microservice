@@ -181,14 +181,17 @@ const api = {
     async uploadFiles(files, ttlMins, metadata) {
         const results = [];
         for (const file of files) {
-            const formData = new FormData();
-            if (ttlMins) formData.append('ttlMins', ttlMins);
-            if (metadata) formData.append('metadata', metadata);
-            formData.append('file', file);
+            const headers = {
+                'x-file-name': file.name || 'unknown',
+                'content-type': file.type || 'application/octet-stream'
+            };
+            if (ttlMins) headers['x-ttl-mins'] = String(ttlMins);
+            if (metadata) headers['x-metadata'] = String(metadata);
 
             const response = await fetch(`${CONFIG.API_BASE_URL}/files`, {
                 method: 'POST',
-                body: formData
+                headers,
+                body: file
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || `Resource ${file.name} initiation failed`);

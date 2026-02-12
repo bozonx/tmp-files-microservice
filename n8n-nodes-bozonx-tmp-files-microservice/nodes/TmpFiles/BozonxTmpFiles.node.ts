@@ -7,7 +7,6 @@ import {
 	type INodeTypeDescription,
 	type IHttpRequestOptions,
 } from 'n8n-workflow';
-import FormData from 'form-data';
 
 export class BozonxTmpFiles implements INodeType {
 	description: INodeTypeDescription = {
@@ -172,7 +171,7 @@ export class BozonxTmpFiles implements INodeType {
 					const dataBuffer = await this.helpers.getBinaryDataBuffer(i, binaryProperty);
 					const { fileName, mimeType } = item.binary[binaryProperty]!;
 
-					// Ensure multipart/form-data using FormData body
+					// Raw upload: params via headers
 					if (metadata && metadata.trim() !== '') {
 						try {
 							JSON.parse(metadata);
@@ -183,21 +182,13 @@ export class BozonxTmpFiles implements INodeType {
 						}
 					}
 
-					const form = new FormData();
-					form.append('ttlMins', String(ttlMins));
-					if (metadata && metadata.trim() !== '') form.append('metadata', metadata);
-					form.append('file', dataBuffer, {
-						filename: fileName || 'file',
-						contentType: mimeType || 'application/octet-stream',
-					});
-
-					// Assign body and merge headers so boundary is included
-					(options as unknown as { body?: unknown }).body = form as unknown as IDataObject;
-					const formHeaders =
-						(form as unknown as { getHeaders?: () => Record<string, string> }).getHeaders?.() ?? {};
+					(options as unknown as { body?: unknown }).body = dataBuffer as unknown as IDataObject;
 					(options as unknown as { headers?: Record<string, string> }).headers = {
 						...(options as unknown as { headers?: Record<string, string> }).headers,
-						...formHeaders,
+						'x-ttl-mins': String(ttlMins),
+						'x-file-name': (fileName || 'file').toString(),
+						'content-type': (mimeType || 'application/octet-stream').toString(),
+						...(metadata && metadata.trim() !== '' ? { 'x-metadata': metadata } : {}),
 					};
 				} else {
 					throw new NodeOperationError(this.getNode(), `Unsupported source type: ${sourceType}`, {

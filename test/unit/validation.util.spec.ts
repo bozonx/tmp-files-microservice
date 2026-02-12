@@ -10,8 +10,10 @@ describe('ValidationUtil', () => {
         size: 3,
         stream: Readable.from(Buffer.from('abc')),
       } as any,
-      ['text/plain'],
-      10
+      {
+        allowedMimeTypes: ['text/plain'],
+        maxFileSize: 10,
+      }
     )
     expect(res.isValid).toBe(true)
   })
@@ -19,8 +21,10 @@ describe('ValidationUtil', () => {
   it('validateUploadedFile catches errors', () => {
     const res = ValidationUtil.validateUploadedFile(
       { originalname: '', mimetype: '', size: 0 } as any,
-      [],
-      1
+      {
+        allowedMimeTypes: [],
+        maxFileSize: 1,
+      }
     )
     expect(res.isValid).toBe(false)
     expect(res.errors.length).toBeGreaterThan(0)

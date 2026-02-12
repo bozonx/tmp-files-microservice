@@ -9,7 +9,6 @@ Production-ready microservice for temporary file storage with TTL, search, and c
 - JSON logging (via internal logger adapter)
 - Unified error handling with consistent JSON error responses
 - **Full Streaming Support**: Efficiently handles large files via streams for both uploads and downloads (Node.js runtime)
-- **Multi-file Upload**: Support for uploading multiple files in a single request
 - Unit and E2E tests (Jest)
 - Docker/Docker Compose support
 - Cloudflare Workers + R2 support (Wrangler)
@@ -17,7 +16,7 @@ Production-ready microservice for temporary file storage with TTL, search, and c
 
 ## Overview
 
-The service accepts files via REST (`multipart/form-data`), stores them for a time limited by `ttlMins` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks.
+The service accepts files via REST (raw body upload), stores them for a time limited by `ttlMins` (in minutes; default 1440 = 1 day), and provides endpoints for info, download, deletion, listing, stats, and existence checks.
 
 ### Architecture at a glance
 
@@ -25,7 +24,6 @@ The service accepts files via REST (`multipart/form-data`), stores them for a ti
 - **Node.js runtime (Docker)**:
   - File storage: **S3-compatible** (AWS S3 / Minio / Garage / etc.)
   - Metadata storage: **Storage-based** (co-located with files in S3)
-  - Multipart upload parsing: streaming via Busboy (does not buffer entire upload)
 - **Cloudflare Workers runtime**:
   - File storage: **R2**
   - Metadata storage: **Storage-based** (co-located with files in R2)
@@ -185,8 +183,6 @@ Source of truth: `.env.production.example`
 - `TZ` — timezone (default `UTC`)
 - Storage-related:
   - `MAX_FILE_SIZE_MB` — maximum upload size (MB). Single source of truth for upload limits; enforced by both request parsing and service-level validation.
-    - In Node.js runtime, streaming multipart parsing is used.
-    - In Workers runtime, multipart parsing uses `Request.formData()`.
   - `ALLOWED_MIME_TYPES` — comma-separated list of allowed types (e.g. `image/png,image/jpeg`), empty = allow all
 
   - `MAX_TTL_MIN` — maximum TTL in minutes (default 44640 = 31 days)
@@ -269,7 +265,7 @@ The UI is served from the `public/` directory and uses vanilla HTML/CSS/JavaScri
 ## Endpoints (summary)
 
 - `GET /{base}/health` — service health
-- `POST /{base}/files` — upload (multipart/form-data)
+- `POST /{base}/files` — upload (raw body)
 - `POST /{base}/files/url` — upload by providing a direct file URL (JSON)
 - `GET /{base}/files/:id` — file info
 - `GET /{base}/download/:id` — file download
@@ -306,7 +302,7 @@ The health endpoint is always `GET {base}/health`.
 
 ### Data formats
 
-- File upload: `multipart/form-data`
+- File upload: `application/octet-stream` (raw body)
 - Other requests: `application/json`
 
 ### Types and units
@@ -323,13 +319,14 @@ The health endpoint is always `GET {base}/health`.
 
 #### Upload file
 - POST `/{base}/files`
-- Body (multipart/form-data):
-  - `file` — binary content (required). Can be provided multiple times for multi-file upload.
-  - `ttlMins` — integer (minutes, controller default is 1440)
-  - `metadata` — string (JSON), optional. Arbitrary custom metadata
+- Headers:
+  - `Content-Type` — file MIME type (optional, default: `application/octet-stream`)
+  - `X-File-Name` — original file name (optional, default: `unknown`)
+  - `X-Ttl-Mins` — integer in minutes (optional, default: 1440)
+  - `X-Metadata` — JSON object serialized as string (optional)
+- Body: raw file bytes
 - Success 201 response:
-  - If a single file is uploaded, returns a single file object (see below).
-  - If multiple files are uploaded, returns an array of file objects.
+  - Returns a single file object (see below).
 ```json
 {
   "file": {

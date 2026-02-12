@@ -9,15 +9,16 @@ describe('Files (e2e)', () => {
     ;({ app } = await createTestApp())
   })
 
-  it('POST /api/v1/files (multipart) - honors provided ttlMins (e.g., 5)', async () => {
-    const form = new FormData()
-    form.set('ttlMins', '5')
-    form.set('file', new File([new TextEncoder().encode('hello')], 'a.txt', { type: 'text/plain' }))
-
+  it('POST /api/v1/files (raw) - honors provided x-ttl-mins (e.g., 5)', async () => {
     const res = await app.request('/api/v1/files', {
       method: 'POST',
-      headers: authHeaders,
-      body: form,
+      headers: {
+        ...authHeaders,
+        'x-ttl-mins': '5',
+        'x-file-name': 'a.txt',
+        'content-type': 'text/plain',
+      },
+      body: new TextEncoder().encode('hello'),
     })
     if (res.status !== 201) {
       throw new Error(`Unexpected status ${res.status}: ${await res.text()}`)
@@ -26,21 +27,39 @@ describe('Files (e2e)', () => {
     expect(data?.file?.ttlMins).toBe(5)
   })
 
-  it('POST /api/v1/files (multipart) - ttlMins=0 is treated as present and coerced to minimum 1', async () => {
-    const form = new FormData()
-    form.set('ttlMins', '0')
-    form.set('file', new File([new TextEncoder().encode('hello')], 'a.txt', { type: 'text/plain' }))
-
+  it('POST /api/v1/files (raw) - x-ttl-mins=0 is treated as present and coerced to minimum 1', async () => {
     const res = await app.request('/api/v1/files', {
       method: 'POST',
-      headers: authHeaders,
-      body: form,
+      headers: {
+        ...authHeaders,
+        'x-ttl-mins': '0',
+        'x-file-name': 'a.txt',
+        'content-type': 'text/plain',
+      },
+      body: new TextEncoder().encode('hello'),
     })
     if (res.status !== 201) {
       throw new Error(`Unexpected status ${res.status}: ${await res.text()}`)
     }
     const data = (await res.json()) as any
     expect(data?.file?.ttlMins).toBe(1)
+  })
+
+  it('POST /api/v1/files (raw) - accepts x-metadata JSON object header', async () => {
+    const res = await app.request('/api/v1/files', {
+      method: 'POST',
+      headers: {
+        ...authHeaders,
+        'x-ttl-mins': '5',
+        'x-file-name': 'meta.txt',
+        'x-metadata': '{"source":"e2e"}',
+        'content-type': 'text/plain',
+      },
+      body: new TextEncoder().encode('hello'),
+    })
+    expect(res.status).toBe(201)
+    const data = (await res.json()) as any
+    expect(data?.file?.metadata?.source).toBe('e2e')
   })
 
   it('POST /api/v1/files/url - honors provided ttlMins (e.g., 5)', async () => {

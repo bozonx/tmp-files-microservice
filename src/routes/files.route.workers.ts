@@ -11,6 +11,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function createFilesRoutesWorkers(): Hono<HonoEnv> {
   const app = new Hono<HonoEnv>()
 
+  const parseOptionalHeaderInt = (raw: string | undefined, name: string): number | undefined => {
+    if (raw === undefined) return undefined
+    if (raw.trim() === '') return undefined
+    const n = Number.parseInt(raw, 10)
+    if (!Number.isFinite(n)) {
+      throw new HttpError(`Header "${name}" must be an integer`, 400)
+    }
+    return n
+  }
+
+  const parseOptionalHeaderJsonObject = (
+    raw: string | undefined,
+    name: string
+  ): Record<string, unknown> | undefined => {
+    if (raw === undefined) return undefined
+    const v = raw.trim()
+    if (v === '') return undefined
+    try {
+      const parsed: unknown = JSON.parse(v)
+      if (!isRecord(parsed)) {
+        throw new HttpError(`Header "${name}" must be a JSON object`, 400)
+      }
+      return parsed
+    } catch (e: unknown) {
+      if (e instanceof HttpError) throw e
+      throw new HttpError(`Header "${name}" must be a valid JSON string`, 400)
+    }
+  }
+
   const parseOptionalInt = (raw: string | undefined, name: string): number | undefined => {
     if (raw === undefined) return undefined
     if (raw.trim() === '') return undefined
@@ -32,58 +61,41 @@ export function createFilesRoutesWorkers(): Hono<HonoEnv> {
   }
 
   app.post('/files', async (c: Context<HonoEnv>) => {
-    const contentType = c.req.header('content-type') ?? ''
-    if (!contentType.toLowerCase().includes('multipart/form-data')) {
-      throw new HttpError('Multipart request expected', 400)
+    const ttlMins = parseOptionalHeaderInt(c.req.header('x-ttl-mins'), 'x-ttl-mins')
+    const ttl = Math.max(60, Math.floor((ttlMins ?? 1440) * 60))
+
+    const metadata = parseOptionalHeaderJsonObject(c.req.header('x-metadata'), 'x-metadata')
+
+    const originalName = (c.req.header('x-file-name') ?? '').trim() || 'unknown'
+    const mimeType = (c.req.header('content-type') ?? '').trim() || 'application/octet-stream'
+
+    const contentLengthRaw = c.req.header('content-length')
+    const contentLength =
+      contentLengthRaw && contentLengthRaw.trim() !== ''
+        ? Number.parseInt(contentLengthRaw, 10)
+        : undefined
+    if (contentLength !== undefined && (!Number.isFinite(contentLength) || contentLength < 0)) {
+      throw new HttpError('Header "content-length" must be a non-negative integer', 400)
     }
 
-    const form = await c.req.formData()
-
-    const ttlMinsRaw = form.get('ttlMins')
-    const ttlMins =
-      typeof ttlMinsRaw === 'string' && ttlMinsRaw.trim() !== ''
-        ? Number.parseInt(ttlMinsRaw, 10)
-        : 1440
-    const ttl = Math.max(60, Math.floor(ttlMins * 60))
-
-    const metadataRaw = form.get('metadata')
-    let metadata: Record<string, unknown> | undefined
-    if (typeof metadataRaw === 'string' && metadataRaw.trim() !== '') {
-      try {
-        const parsed: unknown = JSON.parse(metadataRaw)
-        if (!isRecord(parsed)) {
-          throw new HttpError('Metadata must be an object', 400)
-        }
-        metadata = parsed
-      } catch {
-        throw new HttpError('Invalid metadata JSON format', 400)
-      }
-    }
-
-    const files = form.getAll('file')
-    if (files.length === 0) {
-      throw new HttpError('No file provided', 400)
+    const bodyStream = c.req.raw.body
+    if (!bodyStream) {
+      throw new HttpError('Request body is required', 400)
     }
 
     const services = c.get('services')
+    const resp: UploadFileResponse = await services.files.uploadFile({
+      file: {
+        originalname: originalName,
+        mimetype: mimeType,
+        size: contentLength ?? 0,
+        stream: bodyStream,
+      },
+      ttl,
+      metadata,
+    })
 
-    const responses: UploadFileResponse[] = []
-    for (const f of files) {
-      if (!(f instanceof File)) {
-        continue
-      }
-      const uploaded = {
-        originalname: f.name || 'unknown',
-        mimetype: f.type || 'application/octet-stream',
-        size: f.size,
-        stream: f.stream(),
-      }
-
-      const resp = await services.files.uploadFile({ file: uploaded, ttl, metadata })
-      responses.push(resp)
-    }
-
-    return c.json(responses.length === 1 ? responses[0] : responses, 201)
+    return c.json(resp, 201)
   })
 
   app.post('/files/url', async (c: Context<HonoEnv>) => {

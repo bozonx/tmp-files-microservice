@@ -35,8 +35,12 @@
  - The node returns the service response as JSON unchanged.
 
  Endpoints and payloads:
-
- - Binary upload: `POST /files` with `multipart/form-data` containing fields `file`, `ttlMins`, and optional `metadata`.
+ 
+ - Binary upload: `POST /files` with raw body (file bytes) and parameters passed via headers:
+   - `Content-Type` — file MIME type
+   - `X-File-Name` — original file name
+   - `X-Ttl-Mins` — TTL in minutes
+   - `X-Metadata` — JSON object serialized as string (optional)
  - URL upload: `POST /files/url` with JSON `{ url: string, ttlMins: number, metadata?: string }`.
 
  ## Credentials
