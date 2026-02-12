@@ -9,10 +9,10 @@ importers:
   .:
     dependencies:
       '@aws-sdk/client-s3':
-        specifier: ^3.985.0
+        specifier: ^3.988.0
         version: 3.988.0
       '@aws-sdk/lib-storage':
-        specifier: ^3.985.0
+        specifier: ^3.988.0
         version: 3.988.0(@aws-sdk/client-s3@3.988.0)
       '@hono/node-server':
         specifier: ^1.19.9
@@ -30,11 +30,11 @@ importers:
         specifier: ^4.11.9
         version: 4.11.9
       pino:
-        specifier: ^10.3.0
+        specifier: ^10.3.1
         version: 10.3.1
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20260207.0
+        specifier: ^4.20260212.0
         version: 4.20260212.0
       '@eslint/eslintrc':
         specifier: ^3.3.3
@@ -45,11 +45,14 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.2.3
       '@typescript-eslint/eslint-plugin':
-        specifier: ^8.54.0
+        specifier: ^8.55.0
         version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
       '@typescript-eslint/parser':
-        specifier: ^8.54.0
+        specifier: ^8.55.0
         version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
       eslint:
         specifier: ^10.0.0
@@ -70,7 +73,7 @@ importers:
         specifier: ^30.2.0
         version: 30.2.0(@types/node@25.2.3)(ts-node@10.9.2(@types/node@25.2.3)(typescript@5.9.3))
       nock:
-        specifier: ^14.0.10
+        specifier: ^14.0.11
         version: 14.0.11
       pino-pretty:
         specifier: ^13.1.3
@@ -94,7 +97,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       wrangler:
-        specifier: ^4.63.0
+        specifier: ^4.64.0
         version: 4.64.0(@cloudflare/workers-types@4.20260212.0)
 
 packages:
