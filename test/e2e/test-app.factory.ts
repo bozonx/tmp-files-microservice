@@ -146,7 +146,13 @@ class MemoryMetadataAdapter implements MetadataAdapter {
     if (params.uploadedBefore !== undefined) {
       files = files.filter((f) => DateUtil.isBefore(f.uploadedAt as Date, params.uploadedBefore!))
     }
-    if (params.expiredOnly) files = files.filter((f) => DateUtil.isExpired(f.expiresAt as Date))
+    if (params.expiredOnly !== undefined) {
+      if (params.expiredOnly) {
+        files = files.filter((f) => DateUtil.isExpired(f.expiresAt as Date))
+      } else {
+        files = files.filter((f) => !DateUtil.isExpired(f.expiresAt as Date))
+      }
+    }
 
     files.sort((a, b) => {
       const ta =

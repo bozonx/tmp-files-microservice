@@ -184,7 +184,8 @@ export function createFilesRoutesWorkers(): Hono<HonoEnv> {
       maxSize: parseOptionalInt(q.maxSize, 'maxSize'),
       uploadedAfter: parseOptionalDate(q.uploadedAfter, 'uploadedAfter'),
       uploadedBefore: parseOptionalDate(q.uploadedBefore, 'uploadedBefore'),
-      expiredOnly: q.expiredOnly === 'true',
+      expiredOnly:
+        q.expiredOnly === 'true' ? true : q.expiredOnly === 'false' ? false : undefined,
       limit: parseOptionalInt(q.limit, 'limit'),
       offset: parseOptionalInt(q.offset, 'offset'),
       signal: c.req.raw.signal,

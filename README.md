@@ -410,7 +410,7 @@ Errors: 400, 404 (not found), 500.
   - `mimeType`
   - `minSize`, `maxSize` (bytes)
   - `uploadedAfter`, `uploadedBefore` (ISO date)
-  - `expiredOnly` (true|false)
+  - `expiredOnly` (true|false). If true, returns only expired files. If false, returns only valid files. If omitted, returns all files.
   - `limit`, `offset`
 - 200 response:
 ```json
