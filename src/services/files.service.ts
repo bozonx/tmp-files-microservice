@@ -172,7 +172,8 @@ export class FilesService {
 
   private async fetchWithRedirects(
     initialUrl: URL,
-    maxRedirects: number
+    maxRedirects: number,
+    signal?: AbortSignal
   ): Promise<{ response: Response; finalUrl: URL }> {
     let current = initialUrl
 
@@ -185,14 +186,21 @@ export class FilesService {
 
       let res: Response
       try {
+        const fetchSignal = signal
+          ? (AbortSignal as any).any([signal, controller.signal])
+          : controller.signal
+
         res = await fetch(current, {
           redirect: 'manual',
-          signal: controller.signal,
+          signal: fetchSignal,
         })
       } catch (e: unknown) {
         const err = e instanceof Error ? e : new Error(String(e))
         const name = (err as { name?: unknown }).name
         if (name === 'AbortError') {
+          if (signal?.aborted) {
+            throw new HttpError('Request cancelled', 499)
+          }
           throw new HttpError('Remote request timed out', 504)
         }
         throw err
@@ -225,11 +233,16 @@ export class FilesService {
     url: string
     ttl: number
     metadata?: Record<string, unknown>
+    signal?: AbortSignal
   }): Promise<UploadFileResponse> {
     if (!params.url || typeof params.url !== 'string') throw new HttpError('Invalid URL', 400)
 
     const initialUrl = this.parseAndValidateRemoteUrl(params.url)
-    const { response: res, finalUrl } = await this.fetchWithRedirects(initialUrl, 3)
+    const { response: res, finalUrl } = await this.fetchWithRedirects(
+      initialUrl,
+      3,
+      params.signal
+    )
     if (!res.ok) {
       throw new HttpError(`Failed to fetch URL. Status: ${res.status}`, 400)
     }
@@ -262,7 +275,12 @@ export class FilesService {
       stream: res.body as ReadableStream<Uint8Array>,
     }
 
-    return this.uploadFile({ file, ttl: params.ttl, metadata: params.metadata })
+    return this.uploadFile({
+      file,
+      ttl: params.ttl,
+      metadata: params.metadata,
+      signal: params.signal,
+    })
   }
 
   private generateApiUrl(endpoint: string, params: Record<string, string> = {}): string {
@@ -306,6 +324,7 @@ export class FilesService {
     file: UploadedFile
     ttl: number
     metadata?: Record<string, unknown>
+    signal?: AbortSignal
   }): Promise<UploadFileResponse> {
     const maxFileSize = this.deps.env.MAX_FILE_SIZE_MB * 1024 * 1024
 
@@ -336,6 +355,7 @@ export class FilesService {
       file: params.file,
       ttl: params.ttl,
       metadata: params.metadata,
+      signal: params.signal,
     })
 
     if (!saveRes.success) {
@@ -356,13 +376,16 @@ export class FilesService {
     }
   }
 
-  public async getFileInfo(params: { fileId: string }): Promise<GetFileInfoResponse> {
+  public async getFileInfo(params: {
+    fileId: string
+    signal?: AbortSignal
+  }): Promise<GetFileInfoResponse> {
     const idValidation = ValidationUtil.validateFileId(params.fileId)
     if (!idValidation.isValid) {
       throw new HttpError(`File ID validation failed: ${idValidation.errors.join(', ')}`, 400)
     }
 
-    const res = await this.deps.storage.getFileInfo(params.fileId)
+    const res = await this.deps.storage.getFileInfo(params.fileId, params.signal)
     if (!res.success) {
       const notFound =
         (res.error?.includes('not found') ?? false) || (res.error?.includes('expired') ?? false)
@@ -383,13 +406,14 @@ export class FilesService {
   public async downloadFileStream(params: {
     fileId: string
     range?: StorageRange
+    signal?: AbortSignal
   }): Promise<{ stream: ReadableStream<Uint8Array>; fileInfo: FileInfo }> {
     const idValidation = ValidationUtil.validateFileId(params.fileId)
     if (!idValidation.isValid) {
       throw new HttpError(`File ID validation failed: ${idValidation.errors.join(', ')}`, 400)
     }
 
-    const fileRes = await this.deps.storage.getFileInfo(params.fileId)
+    const fileRes = await this.deps.storage.getFileInfo(params.fileId, params.signal)
     if (!fileRes.success) {
       const notFound =
         (fileRes.error?.includes('not found') ?? false) ||
@@ -398,7 +422,11 @@ export class FilesService {
     }
 
     const info = fileRes.data as FileInfo
-    const streamRes = await this.deps.storage.createFileReadStream(params.fileId, params.range)
+    const streamRes = await this.deps.storage.createFileReadStream(
+      params.fileId,
+      params.range,
+      params.signal
+    )
     if (!streamRes.success) {
       throw new HttpError(`Failed to create read stream: ${streamRes.error}`, 500)
     }
@@ -406,13 +434,16 @@ export class FilesService {
     return { stream: streamRes.data as ReadableStream<Uint8Array>, fileInfo: info }
   }
 
-  public async deleteFile(params: { fileId: string }): Promise<DeleteFileResponse> {
+  public async deleteFile(params: {
+    fileId: string
+    signal?: AbortSignal
+  }): Promise<DeleteFileResponse> {
     const idValidation = ValidationUtil.validateFileId(params.fileId)
     if (!idValidation.isValid) {
       throw new HttpError(`File ID validation failed: ${idValidation.errors.join(', ')}`, 400)
     }
 
-    const res = await this.deps.storage.deleteFile(params.fileId)
+    const res = await this.deps.storage.deleteFile(params.fileId, params.signal)
     if (!res.success) {
       const notFound = res.error?.includes('not found')
       throw new HttpError(res.error ?? 'Failed to delete', notFound ? 404 : 500)
@@ -434,8 +465,9 @@ export class FilesService {
     expiredOnly?: boolean
     limit?: number
     offset?: number
+    signal?: AbortSignal
   }): Promise<{ files: FileResponse[]; total: number; pagination: PaginationInfo }> {
-    const res = await this.deps.storage.searchFiles(params)
+    const res = await this.deps.storage.searchFiles(params, params.signal)
     const files = res.files.map((f) => this.toFileResponse(f))
 
     const limit = params.limit ?? 10
@@ -452,13 +484,15 @@ export class FilesService {
     return { files, total: res.total, pagination }
   }
 
-  public async getFileStats(): Promise<{ stats: unknown; generatedAt: string }> {
-    const stats = await this.deps.storage.getFileStats()
+  public async getFileStats(
+    signal?: AbortSignal
+  ): Promise<{ stats: unknown; generatedAt: string }> {
+    const stats = await this.deps.storage.getFileStats(signal)
     return { stats, generatedAt: new Date().toISOString() }
   }
 
-  public async fileExists(fileId: string): Promise<boolean> {
-    const res = await this.deps.storage.getFileInfo(fileId)
+  public async fileExists(fileId: string, signal?: AbortSignal): Promise<boolean> {
+    const res = await this.deps.storage.getFileInfo(fileId, signal)
     return !!res.success
   }
 }

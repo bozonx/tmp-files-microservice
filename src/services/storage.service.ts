@@ -206,7 +206,8 @@ export class StorageService {
         key,
         mimeType,
         params.file.size,
-        customMetadata
+        customMetadata,
+        params.signal
       )
 
       if (!uploadRes.success) {
@@ -235,7 +236,7 @@ export class StorageService {
         metadata: params.metadata ?? {},
       }
 
-      await this.deps.metadata.saveFileInfo(fileInfo)
+      await this.deps.metadata.saveFileInfo(fileInfo, params.signal)
 
       return { success: true, data: fileInfo }
     } catch (e: unknown) {
@@ -262,10 +263,13 @@ export class StorageService {
     }
   }
 
-  public async getFileInfo(fileId: string): Promise<FileOperationResult> {
+  public async getFileInfo(
+    fileId: string,
+    signal?: AbortSignal
+  ): Promise<FileOperationResult> {
     await this.ensureInitialized()
 
-    const fileInfo = await this.deps.metadata.getFileInfo(fileId)
+    const fileInfo = await this.deps.metadata.getFileInfo(fileId, signal)
     if (!fileInfo) return { success: false, error: `File with ID ${fileId} not found` }
 
     if (DateUtil.isExpired(fileInfo.expiresAt)) {
@@ -275,44 +279,54 @@ export class StorageService {
     return { success: true, data: fileInfo }
   }
 
-  public async readFile(fileId: string): Promise<StorageOperationResult<Uint8Array>> {
-    const infoRes = await this.getFileInfo(fileId)
+  public async readFile(
+    fileId: string,
+    signal?: AbortSignal
+  ): Promise<StorageOperationResult<Uint8Array>> {
+    const infoRes = await this.getFileInfo(fileId, signal)
     if (!infoRes.success) return { success: false, error: infoRes.error }
 
     const info = infoRes.data as FileInfo
-    return this.deps.fileStorage.readFile(info.filePath)
+    return this.deps.fileStorage.readFile(info.filePath, signal)
   }
 
   public async createFileReadStream(
     fileId: string,
-    range?: StorageRange
+    range?: StorageRange,
+    signal?: AbortSignal
   ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
-    const infoRes = await this.getFileInfo(fileId)
+    const infoRes = await this.getFileInfo(fileId, signal)
     if (!infoRes.success) return { success: false, error: infoRes.error }
     const info = infoRes.data as FileInfo
-    return this.deps.fileStorage.createReadStream(info.filePath, range)
+    return this.deps.fileStorage.createReadStream(info.filePath, range, signal)
   }
 
-  public async deleteFile(fileId: string): Promise<FileOperationResult> {
+  public async deleteFile(
+    fileId: string,
+    signal?: AbortSignal
+  ): Promise<FileOperationResult> {
     await this.ensureInitialized()
 
-    const fileInfo = await this.deps.metadata.getFileInfo(fileId)
+    const fileInfo = await this.deps.metadata.getFileInfo(fileId, signal)
     if (!fileInfo) return { success: false, error: `File with ID ${fileId} not found` }
 
-    await this.deps.fileStorage.deleteFile(fileInfo.filePath)
-    await this.deps.metadata.deleteFileInfo(fileId)
+    await this.deps.fileStorage.deleteFile(fileInfo.filePath, signal)
+    await this.deps.metadata.deleteFileInfo(fileId, signal)
 
     return { success: true, data: fileInfo }
   }
 
-  public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
+  public async searchFiles(
+    params: FileSearchParams,
+    signal?: AbortSignal
+  ): Promise<FileSearchResult> {
     await this.ensureInitialized()
-    return this.deps.metadata.searchFiles(params)
+    return this.deps.metadata.searchFiles(params, signal)
   }
 
-  public async getFileStats(): Promise<FileStats> {
+  public async getFileStats(signal?: AbortSignal): Promise<FileStats> {
     await this.ensureInitialized()
-    return this.deps.metadata.getStats()
+    return this.deps.metadata.getStats(signal)
   }
 
   public async getStorageHealth(): Promise<StorageHealth> {

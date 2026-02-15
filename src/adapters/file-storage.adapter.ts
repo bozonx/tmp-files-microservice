@@ -9,21 +9,23 @@ export interface FileStorageAdapter {
     key: string,
     mimeType: string,
     size?: number,
-    metadata?: Record<string, string>
+    metadata?: Record<string, string>,
+    signal?: AbortSignal
   ): Promise<StorageOperationResult<string>>
 
-  readFile(key: string): Promise<StorageOperationResult<Uint8Array>>
+  readFile(key: string, signal?: AbortSignal): Promise<StorageOperationResult<Uint8Array>>
 
   createReadStream(
     key: string,
-    range?: StorageRange
+    range?: StorageRange,
+    signal?: AbortSignal
   ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>>
 
-  getMetadata(key: string): Promise<StorageOperationResult<Record<string, string>>>
+  getMetadata(key: string, signal?: AbortSignal): Promise<StorageOperationResult<Record<string, string>>>
 
-  deleteFile(key: string): Promise<StorageOperationResult<void>>
+  deleteFile(key: string, signal?: AbortSignal): Promise<StorageOperationResult<void>>
 
-  listAllKeys(prefix?: string): Promise<string[]>
+  listAllKeys(prefix?: string, signal?: AbortSignal): Promise<string[]>
 
   isHealthy(): Promise<boolean>
 }

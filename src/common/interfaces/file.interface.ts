@@ -24,6 +24,7 @@ export interface CreateFileParams {
   file: UploadedFile
   ttl: number
   metadata?: Record<string, unknown>
+  signal?: AbortSignal
 }
 
 export interface FileOperationResult<T = FileInfo> {

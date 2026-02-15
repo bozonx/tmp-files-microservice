@@ -22,7 +22,7 @@ export class StorageMetadataAdapter implements MetadataAdapter {
     return `${METADATA_PREFIX}${ts}__${id}.json`
   }
 
-  public async saveFileInfo(fileInfo: FileInfo): Promise<void> {
+  public async saveFileInfo(fileInfo: FileInfo, signal?: AbortSignal): Promise<void> {
     const key = this.metadataKey(fileInfo.expiresAt, fileInfo.id)
     const content = new TextEncoder().encode(JSON.stringify(fileInfo))
 
@@ -37,7 +37,9 @@ export class StorageMetadataAdapter implements MetadataAdapter {
       }),
       key,
       'application/json',
-      content.byteLength
+      content.byteLength,
+      undefined,
+      signal
     )
 
     if (!res.success) {
@@ -45,34 +47,39 @@ export class StorageMetadataAdapter implements MetadataAdapter {
     }
   }
 
-  public async getFileInfo(fileId: string): Promise<FileInfo | null> {
+  public async getFileInfo(fileId: string, signal?: AbortSignal): Promise<FileInfo | null> {
     // Search in metadata/ folder
-    const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX)
+    const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX, signal)
     const match = allMetaKeys.find((k) => k.endsWith(`__${fileId}.json`))
     if (!match) return null
 
-    const contentRes = await this.deps.storage.readFile(match)
+    const contentRes = await this.deps.storage.readFile(match, signal)
     if (!contentRes.success || !contentRes.data) return null
 
     return JSON.parse(new TextDecoder().decode(contentRes.data)) as FileInfo
   }
 
-  public async deleteFileInfo(fileId: string): Promise<void> {
-    const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX)
+  public async deleteFileInfo(fileId: string, signal?: AbortSignal): Promise<void> {
+    const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX, signal)
     const matches = allMetaKeys.filter((k) => k.endsWith(`__${fileId}.json`))
     for (const key of matches) {
-      await this.deps.storage.deleteFile(key)
+      await this.deps.storage.deleteFile(key, signal)
     }
   }
 
-  public async searchFiles(params: FileSearchParams): Promise<FileSearchResult> {
-    const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX)
+  public async searchFiles(
+    params: FileSearchParams,
+    signal?: AbortSignal
+  ): Promise<FileSearchResult> {
+    const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX, signal)
     const files: FileInfo[] = []
 
     const concurrency = 20
     for (let i = 0; i < allMetaKeys.length; i += concurrency) {
+      if (signal?.aborted) break
       const batch = allMetaKeys.slice(i, i + concurrency)
-      await Promise.all(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _results = await Promise.all(
         batch.map(async (key) => {
           // metadata/[expiresAt]__[id].json
           const filename = key.slice(METADATA_PREFIX.length)
@@ -87,7 +94,7 @@ export class StorageMetadataAdapter implements MetadataAdapter {
             if (!params.expiredOnly && isExpired) return
           }
 
-          const contentRes = await this.deps.storage.readFile(key)
+          const contentRes = await this.deps.storage.readFile(key, signal)
           if (contentRes.success && contentRes.data) {
             try {
               const content = new TextDecoder().decode(contentRes.data)
@@ -117,8 +124,8 @@ export class StorageMetadataAdapter implements MetadataAdapter {
     return { files: out, total, params }
   }
 
-  public async getStats(): Promise<FileStats> {
-    const res = await this.searchFiles({})
+  public async getStats(signal?: AbortSignal): Promise<FileStats> {
+    const res = await this.searchFiles({}, signal)
     const all = res.files
 
     const filesByMimeType: Record<string, number> = {}
@@ -138,8 +145,8 @@ export class StorageMetadataAdapter implements MetadataAdapter {
     }
   }
 
-  public async getAllFileIds(): Promise<string[]> {
-    const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX)
+  public async getAllFileIds(signal?: AbortSignal): Promise<string[]> {
+    const allMetaKeys = await this.deps.storage.listAllKeys(METADATA_PREFIX, signal)
     return allMetaKeys.map((k) => {
       const filename = k.slice(METADATA_PREFIX.length)
       const parts = filename.split('__')

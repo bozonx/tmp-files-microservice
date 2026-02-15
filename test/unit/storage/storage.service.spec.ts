@@ -14,17 +14,17 @@ describe('StorageService (basic)', () => {
   beforeEach(() => {
     metadata = {
       initialize: jest.fn().mockResolvedValue(undefined),
-      saveFileInfo: jest.fn().mockResolvedValue(undefined),
-      getFileInfo: jest.fn().mockResolvedValue(null),
-      deleteFileInfo: jest.fn().mockResolvedValue(undefined),
+      saveFileInfo: jest.fn().mockResolvedValue(undefined) as any,
+      getFileInfo: jest.fn().mockResolvedValue(null) as any,
+      deleteFileInfo: jest.fn().mockResolvedValue(undefined) as any,
       searchFiles: jest.fn() as any,
       getStats: jest.fn().mockResolvedValue({
         totalFiles: 0,
         totalSize: 0,
         filesByMimeType: {},
         filesByDate: {},
-      }),
-      getAllFileIds: jest.fn().mockResolvedValue([]),
+      }) as any,
+      getAllFileIds: jest.fn().mockResolvedValue([]) as any,
       isHealthy: jest.fn().mockResolvedValue(true),
     }
 
@@ -33,7 +33,7 @@ describe('StorageService (basic)', () => {
       readFile: jest.fn() as any,
       createReadStream: jest.fn() as any,
       deleteFile: jest.fn() as any,
-      listAllKeys: jest.fn().mockResolvedValue([]),
+      listAllKeys: jest.fn().mockResolvedValue([]) as any,
       isHealthy: jest.fn().mockResolvedValue(true),
     }
 

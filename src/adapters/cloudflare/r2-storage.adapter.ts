@@ -40,7 +40,9 @@ export class R2StorageAdapter implements FileStorageAdapter {
     key: string,
     mimeType: string,
     size?: number,
-    metadata?: Record<string, string>
+    metadata?: Record<string, string>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    signal?: AbortSignal
   ): Promise<StorageOperationResult<string>> {
     try {
       // In Cloudflare Workers, R2.put() requires a known length for streams.
@@ -68,7 +70,11 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async readFile(key: string): Promise<StorageOperationResult<Uint8Array>> {
+  public async readFile(
+    key: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    signal?: AbortSignal
+  ): Promise<StorageOperationResult<Uint8Array>> {
     try {
       const obj = await this.deps.bucket.get(key)
       if (!obj) return { success: false, error: 'NotFound' }
@@ -82,7 +88,9 @@ export class R2StorageAdapter implements FileStorageAdapter {
 
   public async createReadStream(
     key: string,
-    range?: StorageRange
+    range?: StorageRange,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    signal?: AbortSignal
   ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
     try {
       const obj = await this.deps.bucket.get(key, { range })
@@ -94,7 +102,11 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async getMetadata(key: string): Promise<StorageOperationResult<Record<string, string>>> {
+  public async getMetadata(
+    key: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    signal?: AbortSignal
+  ): Promise<StorageOperationResult<Record<string, string>>> {
     try {
       const obj = await this.deps.bucket.head(key)
       if (!obj) return { success: false, error: 'NotFound' }
@@ -105,7 +117,11 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async deleteFile(key: string): Promise<StorageOperationResult<void>> {
+  public async deleteFile(
+    key: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    signal?: AbortSignal
+  ): Promise<StorageOperationResult<void>> {
     try {
       await this.deps.bucket.delete(key)
       return { success: true }
@@ -115,11 +131,12 @@ export class R2StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async listAllKeys(prefix?: string): Promise<string[]> {
+  public async listAllKeys(prefix?: string, signal?: AbortSignal): Promise<string[]> {
     const keys: string[] = []
     let cursor: string | undefined
 
     do {
+      if (signal?.aborted) return []
       const res = await this.deps.bucket.list({ cursor, prefix })
       for (const obj of res.objects) {
         keys.push(obj.key)

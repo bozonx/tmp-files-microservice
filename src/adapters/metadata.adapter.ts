@@ -4,13 +4,13 @@ import type { FileSearchParams, FileSearchResult } from '../common/interfaces/st
 export interface MetadataAdapter {
   initialize(): Promise<void>
 
-  saveFileInfo(fileInfo: FileInfo): Promise<void>
-  getFileInfo(fileId: string): Promise<FileInfo | null>
-  deleteFileInfo(fileId: string): Promise<void>
+  saveFileInfo(fileInfo: FileInfo, signal?: AbortSignal): Promise<void>
+  getFileInfo(fileId: string, signal?: AbortSignal): Promise<FileInfo | null>
+  deleteFileInfo(fileId: string, signal?: AbortSignal): Promise<void>
 
-  searchFiles(params: FileSearchParams): Promise<FileSearchResult>
-  getStats(): Promise<FileStats>
-  getAllFileIds(): Promise<string[]>
+  searchFiles(params: FileSearchParams, signal?: AbortSignal): Promise<FileSearchResult>
+  getStats(signal?: AbortSignal): Promise<FileStats>
+  getAllFileIds(signal?: AbortSignal): Promise<string[]>
 
   isHealthy(): Promise<boolean>
 }

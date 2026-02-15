@@ -27,7 +27,8 @@ export class S3StorageAdapter implements FileStorageAdapter {
     key: string,
     mimeType: string,
     size?: number,
-    metadata?: Record<string, string>
+    metadata?: Record<string, string>,
+    signal?: AbortSignal
   ): Promise<StorageOperationResult<string>> {
     try {
       const reader = input.getReader()
@@ -53,6 +54,10 @@ export class S3StorageAdapter implements FileStorageAdapter {
         },
       })
 
+      if (signal) {
+        signal.addEventListener('abort', () => upload.abort(), { once: true })
+      }
+
       await upload.done()
       return { success: true, data: key }
     } catch (e: unknown) {
@@ -61,15 +66,21 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async readFile(key: string): Promise<StorageOperationResult<Uint8Array>> {
+  public async readFile(
+    key: string,
+    signal?: AbortSignal
+  ): Promise<StorageOperationResult<Uint8Array>> {
     try {
       const cmd = new GetObjectCommand({ Bucket: this.deps.bucket, Key: key })
-      const res = await this.deps.client.send(cmd)
+      const res = await this.deps.client.send(cmd, { abortSignal: signal })
       const body = res.Body
       if (!body) return { success: false, error: 'NotFound' }
 
       const chunks: Buffer[] = []
       for await (const chunk of body as AsyncIterable<Uint8Array>) {
+        if (signal?.aborted) {
+          throw new Error('Aborted')
+        }
         chunks.push(Buffer.from(chunk))
       }
       return { success: true, data: new Uint8Array(Buffer.concat(chunks)) }
@@ -81,7 +92,8 @@ export class S3StorageAdapter implements FileStorageAdapter {
 
   public async createReadStream(
     key: string,
-    range?: StorageRange
+    range?: StorageRange,
+    signal?: AbortSignal
   ): Promise<StorageOperationResult<ReadableStream<Uint8Array>>> {
     try {
       let rangeHeader: string | undefined
@@ -95,7 +107,7 @@ export class S3StorageAdapter implements FileStorageAdapter {
         Key: key,
         Range: rangeHeader,
       })
-      const res = await this.deps.client.send(cmd)
+      const res = await this.deps.client.send(cmd, { abortSignal: signal })
       const body = res.Body
       if (!body) return { success: false, error: 'NotFound' }
 
@@ -108,10 +120,13 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async getMetadata(key: string): Promise<StorageOperationResult<Record<string, string>>> {
+  public async getMetadata(
+    key: string,
+    signal?: AbortSignal
+  ): Promise<StorageOperationResult<Record<string, string>>> {
     try {
       const cmd = new HeadObjectCommand({ Bucket: this.deps.bucket, Key: key })
-      const res = await this.deps.client.send(cmd)
+      const res = await this.deps.client.send(cmd, { abortSignal: signal })
       return { success: true, data: res.Metadata ?? {} }
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e))
@@ -119,10 +134,13 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async deleteFile(key: string): Promise<StorageOperationResult<void>> {
+  public async deleteFile(
+    key: string,
+    signal?: AbortSignal
+  ): Promise<StorageOperationResult<void>> {
     try {
       const cmd = new DeleteObjectCommand({ Bucket: this.deps.bucket, Key: key })
-      await this.deps.client.send(cmd)
+      await this.deps.client.send(cmd, { abortSignal: signal })
       return { success: true }
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e))
@@ -130,19 +148,20 @@ export class S3StorageAdapter implements FileStorageAdapter {
     }
   }
 
-  public async listAllKeys(prefix?: string): Promise<string[]> {
+  public async listAllKeys(prefix?: string, signal?: AbortSignal): Promise<string[]> {
     const keys: string[] = []
     let continuationToken: string | undefined
 
     try {
       do {
+        if (signal?.aborted) return []
         const cmd = new ListObjectsV2Command({
           Bucket: this.deps.bucket,
           Prefix: prefix,
           ContinuationToken: continuationToken,
         })
 
-        const res = await this.deps.client.send(cmd)
+        const res = await this.deps.client.send(cmd, { abortSignal: signal })
         for (const obj of res.Contents ?? []) {
           if (obj.Key) keys.push(obj.Key)
         }

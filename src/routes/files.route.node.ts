@@ -94,6 +94,7 @@ export function createFilesRoutesNode(): Hono<HonoEnv> {
       },
       ttl,
       metadata,
+      signal: c.req.raw.signal,
     })
 
     return c.json(resp, 201)
@@ -116,7 +117,7 @@ export function createFilesRoutesNode(): Hono<HonoEnv> {
         ? ttlMinsRaw
         : typeof ttlMinsRaw === 'string' && ttlMinsRaw.trim() !== ''
           ? Number.parseInt(ttlMinsRaw, 10)
-          : 1440
+          : 60
     const ttl = Math.max(60, Math.floor(ttlMins * 60))
 
     let metadata: Record<string, unknown> | undefined
@@ -140,25 +141,36 @@ export function createFilesRoutesNode(): Hono<HonoEnv> {
     }
 
     const services = c.get('services')
-    const resp = await services.files.uploadFileFromUrl({ url, ttl, metadata })
+    const resp = await services.files.uploadFileFromUrl({
+      url,
+      ttl,
+      metadata,
+      signal: c.req.raw.signal,
+    })
     return c.json(resp, 201)
   })
 
   app.get('/files/stats', async (c: Context<HonoEnv>) => {
     const services = c.get('services')
-    const resp = await services.files.getFileStats()
+    const resp = await services.files.getFileStats(c.req.raw.signal)
     return c.json(resp)
   })
 
   app.get('/files/:id', async (c: Context<HonoEnv>) => {
     const services = c.get('services')
-    const resp = await services.files.getFileInfo({ fileId: c.req.param('id') })
+    const resp = await services.files.getFileInfo({
+      fileId: c.req.param('id'),
+      signal: c.req.raw.signal,
+    })
     return c.json(resp)
   })
 
   app.delete('/files/:id', async (c: Context<HonoEnv>) => {
     const services = c.get('services')
-    const resp = await services.files.deleteFile({ fileId: c.req.param('id') })
+    const resp = await services.files.deleteFile({
+      fileId: c.req.param('id'),
+      signal: c.req.raw.signal,
+    })
     return c.json(resp)
   })
 
@@ -175,6 +187,7 @@ export function createFilesRoutesNode(): Hono<HonoEnv> {
       expiredOnly: q.expiredOnly === 'true',
       limit: parseOptionalInt(q.limit, 'limit'),
       offset: parseOptionalInt(q.offset, 'offset'),
+      signal: c.req.raw.signal,
     })
 
     return c.json(resp)
@@ -189,10 +202,13 @@ export function createFilesRoutesNode(): Hono<HonoEnv> {
       throw new HttpError(`File ID validation failed: ${idValidation.errors.join(', ')}`, 400)
     }
 
-    const exists = await services.files.fileExists(fileId)
+    const exists = await services.files.fileExists(fileId, c.req.raw.signal)
     if (!exists) return c.json({ exists, fileId, isExpired: false })
 
-    const info = await services.files.getFileInfo({ fileId })
+    const info = await services.files.getFileInfo({
+      fileId,
+      signal: c.req.raw.signal,
+    })
     return c.json({ exists, fileId, isExpired: info.file.isExpired })
   })
 

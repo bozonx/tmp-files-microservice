@@ -54,7 +54,10 @@ export function createDownloadRoutes(): Hono<HonoEnv> {
     // Add Accept-Ranges header to all download responses
     c.header('Accept-Ranges', 'bytes')
 
-    const fileRes = await services.files.getFileInfo({ fileId })
+    const fileRes = await services.files.getFileInfo({
+      fileId,
+      signal: c.req.raw.signal,
+    })
     const totalSize = fileRes.file.size
 
     let range: StorageRange | undefined
@@ -73,6 +76,7 @@ export function createDownloadRoutes(): Hono<HonoEnv> {
     const { stream, fileInfo } = await services.files.downloadFileStream({
       fileId,
       range,
+      signal: c.req.raw.signal,
     })
 
     const name = String(fileInfo.originalName || 'file')
